@@ -2187,12 +2187,13 @@ function calcularProximaAcao(contato) {
 
 // Retorna o diffDias real do cliente respeitando data personalizada
 function getDiffDiasCliente(cliente) {
-  if (!cliente.historico || cliente.historico.length === 0) return null;
+  // Data de retorno agendada manda — mesmo que o cliente ainda não tenha visita registrada
   if (cliente.dataRetornoCustom) {
     const hoje = new Date();
     const dataCustom = new Date(cliente.dataRetornoCustom + 'T12:00:00');
     return Math.floor((dataCustom - hoje) / 86400000);
   }
+  if (!cliente.historico || cliente.historico.length === 0) return null;
   const proxima = calcularProximaAcao(cliente.historico[0]);
   return proxima ? proxima.diffDias : null;
 }
@@ -2249,6 +2250,15 @@ function atualizarDashboard() {
 
   clientes.forEach(c => {
     if (!c.historico || c.historico.length === 0) {
+      // Sem visita registrada, mas com data agendada: entra pela urgência da agenda
+      if (c.dataRetornoCustom) {
+        const diffDias = getDiffDiasCliente(c);
+        if (diffDias === null) return;
+        if (diffDias <= 0) urgentes.push({ cliente: c, diffDias });
+        else if (diffDias <= 7) semana.push({ cliente: c, diffDias });
+        else okCount++;
+        return;
+      }
       const diasSemContato = Math.floor((hoje - new Date(c.criadoEm)) / 86400000);
       if (diasSemContato >= cfg.dias_esquecidos) esquecidos.push({ cliente: c, dias: diasSemContato });
       return;
@@ -2442,7 +2452,7 @@ function renderizarRotaPeriodo() {
 
 function abrirRotaDeHoje() {
   const clientes = getClientes();
-  const comGPS = clientes.filter(c => c.lat && c.lng && c.historico && c.historico.length > 0);
+  const comGPS = clientes.filter(c => c.lat && c.lng && ((c.historico && c.historico.length > 0) || c.dataRetornoCustom));
   _rotaClientesGPS = comGPS;
   _rotaPos = null;
   periodoRota = 'hoje';
@@ -3273,7 +3283,7 @@ function abrirFiltrado(tipo) {
   if (tipo === 'urgentes') {
     titulo = '🔴 Retomar agora';
     lista = clientes.filter(c => {
-      if (!c.historico || c.historico.length === 0) return false;
+      if ((!c.historico || c.historico.length === 0) && !c.dataRetornoCustom) return false;
       const diff = getDiffDiasCliente(c);
       return diff !== null && diff <= 0;
     });
@@ -3281,7 +3291,7 @@ function abrirFiltrado(tipo) {
   } else {
     titulo = '🟡 Retomar essa semana';
     lista = clientes.filter(c => {
-      if (!c.historico || c.historico.length === 0) return false;
+      if ((!c.historico || c.historico.length === 0) && !c.dataRetornoCustom) return false;
       const diff = getDiffDiasCliente(c);
       return diff !== null && diff > 0 && diff <= 7;
     });

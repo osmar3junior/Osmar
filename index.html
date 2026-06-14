@@ -750,6 +750,11 @@
       </button>
     </div>
   </div>
+  <!-- Banner: clientes com endereço mas sem alfinete no mapa -->
+  <div id="mapa-sem-gps-banner" style="display:none;background:rgba(234,179,8,.12);border-bottom:1px solid rgba(234,179,8,.35);padding:10px 14px;align-items:center;gap:10px;">
+    <div style="flex:1;font-size:12px;color:var(--texto);font-weight:600;line-height:1.35;" id="mapa-sem-gps-texto"></div>
+    <button id="mapa-sem-gps-btn" onclick="geocodificarTodosPendentes()" style="background:var(--amarelo);border:none;border-radius:9px;padding:9px 12px;color:#000;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📍 Buscar</button>
+  </div>
   <div id="mapa-container" style="flex:1;position:relative;overflow:hidden;isolation:isolate;">
     <div id="leaflet-map" style="width:100%;height:100%;"></div>
     <div class="mapa-legenda">
@@ -1706,6 +1711,7 @@ function renderizarMapa() {
   const comGPS = clientes.filter(c => c.lat && c.lng);
 
   document.getElementById('mapa-contador').textContent = `${comGPS.length} cliente${comGPS.length !== 1 ? 's' : ''} no mapa`;
+  atualizarBannerSemGps();
 
   const container = document.getElementById('leaflet-map');
   container.style.height = (window.innerHeight - 120) + 'px';
@@ -1717,7 +1723,11 @@ function renderizarMapa() {
 
   if (comGPS.length === 0) {
     if (mapaLeaflet) { mapaLeaflet.remove(); mapaLeaflet = null; }
-    container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#8A95A3;gap:12px;padding:24px;text-align:center;"><div style="font-size:48px;">🗺️</div><div style="font-size:16px;font-weight:600;color:#F0F4F8;">Nenhum cliente no mapa</div><div style="font-size:13px;">Cadastre clientes via Check-in para eles aparecerem aqui com a localização exata.</div></div>';
+    const temPendentes = clientesSemCoordenada().length > 0;
+    const descVazio = temPendentes
+      ? 'Seus clientes têm endereço, mas ainda sem coordenada. Toque em <b style="color:var(--amarelo);">📍 Buscar</b> no topo para colocá-los no mapa automaticamente.'
+      : 'Cadastre clientes via Check-in para eles aparecerem aqui com a localização exata.';
+    container.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#8A95A3;gap:12px;padding:24px;text-align:center;"><div style="font-size:48px;">🗺️</div><div style="font-size:16px;font-weight:600;color:#F0F4F8;">Nenhum cliente no mapa</div><div style="font-size:13px;line-height:1.5;">${descVazio}</div></div>`;
     return;
   }
 
@@ -2514,30 +2524,54 @@ function clientesSemCoordenada() {
 }
 
 function atualizarBannerSemGps() {
-  const banner = document.getElementById('rota-sem-gps-banner');
-  if (!banner) return;
-  const pend = clientesSemCoordenada();
-  if (pend.length === 0) { banner.style.display = 'none'; return; }
-  const n = pend.length;
-  document.getElementById('rota-sem-gps-texto').textContent =
-    `${n} cliente${n > 1 ? 's' : ''} com endereço mas sem localização no mapa — ${n > 1 ? 'não entram' : 'não entra'} na rota. Posso buscar as coordenadas pra você.`;
-  document.getElementById('rota-sem-gps-btn').textContent = `📍 Buscar coordenadas de ${n} cliente${n > 1 ? 's' : ''}`;
-  banner.style.display = 'block';
+  const n = clientesSemCoordenada().length;
+
+  // Banner dentro da rota de hoje
+  const bRota = document.getElementById('rota-sem-gps-banner');
+  if (bRota) {
+    if (n === 0) { bRota.style.display = 'none'; }
+    else {
+      document.getElementById('rota-sem-gps-texto').textContent =
+        `${n} cliente${n > 1 ? 's' : ''} com endereço mas sem localização no mapa — ${n > 1 ? 'não entram' : 'não entra'} na rota. Posso buscar as coordenadas pra você.`;
+      document.getElementById('rota-sem-gps-btn').textContent = `📍 Buscar coordenadas de ${n} cliente${n > 1 ? 's' : ''}`;
+      bRota.style.display = 'block';
+    }
+  }
+
+  // Banner no topo da tela do mapa
+  const bMapa = document.getElementById('mapa-sem-gps-banner');
+  if (bMapa) {
+    if (n === 0) { bMapa.style.display = 'none'; }
+    else {
+      document.getElementById('mapa-sem-gps-texto').textContent =
+        `${n} cliente${n > 1 ? 's' : ''} com endereço ainda sem alfinete no mapa.`;
+      document.getElementById('mapa-sem-gps-btn').textContent = `📍 Buscar ${n}`;
+      bMapa.style.display = 'flex';
+    }
+  }
+}
+
+// Atualiza o texto de progresso e o estado dos botões nos dois banners (rota + mapa)
+function _progressoGeocode(texto, botoesDesativados) {
+  ['rota-sem-gps-texto', 'mapa-sem-gps-texto'].forEach(id => {
+    const el = document.getElementById(id); if (el && texto != null) el.textContent = texto;
+  });
+  ['rota-sem-gps-btn', 'mapa-sem-gps-btn'].forEach(id => {
+    const el = document.getElementById(id); if (el && botoesDesativados != null) el.disabled = botoesDesativados;
+  });
 }
 
 async function geocodificarTodosPendentes() {
   if (!navigator.onLine) { toast('Sem internet — tente novamente quando estiver online.'); return; }
-  const btn = document.getElementById('rota-sem-gps-btn');
-  const txt = document.getElementById('rota-sem-gps-texto');
   const clientes = getClientes();
   const pend = clientes.filter(c => !(c.lat && c.lng) && (c.enderecoPendente || c.endereco));
   if (pend.length === 0) { atualizarBannerSemGps(); return; }
 
-  btn.disabled = true;
+  _progressoGeocode(null, true);
   let ok = 0, falhou = 0;
   for (let i = 0; i < pend.length; i++) {
     const c = pend[i];
-    txt.textContent = `Buscando ${i + 1} de ${pend.length}… (${ok} localizado${ok !== 1 ? 's' : ''})`;
+    _progressoGeocode(`Buscando ${i + 1} de ${pend.length}… (${ok} localizado${ok !== 1 ? 's' : ''})`, true);
     const base = c.enderecoPendente || c.endereco;
     const q = c.cidade ? `${base}, ${c.cidade}, Brasil` : `${base}, Brasil`;
     try {
@@ -2559,13 +2593,14 @@ async function geocodificarTodosPendentes() {
     if (i < pend.length - 1) await new Promise(r => setTimeout(r, 1100));
   }
 
-  btn.disabled = false;
+  _progressoGeocode(null, false);
   toast(`📍 ${ok} cliente${ok !== 1 ? 's' : ''} localizado${ok !== 1 ? 's' : ''}${falhou ? ` · ${falhou} não encontrado${falhou !== 1 ? 's' : ''}` : ''}.`);
 
-  // Recarrega a rota já com as novas coordenadas
+  // Recarrega o cache da rota e re-renderiza o que estiver visível na tela
   _rotaClientesGPS = getClientes().filter(c => c.lat && c.lng && ((c.historico && c.historico.length > 0) || c.dataRetornoCustom));
   atualizarBannerSemGps();
-  renderizarRotaPeriodo();
+  if (document.getElementById('modal-rota-hoje')?.classList.contains('aberto')) renderizarRotaPeriodo();
+  if (document.getElementById('tela-mapa')?.classList.contains('ativa')) renderizarMapa();
 }
 
 function montarRota(clientes, latRep, lngRep) {

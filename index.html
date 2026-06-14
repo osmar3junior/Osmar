@@ -469,7 +469,10 @@
   </div>
   <div class="dash-content">
     <div class="saudacao">
-      <div class="saudacao-sub">Bom dia</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div class="saudacao-sub">Bom dia</div>
+        <div id="app-versao" style="font-size:10px;color:var(--texto3);font-weight:600;letter-spacing:.5px;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:2px 8px;"></div>
+      </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div class="saudacao-nome" id="dash-nome">Carregando...</div>
       </div>
@@ -812,7 +815,7 @@
           <button id="bs-btn-wpp" onclick="whatsappCliente()" style="background:#1C2A1E;border:1px solid #25D366;border-radius:12px;padding:13px;color:#25D366;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
             💬 WhatsApp
           </button>
-          <button onclick="registrarVisitaMapa()" style="background:#2A1A0A;border:1px solid #EA580C;border-radius:12px;padding:13px;color:#EA580C;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <button onclick="registrarVisitaMapa()" style="background:#EA580C;border:1px solid #EA580C;border-radius:12px;padding:13px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
             📝 Registrar visita
           </button>
           <button id="bs-btn-nav" onclick="navegarParaCliente()" style="background:#0D1F18;border:1px solid #00D68F;border-radius:12px;padding:13px;color:#00D68F;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
@@ -1366,6 +1369,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ===== ESTADO =====
+const APP_VERSION = 'v1.6 · 13/06';
 let usuarioAtual = null;
 let clienteAtualId = null;
 let tipoContatoAtual = null;
@@ -4672,6 +4676,8 @@ function ajustarAlturaListaMotivos() {
 
 // INIT
 (function() {
+  const versaoEl = document.getElementById('app-versao');
+  if (versaoEl) versaoEl.textContent = APP_VERSION;
   document.querySelectorAll('.tela').forEach(t => { t.style.display='none'; t.classList.remove('ativa'); });
   const session = getData('cv_session');
   if (session && getUsuarios()[session.email]) {

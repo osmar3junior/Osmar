@@ -2167,6 +2167,14 @@ const MOTIVOS_BASE = {
   }
 };
 
+// Diferença em DIAS DE CALENDÁRIO (meia-noite a meia-noite), ignorando a hora atual.
+// Evita que um cliente de amanhã apareça como "hoje" só porque faltam < 24h cronológicas.
+function diffDiasCalendario(dataAlvo) {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const alvo = new Date(dataAlvo); alvo.setHours(0, 0, 0, 0);
+  return Math.round((alvo - hoje) / 86400000); // round = seguro contra horário de verão
+}
+
 function calcularProximaAcao(contato) {
   if (!contato?.motivo) return null;
   // Motivos personalizados: usa prazo fixo de 30 dias sem cadência especial
@@ -2177,7 +2185,7 @@ function calcularProximaAcao(contato) {
     const hoje = new Date();
     const dataAcao = new Date(dataContato);
     dataAcao.setDate(dataAcao.getDate() + diasTotal);
-    const diffDias = Math.floor((dataAcao - hoje) / 86400000);
+    const diffDias = diffDiasCalendario(dataAcao);
     return {
       data: dataAcao,
       diffDias,
@@ -2204,7 +2212,7 @@ function calcularProximaAcao(contato) {
 
   const dataAcao = new Date(dataContato);
   dataAcao.setDate(dataAcao.getDate() + passos[stepIdx]);
-  const diffDias = Math.floor((dataAcao - hoje) / 86400000);
+  const diffDias = diffDiasCalendario(dataAcao);
 
   const msgs5 = base.msgs[stepIdx];
   const gatilhos = base.gatilhos;
@@ -2223,9 +2231,7 @@ function calcularProximaAcao(contato) {
 function getDiffDiasCliente(cliente) {
   // Data de retorno agendada manda — mesmo que o cliente ainda não tenha visita registrada
   if (cliente.dataRetornoCustom) {
-    const hoje = new Date();
-    const dataCustom = new Date(cliente.dataRetornoCustom + 'T12:00:00');
-    return Math.floor((dataCustom - hoje) / 86400000);
+    return diffDiasCalendario(cliente.dataRetornoCustom + 'T00:00:00');
   }
   if (!cliente.historico || cliente.historico.length === 0) return null;
   const proxima = calcularProximaAcao(cliente.historico[0]);
@@ -2373,11 +2379,15 @@ function abrirFinalizarDia() {
   const clientes = getClientes();
   const hojeStr = new Date().toDateString();
   let visitas = 0, pedidos = 0, valorTotal = 0;
-  const pendentesZap = [];
+  const itens = []; // vendas do dia + follow-ups de WhatsApp
 
   clientes.forEach(c => {
-    (c.historico || []).forEach(h => {
-      if (new Date(h.data).toDateString() !== hojeStr) return;
+    const hist = c.historico || [];
+    const hojeHist = hist.filter(h => new Date(h.data).toDateString() === hojeStr);
+    if (hojeHist.length === 0) return;
+
+    // Contadores do topo
+    hojeHist.forEach(h => {
       if (h.tipo === 'visita') visitas++;
       if (h.motivo === 'fechou_pedido') {
         pedidos++;
@@ -2385,29 +2395,42 @@ function abrirFinalizarDia() {
       }
     });
 
-    const ultimo = (c.historico || [])[0];
-    if (ultimo && ultimo.tipo === 'visita' && new Date(ultimo.data).toDateString() === hojeStr) {
-      const tel = c.telefone ? c.telefone.replace(/\D/g,'') : '';
-      if (tel.length >= 10) {
-        const proxima = calcularProximaAcao(ultimo);
-        const primeiroNome = c.nome.split(' ')[0];
-        const msg = proxima ? proxima.getMsgs(primeiroNome)[0] : `Oi ${primeiroNome}, tudo bem? Passando para dar continuidade ao nosso papo de hoje.`;
-        const motivoLabel = MOTIVOS_BASE[ultimo.motivo]?.label || ultimo.motivo;
-        pendentesZap.push({ cliente: c, tel, msg, motivoLabel, pedidoValor: ultimo.pedidoValor || null });
-      }
+    const tel = c.telefone ? c.telefone.replace(/\D/g, '') : '';
+    const temTel = tel.length >= 10;
+    const primeiroNome = c.nome.split(' ')[0];
+
+    // 1) VENDA fechada hoje — SEMPRE aparece, com ou sem telefone, mesmo que não seja a última ação
+    const venda = hojeHist.find(h => h.motivo === 'fechou_pedido');
+    if (venda) {
+      const proxima = calcularProximaAcao(venda);
+      const msg = proxima ? proxima.getMsgs(primeiroNome)[0] : `Oi ${primeiroNome}, tudo bem? Passando para dar continuidade ao nosso papo de hoje.`;
+      itens.push({ cliente: c, ehVenda: true, motivoLabel: '🎉 Venda fechada', pedidoValor: venda.pedidoValor || null, tel: temTel ? tel : null, msg });
+      return; // já representado pela venda — não duplica como follow-up
+    }
+
+    // 2) Follow-up de visita — precisa ser a última ação e ter telefone
+    const ultimo = hist[0];
+    if (ultimo && ultimo.tipo === 'visita' && new Date(ultimo.data).toDateString() === hojeStr && temTel) {
+      const proxima = calcularProximaAcao(ultimo);
+      const msg = proxima ? proxima.getMsgs(primeiroNome)[0] : `Oi ${primeiroNome}, tudo bem? Passando para dar continuidade ao nosso papo de hoje.`;
+      const motivoLabel = MOTIVOS_BASE[ultimo.motivo]?.label || ultimo.motivo;
+      itens.push({ cliente: c, ehVenda: false, motivoLabel, pedidoValor: ultimo.pedidoValor || null, tel, msg });
     }
   });
+
+  // Vendas primeiro na lista
+  itens.sort((a, b) => (b.ehVenda === true) - (a.ehVenda === true));
 
   document.getElementById('fd-visitas').textContent = visitas;
   document.getElementById('fd-pedidos').textContent = pedidos;
   document.getElementById('fd-valor').textContent = 'R$ ' + valorTotal.toLocaleString('pt-BR',{minimumFractionDigits:2});
 
   const lista = document.getElementById('fd-lista-zap');
-  if (pendentesZap.length === 0) {
-    lista.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-titulo">Nada pendente</div><div class="empty-desc">Nenhuma mensagem de follow-up para enviar hoje.</div></div>`;
+  if (itens.length === 0) {
+    lista.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-titulo">Nada por aqui</div><div class="empty-desc">Nenhuma venda ou follow-up registrado hoje.</div></div>`;
   } else {
-    lista.innerHTML = pendentesZap.map(({cliente, tel, msg, motivoLabel, pedidoValor}) => `
-      <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;margin-bottom:8px;cursor:pointer;" onclick="fecharModal('modal-finalizar-dia');abrirDetalhe('${cliente.id}','dashboard')">
+    lista.innerHTML = itens.map(({cliente, tel, msg, motivoLabel, pedidoValor, ehVenda}) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:12px;background:${ehVenda ? 'rgba(0,214,143,.07)' : 'var(--bg3)'};border:1px solid ${ehVenda ? 'rgba(0,214,143,.3)' : 'var(--borda)'};border-radius:12px;margin-bottom:8px;cursor:pointer;" onclick="fecharModal('modal-finalizar-dia');abrirDetalhe('${cliente.id}','dashboard')">
         <div style="flex:1;min-width:0;">
           <div style="font-weight:700;font-size:15px;">${cliente.nome}</div>
           <div style="font-size:12px;color:var(--texto2);">${cliente.loja}${cliente.cidade ? ' · ' + cliente.cidade : ''}</div>
@@ -2416,9 +2439,9 @@ function abrirFinalizarDia() {
             ${pedidoValor ? `<span style="font-size:12px;font-weight:700;color:var(--verde);">💰 R$ ${pedidoValor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
           </div>
         </div>
-        <a href="https://wa.me/55${tel}?text=${encodeURIComponent(msg)}" target="_blank" onclick="event.stopPropagation()" style="background:#25D366;border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        ${tel ? `<a href="https://wa.me/55${tel}?text=${encodeURIComponent(msg)}" target="_blank" onclick="event.stopPropagation()" style="background:#25D366;border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        </a>
+        </a>` : `<span style="font-size:10px;color:var(--texto3);text-align:center;width:46px;flex-shrink:0;line-height:1.3;">sem<br>telefone</span>`}
       </div>`).join('');
   }
 

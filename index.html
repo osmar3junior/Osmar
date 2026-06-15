@@ -717,20 +717,20 @@
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
           <div id="det-proxima-data" class="proxima-data" style="flex:1;">-</div>
         </div>
-        <div id="det-data-personalizada" style="display:none;font-size:12px;color:var(--amarelo);margin-bottom:8px;">📌 Data personalizada pelo representante</div>
-
-        <!-- Input de data visível e clicável -->
-        <div style="display:flex;align-items:center;gap:10px;">
-          <input
-            type="date"
-            id="input-data-retorno"
-            onchange="salvarDataRetorno(this.value)"
-            oninput="salvarDataRetorno(this.value)"
-            style="flex:1;background:var(--bg3);border:1px solid var(--verde);border-radius:10px;padding:10px 14px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;outline:none;cursor:pointer;-webkit-appearance:none;"
-          >
-          <button onclick="confirmarDataRetorno()" style="background:var(--verde);border:none;border-radius:10px;padding:10px 14px;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;">✓ Ok</button>
-          <button onclick="limparDataRetorno()" id="btn-limpar-data" style="display:none;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:10px 12px;color:var(--texto2);font-size:13px;cursor:pointer;">✕</button>
+        <!-- Seletor de data: chip clicável que abre o calendário nativo -->
+        <div style="position:relative;">
+          <input type="date" id="input-data-retorno" onchange="salvarDataRetorno(this.value)"
+            style="position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0;margin:0;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button id="chip-data-retorno" onclick="abrirSeletorData()" style="flex:1;display:flex;align-items:center;gap:10px;background:var(--bg3);border:1.5px dashed rgba(0,214,143,.5);border-radius:12px;padding:13px 14px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;">
+              <span style="font-size:18px;line-height:1;">📅</span>
+              <span id="chip-data-texto" style="flex:1;">Tocar para escolher a data de retorno</span>
+            </button>
+            <button onclick="limparDataRetorno()" id="btn-limpar-data" title="Remover data e voltar à sugerida" style="display:none;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:13px 15px;color:var(--texto2);font-size:14px;cursor:pointer;flex-shrink:0;">✕</button>
+          </div>
         </div>
+
+        <div id="det-data-personalizada" style="display:none;font-size:12px;color:var(--amarelo);margin-top:8px;">📌 Data personalizada pelo representante</div>
       </div>
 
       <!-- BLOCO 2: MENSAGENS COM GATILHOS - ACORDEÃO -->
@@ -860,7 +860,8 @@
             📞 Ligar
           </button>
           <button id="bs-btn-wpp" class="bsb bsb-wpp" onclick="whatsappCliente()">
-            💬 WhatsApp
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            WhatsApp
           </button>
           <button class="bsb bsb-visita" onclick="registrarVisitaMapa()">
             📍 Resultado da Visita
@@ -4032,11 +4033,35 @@ function toggleMensagens() {
   seta.style.transform = aberto ? 'rotate(0deg)' : 'rotate(90deg)';
 }
 
-function confirmarDataRetorno() {
+// Abre o calendário nativo a partir do chip
+function abrirSeletorData() {
   const input = document.getElementById('input-data-retorno');
-  const valor = input.value;
-  if (!valor) { toast('Selecione uma data primeiro'); return; }
-  salvarDataRetorno(valor);
+  if (!input) return;
+  try { if (typeof input.showPicker === 'function') { input.showPicker(); return; } } catch (e) {}
+  input.focus();
+  input.click(); // fallback (mobile)
+}
+
+// Atualiza a aparência do chip: vazio (tracejado, convite) ou preenchido (sólido, com a data)
+function _setChipDataPreenchido(valor) {
+  const chip = document.getElementById('chip-data-retorno');
+  const txt = document.getElementById('chip-data-texto');
+  const btnLimpar = document.getElementById('btn-limpar-data');
+  if (!chip) return;
+  if (valor) {
+    const dataFormatada = new Date(valor + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+    txt.textContent = dataFormatada;
+    chip.style.borderStyle = 'solid';
+    chip.style.borderColor = 'var(--verde)';
+    chip.style.background = 'rgba(0,214,143,.12)';
+    if (btnLimpar) btnLimpar.style.display = 'block';
+  } else {
+    txt.textContent = 'Tocar para escolher a data de retorno';
+    chip.style.borderStyle = 'dashed';
+    chip.style.borderColor = 'rgba(0,214,143,.5)';
+    chip.style.background = 'var(--bg3)';
+    if (btnLimpar) btnLimpar.style.display = 'none';
+  }
 }
 
 function salvarDataRetorno(valor) {
@@ -4048,19 +4073,15 @@ function salvarDataRetorno(valor) {
   salvarClientes(clientes);
 
   const dataFormatada = new Date(valor + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
-  const hoje = new Date();
-  const dataRetorno = new Date(valor + 'T12:00:00');
-  const diffDias = Math.floor((dataRetorno - hoje) / 86400000);
+  const diffDias = diffDiasCalendario(valor + 'T00:00:00');
   const urgLabel = diffDias <= 0 ? 'Retomar agora' : diffDias === 1 ? 'Retomar amanhã' : `Retomar em ${diffDias} dias`;
 
   document.getElementById('det-proxima-data').textContent = `${urgLabel} · ${dataFormatada}`;
   document.getElementById('det-data-personalizada').style.display = 'block';
-  const btnLimpar = document.getElementById('btn-limpar-data');
-  if (btnLimpar) btnLimpar.style.display = 'block';
+  document.getElementById('input-data-retorno').value = valor;
+  _setChipDataPreenchido(valor);
 
-  // Atualiza dashboard e lista em background para refletir nova data
   atualizarDashboard();
-
   toast('📅 Data de retorno salva!');
 }
 
@@ -4072,15 +4093,15 @@ function limparDataRetorno() {
   salvarClientes(clientes);
   document.getElementById('input-data-retorno').value = '';
   document.getElementById('det-data-personalizada').style.display = 'none';
-  const btnLimpar = document.getElementById('btn-limpar-data');
-  if (btnLimpar) btnLimpar.style.display = 'none';
-  // Recalcula a data sugerida
+  _setChipDataPreenchido(null);
+  // Recalcula a data sugerida pelo motivo
   const cliente = clientes[idx];
   if (cliente.historico && cliente.historico.length > 0) {
     const proxima = calcularProximaAcao(cliente.historico[0]);
     if (proxima) document.getElementById('det-proxima-data').textContent = getUrgenciaLabel(proxima.diffDias) + ' · ' + formatarData(proxima.data);
+  } else {
+    document.getElementById('det-proxima-data').textContent = '-';
   }
-  // Atualiza dashboard e lista
   atualizarDashboard();
   toast('Data removida');
 }
@@ -4088,23 +4109,20 @@ function limparDataRetorno() {
 function carregarDataRetorno(cliente) {
   const dataPersonalizada = document.getElementById('det-data-personalizada');
   const inputData = document.getElementById('input-data-retorno');
-  const btnLimpar = document.getElementById('btn-limpar-data');
   if (cliente.dataRetornoCustom) {
     const valor = cliente.dataRetornoCustom;
     const dataFormatada = new Date(valor + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
-    const hoje = new Date();
-    const dataRetorno = new Date(valor + 'T12:00:00');
-    const diffDias = Math.floor((dataRetorno - hoje) / 86400000);
+    const diffDias = diffDiasCalendario(valor + 'T00:00:00');
     const urgLabel = diffDias <= 0 ? 'Retomar agora' : diffDias === 1 ? 'Retomar amanhã' : `Retomar em ${diffDias} dias`;
     document.getElementById('det-proxima-data').textContent = `${urgLabel} · ${dataFormatada}`;
     if (dataPersonalizada) dataPersonalizada.style.display = 'block';
     if (inputData) inputData.value = valor;
-    if (btnLimpar) btnLimpar.style.display = 'block';
+    _setChipDataPreenchido(valor);
     return true;
   }
   if (dataPersonalizada) dataPersonalizada.style.display = 'none';
   if (inputData) inputData.value = '';
-  if (btnLimpar) btnLimpar.style.display = 'none';
+  _setChipDataPreenchido(null);
   return false;
 }
 

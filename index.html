@@ -1374,14 +1374,19 @@
     </div>
 
     <!-- Lista de paradas -->
+    <!-- Faixa-guia da rota personalizada -->
+    <div id="rota-hint-personalizada" style="display:none;font-size:11.5px;color:var(--texto2);background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:9px 11px;margin-bottom:10px;line-height:1.45;">
+      ✋ <b style="color:#7DD3FC;">Rota personalizada:</b> marque os clientes que vai visitar e toque em Waze ou Maps. Sem marcar, mando a rota completa. <span style="color:var(--texto3);">Tocar no card abre o cliente.</span>
+    </div>
+
     <div id="rota-hoje-lista"></div>
 
     <!-- Botão iniciar rota -->
     <div id="rota-hoje-acoes" style="display:none;margin-top:16px;display:flex;flex-direction:column;gap:8px;">
-      <button onclick="iniciarRotaNoWaze()" style="background:#33CCFF;border:none;border-radius:12px;padding:14px;color:#000;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">🚗 Iniciar no Waze</button>
+      <button onclick="iniciarRotaNoWaze()" style="background:#33CCFF;border:none;border-radius:12px;padding:14px;color:#000;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">🚗 <span id="waze-label">Iniciar no Waze</span></button>
       <button onclick="iniciarRotaNoGoogleMaps()" style="background:#fff;border:none;border-radius:12px;padding:14px;color:#3c4043;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M24 4C13 4 4 13 4 24s9 20 20 20 20-9 20-20S35 4 24 4z"/><path fill="#EA4335" d="M24 4c-5.5 0-10.5 2.2-14.1 5.9L24 24l14.1-14.1C34.5 6.2 29.5 4 24 4z"/><path fill="#FBBC04" d="M4 24c0 5.5 2.2 10.5 5.9 14.1L24 24 9.9 9.9C6.2 13.5 4 18.5 4 24z"/><path fill="#34A853" d="M24 44c5.5 0 10.5-2.2 14.1-5.9L24 24 9.9 38.1C13.5 41.8 18.5 44 24 44z"/><path fill="#fff" d="M24 14c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10zm0 16c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6z"/></svg>
-        Iniciar no Google Maps
+        <span id="maps-label">Iniciar no Google Maps</span>
       </button>
     </div>
   </div>
@@ -2482,6 +2487,7 @@ function abrirFinalizarDia() {
 let rotaDeHojeClientes = [];
 let periodoRota = 'hoje';        // 'hoje' | 'proximos' | 'atrasados'
 let ordemRota = 'data';          // 'data' (urgência) | 'proximidade' (GPS)
+let _rotaSelecionados = new Set(); // ids dos clientes marcados para rota personalizada
 let _rotaClientesGPS = [];       // clientes com GPS + histórico (cache da abertura)
 let _rotaPos = null;             // posição do representante {lat, lng} ou null
 
@@ -2521,6 +2527,7 @@ function atualizarSeletorPeriodo() {
 
 function trocarPeriodoRota(periodo) {
   periodoRota = periodo;
+  _rotaSelecionados.clear(); // lista muda de clientes — zera a seleção
   atualizarSeletorPeriodo();
   renderizarRotaPeriodo();
 }
@@ -2561,6 +2568,7 @@ function renderizarRotaPeriodo() {
   if (lista.length === 0) {
     document.getElementById('rota-hoje-resumo').style.display = 'none';
     document.getElementById('rota-hoje-acoes').style.display = 'none';
+    document.getElementById('rota-hint-personalizada').style.display = 'none';
     document.getElementById('rota-hoje-lista').innerHTML = mensagemVaziaPeriodo(periodoRota);
     document.getElementById('rota-hoje-sub').textContent = subtituloPeriodo(periodoRota);
     rotaDeHojeClientes = [];
@@ -2576,6 +2584,7 @@ function abrirRotaDeHoje() {
   _rotaPos = null;
   periodoRota = 'hoje';
   ordemRota = 'data';
+  _rotaSelecionados.clear();
   atualizarSeletorPeriodo();
   atualizarSeletorOrdem();
 
@@ -2769,6 +2778,7 @@ function montarRota(clientes, latRep, lngRep) {
     const diff = getDiffDiasCliente(c);
     const urg = getUrgenciaCor(diff !== null ? diff : -999);
     const urgLabel = diff === null ? 'Esquecido' : getUrgenciaLabel(diff);
+    const sel = _rotaSelecionados.has(c.id);
     let distStr = '';
     if (latRep !== null && i === 0) {
       const d = calcularDistancia(latRep, lngRep, parseFloat(c.lat), parseFloat(c.lng));
@@ -2790,25 +2800,54 @@ function montarRota(clientes, latRep, lngRep) {
             ${distStr ? `<span style="font-size:10px;color:${urg.textColor};opacity:.5;">📍 ${distStr}</span>` : ''}
           </div>
         </div>
-        <div style="color:${urg.textColor};opacity:.4;">›</div>
+        <button onclick="event.stopPropagation();toggleSelecaoRota('${c.id}')" aria-label="Selecionar ${c.nome} para a rota" style="width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;${sel ? 'background:var(--verde);border:1.5px solid var(--verde);' : `background:transparent;border:2px solid ${urg.textColor};opacity:.55;`}">
+          ${sel ? '<span style="color:#04231A;font-size:15px;font-weight:800;line-height:1;">✓</span>' : ''}
+        </button>
       </div>`;
   }).join('');
 
+  document.getElementById('rota-hint-personalizada').style.display = 'block';
   document.getElementById('rota-hoje-acoes').style.display = 'flex';
+  atualizarLabelsRota();
+}
+
+function toggleSelecaoRota(id) {
+  if (_rotaSelecionados.has(id)) _rotaSelecionados.delete(id);
+  else _rotaSelecionados.add(id);
+  renderizarRotaPeriodo(); // redesenha a lista com os checkboxes atualizados
+}
+
+function atualizarLabelsRota() {
+  const n = _rotaSelecionados.size;
+  const suf = n > 0 ? ` (${n})` : '';
+  const w = document.getElementById('waze-label'); if (w) w.textContent = 'Iniciar no Waze' + suf;
+  const m = document.getElementById('maps-label'); if (m) m.textContent = 'Iniciar no Google Maps' + suf;
+}
+
+// Clientes que vão para o app de navegação: marcados (reordenados por proximidade) ou a rota completa
+function _rotaClientesParaNavegar() {
+  if (_rotaSelecionados.size > 0) {
+    const sel = rotaDeHojeClientes.filter(c => _rotaSelecionados.has(c.id));
+    if (_rotaPos && sel.length > 1) return _nearestNeighbor(sel, _rotaPos.lat, _rotaPos.lng);
+    return sel;
+  }
+  return rotaDeHojeClientes;
 }
 
 function iniciarRotaNoWaze() {
-  if (rotaDeHojeClientes.length === 0) return;
-  // Waze abre destino por destino — abre o primeiro
-  const primeiro = rotaDeHojeClientes[0];
+  const lista = _rotaClientesParaNavegar();
+  if (lista.length === 0) return;
+  // Waze abre destino por destino — abre o primeiro (mais próximo)
+  const primeiro = lista[0];
   window.open(`https://waze.com/ul?ll=${primeiro.lat},${primeiro.lng}&navigate=yes`, '_blank');
   fecharModal('modal-rota-hoje');
 }
 
 function iniciarRotaNoGoogleMaps() {
-  if (rotaDeHojeClientes.length === 0) return;
-  const destino = rotaDeHojeClientes[rotaDeHojeClientes.length - 1];
-  const waypoints = rotaDeHojeClientes.slice(0, -1).map(c => `${c.lat},${c.lng}`).join('|');
+  const lista = _rotaClientesParaNavegar();
+  if (lista.length === 0) return;
+  const destino = lista[lista.length - 1];
+  const waypoints = lista.slice(0, -1).map(c => `${c.lat},${c.lng}`).join('|');
   let url = `https://www.google.com/maps/dir/?api=1&destination=${destino.lat},${destino.lng}&travelmode=driving`;
   if (waypoints) url += `&waypoints=${encodeURIComponent(waypoints)}`;
   window.open(url, '_blank');
@@ -4233,7 +4272,9 @@ function salvarContato() {
     editandoContatoIdx = -1;
     toast(motivoSelecionado === 'fechou_pedido' ? '✅ Pedido atualizado!' : 'Contato atualizado!');
   } else {
-    // Novo registro
+    // Novo registro — a visita "zera o relógio": o motivo passa a ditar a próxima
+    // data de retorno. Removemos qualquer data manual antiga que ainda sobrescreveria.
+    delete clientes[idx].dataRetornoCustom;
     clientes[idx].historico.unshift(contato);
     toast(motivoSelecionado === 'fechou_pedido' ? '🎉 Pedido registrado!' : 'Contato registrado!');
   }

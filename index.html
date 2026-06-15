@@ -3871,7 +3871,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
   if (!cliente.historico || cliente.historico.length === 0) {
     historicoCont.innerHTML = `<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-titulo">Sem registros ainda</div><div class="empty-desc">Registre uma visita ou contato para começar.</div></div>`;
   } else {
-    historicoCont.innerHTML = cliente.historico.map(h => {
+    historicoCont.innerHTML = cliente.historico.map((h, idx) => {
       const pedidoInfo = h.motivo === 'fechou_pedido' && h.pedidos && h.pedidos.length >= 1
         ? h.pedidos.map(p => `
            <div style="display:inline-flex;align-items:center;gap:6px;margin-top:4px;margin-right:6px;background:rgba(0,200,150,.08);border:1px solid rgba(0,200,150,.2);border-radius:8px;padding:4px 10px;">
@@ -3888,12 +3888,15 @@ function abrirDetalhe(clienteId, telaOrigem) {
            </div>`
         : '');
       return `
-        <div class="historico-item" style="cursor:pointer;" onclick="editarContato(${cliente.historico.indexOf(h)})">
+        <div class="historico-item" style="cursor:pointer;" onclick="editarContato(${idx})">
           <div class="historico-dot">${h.tipo === 'visita' ? '📍' : '💬'}</div>
           <div class="historico-info">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;gap:10px;">
               <div class="historico-tipo">${h.tipo === 'visita' ? 'Visita presencial' : 'Contato WhatsApp'}</div>
-              <span style="font-size:11px;color:var(--verde);font-weight:600;">✏️ Editar</span>
+              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <span style="font-size:11px;color:var(--verde);font-weight:600;">✏️ Editar</span>
+                <button onclick="event.stopPropagation();excluirHistorico(${idx})" title="Excluir este registro" style="background:rgba(255,77,106,.12);border:1px solid rgba(255,77,106,.35);border-radius:7px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#FF4D6A;font-size:13px;cursor:pointer;line-height:1;padding:0;">🗑️</button>
+              </div>
             </div>
             <div class="historico-motivo">${MOTIVOS_BASE[h.motivo]?.label || h.motivo}${h.obs ? ' · '+h.obs : ''}</div>
             ${pedidoInfo}
@@ -3902,6 +3905,32 @@ function abrirDetalhe(clienteId, telaOrigem) {
         </div>`;
     }).join('');
   }
+
+  // Sempre abre o detalhe no topo, mostrando o nome do cliente
+  requestAnimationFrame(() => {
+    window.scrollTo(0, 0);
+    const dc = document.querySelector('#tela-detalhe .detalhe-content');
+    if (dc) dc.scrollTop = 0;
+  });
+}
+
+function excluirHistorico(idx) {
+  const clientes = getClientes();
+  const i = clientes.findIndex(c => c.id === clienteAtualId);
+  if (i === -1) return;
+  const hist = clientes[i].historico || [];
+  const reg = hist[idx];
+  if (!reg) return;
+
+  const tipoTxt = reg.tipo === 'visita' ? 'Visita presencial' : 'Contato WhatsApp';
+  const motivoTxt = MOTIVOS_BASE[reg.motivo]?.label || reg.motivo;
+  if (!confirm(`Excluir este registro do histórico?\n\n${tipoTxt} · ${motivoTxt}\n${formatarData(reg.data)}\n\nEssa ação não pode ser desfeita.`)) return;
+
+  hist.splice(idx, 1);
+  clientes[i].historico = hist;
+  salvarClientes(clientes);
+  toast('🗑️ Registro excluído');
+  abrirDetalhe(clienteAtualId, telaAnteriorDetalhe); // re-renderiza com o histórico atualizado
 }
 
 function abrirWhatsAppOuMenu() {

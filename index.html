@@ -566,6 +566,27 @@
       <div style="color:#5C8FCF;font-size:20px;">›</div>
     </button>
 
+    <!-- BLOCO ARQUIVO (fechados / inadimplentes) -->
+    <div style="background:linear-gradient(135deg,#1c1714,#262019);border:1.5px solid rgba(140,140,150,.22);border-radius:14px;padding:16px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <div style="width:40px;height:40px;background:rgba(150,150,160,.14);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🗄️</div>
+        <div style="text-align:left;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Arquivo</div>
+          <div style="font-size:11px;color:var(--texto2);">Clientes que saíram da base ativa</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <button onclick="abrirArquivo('fechado')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px 14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:11px;color:var(--texto2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🔒 Fechados</span>
+          <span style="font-size:24px;font-weight:800;color:var(--texto);font-family:'Syne',sans-serif;line-height:1;" id="num-fechados">0</span>
+        </button>
+        <button onclick="abrirArquivo('inadimplente')" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:12px 14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:11px;color:#FCA5A5;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">⚠️ Inadimplentes</span>
+          <span style="font-size:24px;font-weight:800;color:#FCA5A5;font-family:'Syne',sans-serif;line-height:1;" id="num-inadimplentes">0</span>
+        </button>
+      </div>
+    </div>
+
     <div id="banner-esquecidos" class="esquecidos-banner" onclick="irPara('esquecidos')" style="display:none">
       <div class="esquecidos-banner-titulo">👻 Clientes esquecidos</div>
       <div class="esquecidos-banner-desc" id="banner-esquecidos-desc">Você tem clientes sem contato há muito tempo. Toque para ver.</div>
@@ -1432,6 +1453,24 @@
   </div>
 </div>
 
+<!-- MODAL ARQUIVO -->
+<div class="modal-overlay" id="modal-arquivo">
+  <div class="modal-box" style="max-height:85vh;overflow-y:auto;padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-titulo" style="margin-bottom:0;">🗄️ Arquivo</div>
+      <button onclick="fecharModal('modal-arquivo')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div class="modal-sub">Clientes fora da base ativa. Toque em Reativar para trazer de volta.</div>
+
+    <div class="rota-periodo-seletor">
+      <button class="rota-periodo-btn ativo" data-arquivo="fechado" onclick="trocarAbaArquivo('fechado')">🔒 Fechados</button>
+      <button class="rota-periodo-btn" data-arquivo="inadimplente" onclick="trocarAbaArquivo('inadimplente')">⚠️ Inadimplentes</button>
+    </div>
+
+    <div id="arquivo-lista"></div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ===== ESTADO =====
@@ -1457,6 +1496,88 @@ function getData(k) { try { return JSON.parse(localStorage.getItem(k)) || null; 
 function setData(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
 function getUsuarios() { return getData('cv_usuarios') || {}; }
 function getClientes() { return usuarioAtual ? (getData('cv_clientes_' + usuarioAtual.email) || []) : []; }
+// Base ATIVA = clientes que não estão no arquivo (fechados/inadimplentes saem daqui)
+function getClientesAtivos() { return getClientes().filter(c => !c.statusArquivo); }
+function getClientesArquivados(tipo) { return getClientes().filter(c => c.statusArquivo && (!tipo || c.statusArquivo === tipo)); }
+
+// ===== ARQUIVO (fechados / inadimplentes) =====
+let abaArquivo = 'fechado';
+
+// Move pro arquivo, uma única vez, os clientes que já estão fechados/inadimplentes hoje
+function migrarArquivo() {
+  if (!usuarioAtual) return;
+  const flagKey = 'cv_arqmig_' + usuarioAtual.email;
+  if (getData(flagKey)) return;
+  const clientes = getClientes();
+  let mudou = false;
+  clientes.forEach(c => {
+    if (c.statusArquivo) return;
+    const ultimo = (c.historico || [])[0];
+    if (ultimo && (ultimo.motivo === 'fechado' || ultimo.motivo === 'inadimplente')) {
+      c.statusArquivo = ultimo.motivo;
+      c.arquivadoEm = ultimo.data;
+      mudou = true;
+    }
+  });
+  if (mudou) salvarClientes(clientes);
+  setData(flagKey, true);
+}
+
+function abrirArquivo(tipo) {
+  abaArquivo = tipo || 'fechado';
+  atualizarAbaArquivo();
+  renderizarArquivo();
+  document.getElementById('modal-arquivo').classList.add('aberto');
+}
+
+function atualizarAbaArquivo() {
+  document.querySelectorAll('#modal-arquivo .rota-periodo-btn').forEach(b => {
+    b.classList.toggle('ativo', b.dataset.arquivo === abaArquivo);
+  });
+}
+
+function trocarAbaArquivo(tipo) {
+  abaArquivo = tipo;
+  atualizarAbaArquivo();
+  renderizarArquivo();
+}
+
+function renderizarArquivo() {
+  const lista = getClientesArquivados(abaArquivo);
+  const cont = document.getElementById('arquivo-lista');
+  if (lista.length === 0) {
+    const m = abaArquivo === 'fechado'
+      ? { emoji:'🔒', t:'Nenhum cliente fechado', d:'Clientes marcados como "Fechado" no resultado da visita aparecem aqui.' }
+      : { emoji:'⚠️', t:'Nenhum inadimplente', d:'Clientes marcados como "Inadimplente" no resultado da visita aparecem aqui.' };
+    cont.innerHTML = `<div class="empty-state" style="padding:32px 16px;"><div class="empty-icon">${m.emoji}</div><div class="empty-titulo">${m.t}</div><div class="empty-desc">${m.d}</div></div>`;
+    return;
+  }
+  const cor = abaArquivo === 'inadimplente' ? '#FCA5A5' : 'var(--texto2)';
+  const rotulo = abaArquivo === 'inadimplente' ? '⚠️ Inadimplente' : '🔒 Fechado';
+  cont.innerHTML = lista.map(c => `
+    <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;margin-bottom:8px;">
+      <div style="flex:1;min-width:0;cursor:pointer;" onclick="fecharModal('modal-arquivo');abrirDetalhe('${c.id}','dashboard')">
+        <div style="font-weight:700;font-size:15px;color:var(--texto);">${c.nome}</div>
+        <div style="font-size:12px;color:var(--texto2);">${c.loja}${c.cidade ? ' · ' + c.cidade : ''}</div>
+        <div style="font-size:11px;color:${cor};margin-top:3px;">${rotulo}${c.arquivadoEm ? ' em ' + formatarData(c.arquivadoEm) : ''}</div>
+      </div>
+      <button onclick="reativarCliente('${c.id}')" title="Voltar para a base ativa" style="background:rgba(0,214,143,.15);border:1px solid rgba(0,214,143,.4);border-radius:10px;padding:9px 12px;color:var(--verde);font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:5px;">↩️ Reativar</button>
+    </div>`).join('');
+}
+
+function reativarCliente(id) {
+  const clientes = getClientes();
+  const idx = clientes.findIndex(c => c.id === id);
+  if (idx === -1) return;
+  const nome = clientes[idx].nome;
+  if (!confirm(`Reativar ${nome}?\n\nO cliente volta para a base ativa com todo o histórico preservado.`)) return;
+  delete clientes[idx].statusArquivo;
+  delete clientes[idx].arquivadoEm;
+  salvarClientes(clientes);
+  toast(`↩️ ${nome} reativado!`);
+  renderizarArquivo();
+  atualizarDashboard();
+}
 function salvarClientes(c) { setData('cv_clientes_' + usuarioAtual.email, c); }
 function getConfig() {
   const def = { estoque_alto:21, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguarda_colecao:60, fechou_pedido:45, comprou_concorrente:30, inadimplente:15, fechado:60, nao_vai_comprar:90, dias_esquecidos:60, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''] };
@@ -1748,7 +1869,7 @@ function verClienteMapa() {
 }
 
 function renderizarMapa() {
-  const clientes = getClientes();
+  const clientes = getClientesAtivos();
   const comGPS = clientes.filter(c => c.lat && c.lng);
 
   document.getElementById('mapa-contador').textContent = `${comGPS.length} cliente${comGPS.length !== 1 ? 's' : ''} no mapa`;
@@ -2320,7 +2441,8 @@ function atualizarDashboard() {
   const subEl = document.querySelector('.saudacao-sub');
   if (subEl) subEl.textContent = saud;
   document.getElementById('dash-nome').textContent = usuarioAtual.nome.split(' ')[0];
-  const clientes = getClientes();
+  migrarArquivo();
+  const clientes = getClientesAtivos();
   const cfg = getConfig();
   document.getElementById('num-total').textContent = clientes.length;
 
@@ -2374,6 +2496,8 @@ function atualizarDashboard() {
   document.getElementById('num-urgentes').textContent = urgentes.length;
   document.getElementById('num-essa-semana').textContent = semana.length;
   document.getElementById('num-esquecidos').textContent = esquecidos.length;
+  const _elF = document.getElementById('num-fechados'); if (_elF) _elF.textContent = getClientesArquivados('fechado').length;
+  const _elI = document.getElementById('num-inadimplentes'); if (_elI) _elI.textContent = getClientesArquivados('inadimplente').length;
 
   // Ordena do mais urgente para o menos urgente
   urgentes.sort((a, b) => a.diffDias - b.diffDias);
@@ -2587,7 +2711,7 @@ function renderizarRotaPeriodo() {
 }
 
 function abrirRotaDeHoje() {
-  const clientes = getClientes();
+  const clientes = getClientesAtivos();
   const comGPS = clientes.filter(c => c.lat && c.lng && ((c.historico && c.historico.length > 0) || c.dataRetornoCustom));
   _rotaClientesGPS = comGPS;
   _rotaPos = null;
@@ -3544,7 +3668,7 @@ function valorParaFloat(str) {
 
 // ===== LISTA FILTRADA =====
 function abrirFiltrado(tipo) {
-  const clientes = getClientes();
+  const clientes = getClientesAtivos();
   const hoje = new Date();
   let titulo, sub, lista;
 
@@ -3635,7 +3759,7 @@ function copiarTexto(txt) {
 
 // ===== CLIENTES =====
 function renderizarClientes(filtro = '') {
-  const clientes = getClientes();
+  const clientes = getClientesAtivos();
   const lista = document.getElementById('lista-clientes');
   const filtrados = (filtro
     ? clientes.filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()) || c.loja.toLowerCase().includes(filtro.toLowerCase()))
@@ -3715,7 +3839,7 @@ function filtrarClientes() { renderizarClientes(document.getElementById('busca-c
 
 // ===== ESQUECIDOS =====
 function renderizarEsquecidos() {
-  const clientes = getClientes();
+  const clientes = getClientesAtivos();
   const cfg = getConfig();
   const hoje = new Date();
   document.getElementById('label-dias-esquecidos').textContent = cfg.dias_esquecidos + ' dias';
@@ -4303,6 +4427,13 @@ function salvarContato() {
     delete clientes[idx].dataRetornoCustom;
     clientes[idx].historico.unshift(contato);
     toast(motivoSelecionado === 'fechou_pedido' ? '🎉 Pedido registrado!' : 'Contato registrado!');
+  }
+
+  // Auto-arquiva: status atual virou Fechado/Inadimplente → sai da base ativa
+  const _motivoAtual = clientes[idx].historico[0] && clientes[idx].historico[0].motivo;
+  if (_motivoAtual === 'fechado' || _motivoAtual === 'inadimplente') {
+    clientes[idx].statusArquivo = _motivoAtual;
+    clientes[idx].arquivadoEm = clientes[idx].historico[0].data;
   }
 
   salvarClientes(clientes);

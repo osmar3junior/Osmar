@@ -423,6 +423,10 @@
   .hotel-resultado-badge { display:inline-block; font-size:10px; font-weight:700; color:#7DD3FC; background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.25); border-radius:8px; padding:2px 8px; margin-top:4px; }
   .hotel-busca-spinner { text-align:center; padding:16px; color:var(--texto2); font-size:13px; }
   .hotel-busca-vazio { text-align:center; padding:16px; color:var(--texto3); font-size:13px; }
+  .cidade-sugestao-item { padding:11px 14px; font-size:14px; color:var(--texto); cursor:pointer; border-bottom:1px solid var(--borda); display:flex; align-items:center; gap:8px; }
+  .cidade-sugestao-item:last-child { border-bottom:none; }
+  .cidade-sugestao-item:active { background:rgba(0,214,143,.08); }
+  .cidade-sugestao-uf { font-size:11px; font-weight:700; color:var(--verde); background:rgba(0,214,143,.1); border-radius:6px; padding:2px 7px; flex-shrink:0; }
 
   .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--bg3); border:1px solid var(--verde); color:var(--verde); padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; opacity:0; transition:opacity .3s,transform .3s; z-index:300; white-space:nowrap; }
   .toast.visivel { opacity:1; transform:translateX(-50%) translateY(0); }
@@ -1560,10 +1564,22 @@
     <!-- BUSCA ONLINE DE HOTEL -->
     <div class="hotel-busca-wrap" id="hotel-busca-wrap">
       <div class="hotel-busca-titulo">🔎 Buscar hotel para cadastrar</div>
-      <div style="display:flex;gap:8px;margin-bottom:8px;">
-        <input type="text" id="hotel-busca-cidade" class="campo-input" placeholder="Cidade..." style="flex:1;" oninput="agendarBuscaHotel()">
-        <input type="text" id="hotel-busca-nome" class="campo-input" placeholder="Nome do hotel..." style="flex:1.6;" oninput="agendarBuscaHotel()">
+
+      <!-- Campo cidade com autocomplete -->
+      <div style="position:relative;margin-bottom:8px;">
+        <input type="text" id="hotel-busca-cidade" class="campo-input" placeholder="Cidade..." autocomplete="off" oninput="agendarSugestaoCidade()" onblur="setTimeout(()=>fecharSugestoesCidade(),200)">
+        <div id="cidade-sugestoes" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--bg2);border:1px solid var(--verde);border-radius:10px;z-index:500;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.5);"></div>
       </div>
+
+      <!-- Campo nome com dica -->
+      <div style="margin-bottom:8px;">
+        <input type="text" id="hotel-busca-nome" class="campo-input" placeholder="Nome do hotel..." autocomplete="off" oninput="agendarBuscaHotel()">
+        <div style="margin-top:6px;display:flex;align-items:flex-start;gap:6px;background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.2);border-radius:8px;padding:8px 10px;">
+          <span style="font-size:14px;flex-shrink:0;">💡</span>
+          <span style="font-size:11.5px;color:#7DD3FC;line-height:1.5;">Não conhece nenhum hotel na cidade? Digite só <strong>hotel</strong> e veja o que tem disponível na região.</span>
+        </div>
+      </div>
+
       <div id="hotel-busca-resultados"></div>
       <button onclick="abrirCadEstrada()" style="width:100%;margin-top:4px;background:transparent;border:1.5px dashed rgba(56,189,248,.4);border-radius:12px;padding:11px;color:var(--texto3);font-family:'Syne',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">+ Cadastrar manualmente</button>
     </div>
@@ -1819,6 +1835,7 @@ function abrirNaEstrada() {
   document.getElementById('hotel-busca-cidade').value = '';
   document.getElementById('hotel-busca-nome').value = '';
   document.getElementById('hotel-busca-resultados').innerHTML = '';
+  fecharSugestoesCidade();
   atualizarAbaEstrada();
   renderizarEstrada();
   document.getElementById('modal-na-estrada').classList.add('aberto');
@@ -1832,6 +1849,68 @@ function atualizarAbaEstrada() {
   addBtn.textContent = '+ Adicionar posto';
 }
 function trocarAbaEstrada(t) { abaEstrada = t; atualizarAbaEstrada(); renderizarEstrada(); }
+
+const UF_MAP = {
+  'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA','Ceará':'CE',
+  'Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO','Maranhão':'MA',
+  'Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG','Pará':'PA',
+  'Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI','Rio de Janeiro':'RJ',
+  'Rio Grande do Norte':'RN','Rio Grande do Sul':'RS','Rondônia':'RO','Roraima':'RR',
+  'Santa Catarina':'SC','São Paulo':'SP','Sergipe':'SE','Tocantins':'TO'
+};
+
+let _timerCidade = null;
+function agendarSugestaoCidade() {
+  clearTimeout(_timerCidade);
+  const v = document.getElementById('hotel-busca-cidade').value.trim();
+  if (v.length < 2) { fecharSugestoesCidade(); return; }
+  _timerCidade = setTimeout(() => buscarCidades(v), 400);
+}
+
+async function buscarCidades(termo) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(termo)}&format=json&addressdetails=1&limit=6&accept-language=pt-BR&countrycodes=br&featuretype=city`;
+    const resp = await fetch(url);
+    const dados = await resp.json();
+    const cidades = dados.filter(d => ['city','town','village','municipality','administrative'].includes(d.type) || d.class === 'place' || d.class === 'boundary');
+    const vistos = new Set();
+    const lista = [];
+    for (const d of cidades) {
+      const addr = d.address || {};
+      const nome = addr.city || addr.town || addr.village || addr.municipality || d.display_name.split(',')[0];
+      const estado = addr.state || '';
+      const uf = UF_MAP[estado] || estado.substring(0,2).toUpperCase();
+      const chave = nome + uf;
+      if (!vistos.has(chave)) { vistos.add(chave); lista.push({ nome, uf }); }
+      if (lista.length >= 5) break;
+    }
+    mostrarSugestoesCidade(lista);
+  } catch(e) { fecharSugestoesCidade(); }
+}
+
+function mostrarSugestoesCidade(lista) {
+  const box = document.getElementById('cidade-sugestoes');
+  if (!lista.length) { fecharSugestoesCidade(); return; }
+  box.innerHTML = lista.map(c =>
+    `<div class="cidade-sugestao-item" onmousedown="selecionarCidade('${c.nome.replace(/'/g,"\\'")}','${c.uf}')">
+       <span style="flex:1;">📍 ${c.nome}</span>
+       <span class="cidade-sugestao-uf">${c.uf}</span>
+     </div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+function selecionarCidade(nome, uf) {
+  const campo = document.getElementById('hotel-busca-cidade');
+  campo.value = `${nome} - ${uf}`;
+  fecharSugestoesCidade();
+  agendarBuscaHotel();
+}
+
+function fecharSugestoesCidade() {
+  const box = document.getElementById('cidade-sugestoes');
+  if (box) box.style.display = 'none';
+}
 
 let _timerBuscaHotel = null;
 function agendarBuscaHotel() {

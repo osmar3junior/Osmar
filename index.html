@@ -1922,6 +1922,40 @@ function agendarBuscaHotel() {
   _timerBuscaHotel = setTimeout(() => buscarHotelOnline(cidade, nome), 800);
 }
 
+function _extrairDadosHotel(d) {
+  const addr = d.address || {};
+  const nomePOI   = d.name || addr.hotel || addr.tourism || d.display_name.split(',')[0];
+  const cidadeR   = addr.city || addr.town || addr.village || addr.municipality || '';
+  const estadoR   = addr.state || '';
+  const rua       = [addr.road, addr.house_number].filter(Boolean).join(', ');
+  const bairro    = addr.suburb || addr.neighbourhood || '';
+  const enderecoR = [rua, bairro].filter(Boolean).join(' — ') || d.display_name.split(',').slice(1,3).join(',').trim();
+  return { nomePOI, cidadeR, estadoR, enderecoR };
+}
+
+function _cardResultadoHotel(i, nomePOI, cidadeR, estadoR, enderecoR, telefone) {
+  const busca = encodeURIComponent(`${nomePOI} ${cidadeR}`);
+  const telChip = telefone
+    ? `<span style="font-size:11px;color:var(--verde);background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.2);border-radius:6px;padding:2px 8px;">📞 ${telefone}</span>`
+    : `<span id="tel-card-${i}" style="font-size:11px;color:var(--texto3);">📞 buscando...</span>`;
+  return `
+    <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;margin-bottom:8px;">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+        <span style="font-size:20px;flex-shrink:0;">🛏️</span>
+        <div style="flex:1;min-width:0;">
+          <div class="hotel-resultado-nome">${nomePOI}</div>
+          <div class="hotel-resultado-end">${enderecoR || '—'}${cidadeR ? '<br>' + cidadeR + (estadoR ? ' · ' + estadoR : '') : ''}</div>
+          <div style="margin-top:5px;" id="tel-wrap-${i}">${telChip}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button onclick="event.stopPropagation();abrirExterno('https://www.trivago.com.br/?query=${busca}')" style="flex:1;background:#003580;border:none;border-radius:9px;padding:8px 4px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">🔵 Trivago</button>
+        <button onclick="event.stopPropagation();abrirExterno('https://www.tripadvisor.com.br/Search?q=${busca}')" style="flex:1;background:#34E0A1;border:none;border-radius:9px;padding:8px 4px;color:#000;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">🟢 TripAdvisor</button>
+        <button onclick="selecionarHotelBusca(${i})" style="flex:2;background:linear-gradient(135deg,#7DD3FC,#38BDF8);border:none;border-radius:9px;padding:8px 10px;color:#000;font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">✅ Pré-cadastrar</button>
+      </div>
+    </div>`;
+}
+
 async function buscarHotelOnline(cidade, nome) {
   const res = document.getElementById('hotel-busca-resultados');
   const q = [nome, cidade].filter(Boolean).join(' ');
@@ -1930,13 +1964,11 @@ async function buscarHotelOnline(cidade, nome) {
     const resp = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
     const dados = await resp.json();
 
-    // Filtra resultados mais relevantes: hotéis, pousadas, albergues ou qualquer POI com nome
     const filtrados = dados.filter(d =>
       d.type === 'hotel' || d.type === 'motel' || d.type === 'hostel' || d.type === 'guest_house' ||
       d.class === 'tourism' || d.class === 'building' ||
       (d.display_name || '').toLowerCase().includes((nome || cidade || '').toLowerCase())
     ).slice(0, 5);
-
     const lista = filtrados.length ? filtrados : dados.slice(0, 5);
 
     if (!lista.length) {
@@ -1944,59 +1976,67 @@ async function buscarHotelOnline(cidade, nome) {
       return;
     }
 
+    // Renderiza imediatamente com "buscando..." no telefone
     res.innerHTML = lista.map((d, i) => {
-      const addr = d.address || {};
-      const nomePOI = d.name || addr.hotel || addr.tourism || d.display_name.split(',')[0];
-      const cidadeR = addr.city || addr.town || addr.village || addr.municipality || '';
-      const rua = [addr.road, addr.house_number].filter(Boolean).join(', ');
-      const bairro = addr.suburb || addr.neighbourhood || '';
-      const enderecoR = [rua, bairro].filter(Boolean).join(' — ') || d.display_name.split(',').slice(1, 3).join(',').trim();
-      const estadoR = addr.state || '';
-      return `
-        <div class="hotel-resultado" onclick="selecionarHotelBusca(${i})" data-idx="${i}">
-          <div class="hotel-resultado-icon">🛏️</div>
-          <div style="flex:1;min-width:0;">
-            <div class="hotel-resultado-nome">${nomePOI}</div>
-            <div class="hotel-resultado-end">${enderecoR || '—'}${cidadeR ? '<br>' + cidadeR + (estadoR ? ' · ' + estadoR : '') : ''}</div>
-            <span class="hotel-resultado-badge">Toque para pré-cadastrar</span>
-          </div>
-        </div>`;
+      const { nomePOI, cidadeR, estadoR, enderecoR } = _extrairDadosHotel(d);
+      return _cardResultadoHotel(i, nomePOI, cidadeR, estadoR, enderecoR, null);
     }).join('');
 
-    // Guarda os dados para uso no clique
     window._buscaHotelResultados = lista;
+
+    // Busca telefones em paralelo via Nominatim Details
+    lista.forEach((d, i) => {
+      const osmType = { N:'N', W:'W', R:'R' }[d.osm_type] || d.osm_type;
+      if (!d.osm_id || !osmType) { _atualizarTelCard(i, null); return; }
+      fetch(`https://nominatim.openstreetmap.org/details?osmtype=${osmType}&osmid=${d.osm_id}&format=json`)
+        .then(r => r.json())
+        .then(det => {
+          const tags = det.extratags || {};
+          const tel = tags.phone || tags['contact:phone'] || tags['contact:mobile'] || null;
+          _atualizarTelCard(i, tel);
+          if (tel) lista[i]._telefone = tel;
+        })
+        .catch(() => _atualizarTelCard(i, null));
+    });
 
   } catch(e) {
     res.innerHTML = '<div class="hotel-busca-vazio">Erro na busca. Verifique sua conexão.</div>';
   }
 }
 
+function _atualizarTelCard(i, tel) {
+  const wrap = document.getElementById(`tel-wrap-${i}`);
+  if (!wrap) return;
+  wrap.innerHTML = tel
+    ? `<span style="font-size:11px;color:var(--verde);background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.2);border-radius:6px;padding:2px 8px;">📞 ${tel}</span>`
+    : `<span style="font-size:11px;color:var(--texto3);">📞 não encontrado</span>`;
+}
+
+function abrirExterno(url) {
+  window.open(url, '_blank');
+}
+
 function selecionarHotelBusca(idx) {
   const d = (window._buscaHotelResultados || [])[idx];
   if (!d) return;
-
-  const addr = d.address || {};
-  const nomePOI   = d.name || addr.hotel || addr.tourism || d.display_name.split(',')[0];
-  const cidadeR   = addr.city || addr.town || addr.village || addr.municipality || '';
-  const rua       = [addr.road, addr.house_number].filter(Boolean).join(', ');
-  const bairro    = addr.suburb || addr.neighbourhood || '';
-  const enderecoR = [rua, bairro].filter(Boolean).join(' — ') || '';
-
-  // Fecha o modal Na estrada e abre o formulário pré-preenchido
+  const { nomePOI, cidadeR, enderecoR } = _extrairDadosHotel(d);
   fecharModal('modal-na-estrada');
-  abrirCadHotelPreenchido({ nome: nomePOI, cidade: cidadeR, endereco: enderecoR, lat: d.lat, lng: d.lon });
+  abrirCadHotelPreenchido({ nome: nomePOI, cidade: cidadeR, endereco: enderecoR, lat: d.lat, lng: d.lon, telefone: d._telefone || '' });
 }
 
 function abrirCadHotelPreenchido(dados) {
-  // Reseta o form como se fosse novo
   abrirCadHotel(null);
-  // Sobrescreve com os dados da busca
-  document.getElementById('hot-nome').value    = dados.nome    || '';
-  document.getElementById('hot-cidade').value  = dados.cidade  || '';
-  document.getElementById('hot-endereco').value = dados.endereco || '';
-  document.getElementById('hot-lat').value     = dados.lat     || '';
-  document.getElementById('hot-lng').value     = dados.lng     || '';
-  // Destaca visualmente os campos pré-preenchidos
+  document.getElementById('hot-nome').value     = dados.nome     || '';
+  document.getElementById('hot-cidade').value   = dados.cidade   || '';
+  document.getElementById('hot-endereco').value  = dados.endereco || '';
+  document.getElementById('hot-lat').value      = dados.lat      || '';
+  document.getElementById('hot-lng').value      = dados.lng      || '';
+  if (dados.telefone) {
+    const telEl = document.getElementById('hot-telefone');
+    if (telEl) telEl.value = dados.telefone;
+    const wppEl = document.getElementById('hot-whatsapp');
+    if (wppEl && !wppEl.value) wppEl.value = dados.telefone;
+  }
   ['hot-nome','hot-cidade','hot-endereco'].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.value) { el.style.borderColor = 'var(--verde)'; setTimeout(() => el.style.borderColor = '', 2500); }

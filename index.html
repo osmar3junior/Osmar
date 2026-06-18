@@ -409,6 +409,9 @@
   .nav-item.checkin-btn .nav-item-icon { font-size:22px; }
 
   /* TOAST */
+  .fd-periodo-chip { background:var(--bg3); border:1.5px solid var(--borda); border-radius:20px; padding:7px 14px; font-size:12px; font-weight:600; color:var(--texto2); cursor:pointer; font-family:'DM Sans',sans-serif; transition:all .15s; }
+  .fd-periodo-chip.ativo { background:rgba(0,214,143,.12); border-color:var(--verde); color:var(--verde); }
+
   .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--bg3); border:1px solid var(--verde); color:var(--verde); padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; opacity:0; transition:opacity .3s,transform .3s; z-index:300; white-space:nowrap; }
   .toast.visivel { opacity:1; transform:translateX(-50%) translateY(0); }
 
@@ -799,7 +802,7 @@
   <div class="nav-bottom">
     <button class="nav-item" onclick="irPara('dashboard')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Início</span></button>
     <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon">👥</span><span class="nav-item-label">Clientes</span></button>
-    <button class="nav-item checkin-btn" onclick="adicionarEnderecoCliente()" style="font-size:10px;"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:9px;">Add. Endereço</span></button>
+    <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()" style="font-size:10px;"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:9px;">Add Cliente</span></button>
     <button class="nav-item" onclick="irPara('mapa')"><span class="nav-item-icon">🗺️</span><span class="nav-item-label">Mapa</span></button>
     <button class="nav-item" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
   </div>
@@ -1131,6 +1134,12 @@
       <div class="config-secao-titulo">🏷️ Suas representações (marcas)</div>
       <div class="config-secao-sub" style="margin-bottom:8px;">Cadastre as marcas/empresas que você representa. Elas vão aparecer para você marcar em cada cliente — depois você poderá ver quais representações são mais relevantes na sua carteira.</div>
       <div class="sku-custom-grid" id="marcas-grid"></div>
+    </div>
+
+    <div class="config-secao">
+      <div class="config-secao-titulo">📧 E-mail para relatórios</div>
+      <div class="config-secao-sub">Seu e-mail é preenchido automaticamente ao gerar o relatório do dia. Você ainda pode adicionar um C/C na hora de enviar.</div>
+      <input type="email" class="campo-input" id="cfg-email-rep" placeholder="seu@email.com" style="margin-top:4px;">
     </div>
 
     <button class="btn-primario" onclick="salvarConfig()">Salvar configurações</button>
@@ -1467,6 +1476,33 @@
 
     <div class="secao-titulo" style="margin-top:0;">📋 Resumo do dia</div>
     <div id="fd-lista-zap"></div>
+
+    <!-- RELATÓRIO POR E-MAIL -->
+    <div style="margin-top:20px;border-top:1px solid var(--borda);padding-top:16px;">
+      <div class="secao-titulo" style="margin-bottom:10px;">📧 Enviar relatório por e-mail</div>
+
+      <!-- Chips de período -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;" id="fd-periodo-chips">
+        <button class="fd-periodo-chip ativo" data-periodo="hoje" onclick="selecionarPeriodoRelatorio(this)">Hoje</button>
+        <button class="fd-periodo-chip" data-periodo="3dias" onclick="selecionarPeriodoRelatorio(this)">Últimos 3 dias</button>
+        <button class="fd-periodo-chip" data-periodo="semana" onclick="selecionarPeriodoRelatorio(this)">Esta semana</button>
+        <button class="fd-periodo-chip" data-periodo="mes" onclick="selecionarPeriodoRelatorio(this)">Este mês</button>
+      </div>
+
+      <!-- Para -->
+      <div style="margin-bottom:10px;">
+        <label style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Para</label>
+        <input type="email" id="fd-email-para" class="campo-input" placeholder="seu@email.com">
+      </div>
+
+      <!-- C/C -->
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Com cópia (opcional)</label>
+        <input type="email" id="fd-email-cc" class="campo-input" placeholder="gerente@email.com">
+      </div>
+
+      <button onclick="gerarRelatorioEmail()" style="width:100%;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));color:#04231A;border:none;border-radius:12px;padding:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px var(--verde-glow);">Gerar e-mail</button>
+    </div>
   </div>
 </div>
 
@@ -3048,6 +3084,7 @@ function abrirFinalizarDia() {
   }
 
   document.getElementById('modal-finalizar-dia').classList.add('aberto');
+  preencherEmailRelatorio();
 }
 
 // ===== ROTA DE HOJE =====
@@ -5094,6 +5131,7 @@ function carregarConfig() {
     if (el) el.value = cfg[k] || 30;
   });
   document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 60;
+  document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
   renderizarSkuGrid(cfg);
   (cfg.skusCustom || ['','','']).forEach((v, i) => {
     const el = document.getElementById('sku-custom-' + i);
@@ -5130,8 +5168,92 @@ function salvarConfig() {
   cfg.skus = Array.from(document.querySelectorAll('#sku-grid .sku-chip.ativo')).map(el => el.dataset.sku);
   cfg.skusCustom = [0, 1, 2].map(i => (document.getElementById('sku-custom-' + i)?.value || '').trim());
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
+  cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
   salvarConfigData(cfg);
   toast('Configurações salvas!');
+}
+
+function selecionarPeriodoRelatorio(el) {
+  document.querySelectorAll('.fd-periodo-chip').forEach(c => c.classList.remove('ativo'));
+  el.classList.add('ativo');
+}
+
+function gerarRelatorioEmail() {
+  const para = document.getElementById('fd-email-para').value.trim();
+  if (!para) { toast('Informe o e-mail de destino'); return; }
+
+  const periodo = document.querySelector('.fd-periodo-chip.ativo')?.dataset.periodo || 'hoje';
+  const cc = document.getElementById('fd-email-cc').value.trim();
+  const clientes = getClientes();
+
+  const agora = new Date();
+  const inicioPeriodo = new Date(agora);
+  if (periodo === '3dias') inicioPeriodo.setDate(agora.getDate() - 2);
+  else if (periodo === 'semana') inicioPeriodo.setDate(agora.getDate() - agora.getDay() === 0 ? 6 : agora.getDay() - 1);
+  else if (periodo === 'mes') inicioPeriodo.setDate(1);
+  inicioPeriodo.setHours(0, 0, 0, 0);
+
+  const labels = { hoje: 'Hoje', '3dias': 'Últimos 3 dias', semana: 'Esta semana', mes: 'Este mês' };
+  const formatData = d => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+  let visitas = 0, pedidos = 0, valorTotal = 0;
+  const linhasVendas = [], linhasVisitas = [];
+
+  clientes.forEach(c => {
+    const hist = (c.historico || []).filter(h => new Date(h.data) >= inicioPeriodo);
+    if (!hist.length) return;
+    hist.forEach(h => {
+      if (h.tipo === 'visita') visitas++;
+      if (h.motivo === 'fechou_pedido') {
+        pedidos++;
+        if (h.pedidoValor) valorTotal += h.pedidoValor;
+        const skuInfo = h.pedidoQtd ? ` — ${h.pedidoQtd} ${h.pedidoSku || ''}` : '';
+        const valorInfo = h.pedidoValor ? ` (R$ ${h.pedidoValor.toLocaleString('pt-BR', {minimumFractionDigits:2})})` : '';
+        linhasVendas.push(`• ${c.nome} | ${c.loja || ''}${c.cidade ? ' · ' + c.cidade : ''}${skuInfo}${valorInfo} [${formatData(h.data)}]`);
+      } else if (h.tipo === 'visita') {
+        const motivoLabel = MOTIVOS_BASE[h.motivo]?.label || h.motivo || 'Visita';
+        linhasVisitas.push(`• ${c.nome} | ${c.loja || ''}${c.cidade ? ' · ' + c.cidade : ''} — ${motivoLabel} [${formatData(h.data)}]`);
+      }
+    });
+  });
+
+  const totalFmt = valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  const rep = usuarioAtual?.nome || 'Representante';
+  const assunto = encodeURIComponent(`Relatório de vendas — ${labels[periodo]} — ${rep}`);
+
+  let corpo = `RELATÓRIO DE VENDAS — ${labels[periodo].toUpperCase()}\n`;
+  corpo += `Representante: ${rep}\n`;
+  corpo += `Gerado em: ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}\n`;
+  corpo += `\n──────────────────────────\n`;
+  corpo += `RESUMO\n`;
+  corpo += `Visitas realizadas: ${visitas}\n`;
+  corpo += `Pedidos fechados:   ${pedidos}\n`;
+  corpo += `Total em vendas:    R$ ${totalFmt}\n`;
+
+  if (linhasVendas.length) {
+    corpo += `\n──────────────────────────\n`;
+    corpo += `VENDAS FECHADAS (${linhasVendas.length})\n`;
+    corpo += linhasVendas.join('\n');
+  }
+  if (linhasVisitas.length) {
+    corpo += `\n──────────────────────────\n`;
+    corpo += `OUTRAS VISITAS (${linhasVisitas.length})\n`;
+    corpo += linhasVisitas.join('\n');
+  }
+  corpo += `\n──────────────────────────\nCarteira Viva`;
+
+  let mailto = `mailto:${para}?subject=${assunto}&body=${encodeURIComponent(corpo)}`;
+  if (cc) mailto += `&cc=${encodeURIComponent(cc)}`;
+  window.location.href = mailto;
+}
+
+function preencherEmailRelatorio() {
+  const cfg = getConfig();
+  const campo = document.getElementById('fd-email-para');
+  if (campo && cfg.emailRep) campo.value = cfg.emailRep;
+  document.querySelectorAll('.fd-periodo-chip').forEach((c, i) => c.classList.toggle('ativo', i === 0));
+  const cc = document.getElementById('fd-email-cc');
+  if (cc) cc.value = '';
 }
 
 const SKU_OPCOES = [

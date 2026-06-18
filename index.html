@@ -388,6 +388,11 @@
   .rota-ordem-label { font-size:11px; color:var(--texto2); font-weight:600; white-space:nowrap; }
   .rota-ordem-btn { flex:1; background:var(--bg3); border:1px solid var(--borda); border-radius:10px; padding:9px 4px; color:var(--texto2); font-family:'Syne',sans-serif; font-size:11.5px; font-weight:700; cursor:pointer; transition:background .15s,color .15s,border-color .15s; white-space:nowrap; }
   .rota-ordem-btn.ativo { background:rgba(56,189,248,.16); border-color:#38BDF8; color:#7DD3FC; }
+
+  /* Seletor Sim/Não (cadastro de hotel/posto) */
+  .seletor-simnao { display:flex; gap:6px; background:var(--bg3); border:1px solid var(--borda); border-radius:10px; padding:3px; }
+  .ssn-btn { flex:1; background:transparent; border:none; border-radius:7px; padding:8px 4px; color:var(--texto2); font-family:'Syne',sans-serif; font-size:12px; font-weight:700; cursor:pointer; transition:background .15s,color .15s; }
+  .ssn-btn.ativo { background:var(--verde); color:#04231A; }
   .rota-periodo-btn { flex:1; background:transparent; border:none; border-radius:9px; padding:9px 4px; color:var(--texto2); font-family:'Syne',sans-serif; font-size:11.5px; font-weight:700; cursor:pointer; transition:background .15s,color .15s; white-space:nowrap; }
   .rota-periodo-btn.ativo { background:var(--verde); color:#04231A; box-shadow:0 2px 8px var(--verde-glow); }
 
@@ -564,6 +569,18 @@
         </div>
       </div>
       <div style="color:#5C8FCF;font-size:20px;">›</div>
+    </button>
+
+    <!-- BOTÃO NA ESTRADA -->
+    <button onclick="abrirNaEstrada()" style="width:100%;background:linear-gradient(135deg,#0a2230,#10384a);border:1.5px solid rgba(56,189,248,.35);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(56,189,248,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">📍</div>
+        <div style="text-align:left;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Na estrada</div>
+          <div style="font-size:11px;color:var(--texto2);">Hotéis e postos por cidade</div>
+        </div>
+      </div>
+      <div style="color:#38BDF8;font-size:20px;">›</div>
     </button>
 
     <!-- BLOCO ARQUIVO (fechados / inadimplentes) -->
@@ -1471,6 +1488,150 @@
   </div>
 </div>
 
+<!-- MODAL NA ESTRADA -->
+<div class="modal-overlay" id="modal-na-estrada">
+  <div class="modal-box" style="max-height:85vh;overflow-y:auto;padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-titulo" style="margin-bottom:0;">📍 Na estrada</div>
+      <button onclick="fecharModal('modal-na-estrada')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div class="modal-sub">Seus hotéis e postos de confiança. Filtre pela cidade.</div>
+
+    <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:10px 12px;margin-bottom:12px;">
+      <span style="font-size:15px;">🔍</span>
+      <input type="text" id="estrada-busca" oninput="renderizarEstrada()" placeholder="Filtrar por cidade ou nome..." style="flex:1;background:transparent;border:none;outline:none;color:var(--texto);font-family:'DM Sans',sans-serif;font-size:13px;">
+    </div>
+
+    <div class="rota-periodo-seletor">
+      <button class="rota-periodo-btn ativo" data-estrada="hoteis" onclick="trocarAbaEstrada('hoteis')">🛏️ Hotéis</button>
+      <button class="rota-periodo-btn" data-estrada="postos" onclick="trocarAbaEstrada('postos')">⛽ Postos</button>
+    </div>
+
+    <div id="estrada-lista"></div>
+
+    <button id="estrada-add-btn" onclick="abrirCadEstrada()" style="width:100%;margin-top:12px;background:rgba(56,189,248,.1);border:1.5px dashed rgba(56,189,248,.5);border-radius:12px;padding:13px;color:#7DD3FC;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">+ Adicionar hotel</button>
+  </div>
+</div>
+
+<!-- MODAL CADASTRO HOTEL -->
+<div class="modal-overlay" id="modal-cad-hotel">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-titulo" style="margin-bottom:0;" id="cad-hotel-titulo">🛏️ Adicionar hotel</div>
+      <button onclick="fecharModal('modal-cad-hotel')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <input type="hidden" id="hot-id">
+    <div class="campo-grupo"><label class="campo-label">Nome do hotel *</label><input type="text" class="campo-input" id="hot-nome" placeholder="Ex: Hotel Bali"></div>
+    <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="hot-cidade" placeholder="Cidade"></div>
+    <div class="campo-grupo">
+      <label class="campo-label">Endereço</label>
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <input type="text" class="campo-input" id="hot-endereco" placeholder="Rua, número — bairro" style="flex:1;">
+        <button onclick="usarLocalizacaoLog('hot')" id="hot-gps-btn" title="Usar minha localização" style="background:rgba(0,214,143,.12);border:1px solid rgba(0,214,143,.35);border-radius:10px;padding:11px 12px;color:var(--verde);font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0;">📡 GPS</button>
+      </div>
+      <input type="hidden" id="hot-lat"><input type="hidden" id="hot-lng">
+      <div id="hot-gps-status" style="display:none;margin-top:6px;font-size:12px;"></div>
+    </div>
+    <div class="campo-grupo">
+      <label class="campo-label">Diária</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <div style="font-size:11px;color:#7DD3FC;margin-bottom:4px;">❄️ Com ar</div>
+          <input type="text" inputmode="numeric" class="campo-input" id="hot-preco-ar" placeholder="R$ 0,00" oninput="mascaraMoeda(this)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--texto2);margin-bottom:4px;">Sem ar</div>
+          <input type="text" inputmode="numeric" class="campo-input" id="hot-preco-semar" placeholder="R$ 0,00" oninput="mascaraMoeda(this)">
+        </div>
+      </div>
+    </div>
+    <div class="campo-grupo" style="display:flex;gap:12px;">
+      <div style="flex:1;">
+        <label class="campo-label">☕ Café da manhã</label>
+        <div class="seletor-simnao" id="hot-cafe" data-valor="sim">
+          <button type="button" class="ssn-btn ativo" onclick="setSimNao('hot-cafe','sim')">Sim</button>
+          <button type="button" class="ssn-btn" onclick="setSimNao('hot-cafe','nao')">Não</button>
+        </div>
+      </div>
+      <div style="flex:1;">
+        <label class="campo-label">🅿️ Estacionamento</label>
+        <div class="seletor-simnao" id="hot-estac" data-valor="sim">
+          <button type="button" class="ssn-btn ativo" onclick="setSimNao('hot-estac','sim')">Sim</button>
+          <button type="button" class="ssn-btn" onclick="setSimNao('hot-estac','nao')">Não</button>
+        </div>
+      </div>
+    </div>
+    <div class="campo-grupo">
+      <label class="campo-label">Classificação</label>
+      <div id="hot-estrelas" style="display:flex;gap:6px;">
+        <span onclick="setEstrelas(1)" style="font-size:28px;cursor:pointer;">★</span>
+        <span onclick="setEstrelas(2)" style="font-size:28px;cursor:pointer;">★</span>
+        <span onclick="setEstrelas(3)" style="font-size:28px;cursor:pointer;">★</span>
+        <span onclick="setEstrelas(4)" style="font-size:28px;cursor:pointer;">★</span>
+        <span onclick="setEstrelas(5)" style="font-size:28px;cursor:pointer;">★</span>
+      </div>
+    </div>
+    <div class="campo-grupo"><label class="campo-label">📞 Telefone</label><input type="tel" class="campo-input" id="hot-telefone" placeholder="(00) 0000-0000"></div>
+    <div class="campo-grupo"><label class="campo-label">💬 WhatsApp</label><input type="tel" class="campo-input" id="hot-whatsapp" placeholder="(00) 00000-0000"></div>
+    <button class="btn-primario" style="width:100%;" onclick="salvarHotel()">💾 Salvar hotel</button>
+  </div>
+</div>
+
+<!-- MODAL CADASTRO POSTO -->
+<div class="modal-overlay" id="modal-cad-posto">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-titulo" style="margin-bottom:0;" id="cad-posto-titulo">⛽ Adicionar posto</div>
+      <button onclick="fecharModal('modal-cad-posto')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <input type="hidden" id="pos-id">
+    <div class="campo-grupo"><label class="campo-label">Nome do posto *</label><input type="text" class="campo-input" id="pos-nome" placeholder="Ex: Posto Trevo"></div>
+    <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="pos-cidade" placeholder="Cidade"></div>
+    <div class="campo-grupo">
+      <label class="campo-label">Endereço</label>
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <input type="text" class="campo-input" id="pos-endereco" placeholder="Rua, número — bairro" style="flex:1;">
+        <button onclick="usarLocalizacaoLog('pos')" id="pos-gps-btn" title="Usar minha localização" style="background:rgba(0,214,143,.12);border:1px solid rgba(0,214,143,.35);border-radius:10px;padding:11px 12px;color:var(--verde);font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0;">📡 GPS</button>
+      </div>
+      <input type="hidden" id="pos-lat"><input type="hidden" id="pos-lng">
+      <div id="pos-gps-status" style="display:none;margin-top:6px;font-size:12px;"></div>
+    </div>
+    <div class="campo-grupo">
+      <label class="campo-label">Preço dos combustíveis <span style="color:var(--texto3);font-weight:400;">(opcional)</span></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div><div style="font-size:11px;color:var(--texto2);margin-bottom:4px;">Gasolina</div><input type="text" inputmode="decimal" class="campo-input" id="pos-gasolina" placeholder="0,00"></div>
+        <div><div style="font-size:11px;color:var(--texto2);margin-bottom:4px;">Etanol</div><input type="text" inputmode="decimal" class="campo-input" id="pos-etanol" placeholder="0,00"></div>
+        <div><div style="font-size:11px;color:var(--texto2);margin-bottom:4px;">Diesel</div><input type="text" inputmode="decimal" class="campo-input" id="pos-diesel" placeholder="0,00"></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--texto3);margin-top:6px;">A data do preço é registrada automaticamente.</div>
+    </div>
+    <div class="campo-grupo" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:90px;">
+        <label class="campo-label" style="font-size:11px;">Diesel S10</label>
+        <div class="seletor-simnao" id="pos-diesels10" data-valor="nao">
+          <button type="button" class="ssn-btn" onclick="setSimNao('pos-diesels10','sim')">Sim</button>
+          <button type="button" class="ssn-btn ativo" onclick="setSimNao('pos-diesels10','nao')">Não</button>
+        </div>
+      </div>
+      <div style="flex:1;min-width:90px;">
+        <label class="campo-label" style="font-size:11px;">Aceita cartão</label>
+        <div class="seletor-simnao" id="pos-cartao" data-valor="sim">
+          <button type="button" class="ssn-btn ativo" onclick="setSimNao('pos-cartao','sim')">Sim</button>
+          <button type="button" class="ssn-btn" onclick="setSimNao('pos-cartao','nao')">Não</button>
+        </div>
+      </div>
+      <div style="flex:1;min-width:90px;">
+        <label class="campo-label" style="font-size:11px;">Conveniência</label>
+        <div class="seletor-simnao" id="pos-conv" data-valor="nao">
+          <button type="button" class="ssn-btn" onclick="setSimNao('pos-conv','sim')">Sim</button>
+          <button type="button" class="ssn-btn ativo" onclick="setSimNao('pos-conv','nao')">Não</button>
+        </div>
+      </div>
+    </div>
+    <button class="btn-primario" style="width:100%;" onclick="salvarPosto()">💾 Salvar posto</button>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ===== ESTADO =====
@@ -1578,6 +1739,279 @@ function reativarCliente(id) {
   renderizarArquivo();
   atualizarDashboard();
 }
+
+// ===== NA ESTRADA (hotéis e postos — lista pessoal) =====
+let abaEstrada = 'hoteis';
+let estrelasSel = 0;
+const WPP_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>';
+
+function getLogistica() {
+  if (!usuarioAtual) return { hoteis: [], postos: [] };
+  const d = getData('cv_logistica_' + usuarioAtual.email);
+  return (d && d.hoteis) ? d : { hoteis: [], postos: [] };
+}
+function salvarLogistica(obj) {
+  if (usuarioAtual) setData('cv_logistica_' + usuarioAtual.email, obj);
+}
+
+function abrirNaEstrada() {
+  abaEstrada = 'hoteis';
+  document.getElementById('estrada-busca').value = '';
+  atualizarAbaEstrada();
+  renderizarEstrada();
+  document.getElementById('modal-na-estrada').classList.add('aberto');
+}
+function atualizarAbaEstrada() {
+  document.querySelectorAll('#modal-na-estrada .rota-periodo-btn').forEach(b => b.classList.toggle('ativo', b.dataset.estrada === abaEstrada));
+  document.getElementById('estrada-add-btn').textContent = abaEstrada === 'hoteis' ? '+ Adicionar hotel' : '+ Adicionar posto';
+}
+function trocarAbaEstrada(t) { abaEstrada = t; atualizarAbaEstrada(); renderizarEstrada(); }
+
+function renderizarEstrada() {
+  const log = getLogistica();
+  const termo = (document.getElementById('estrada-busca').value || '').toLowerCase().trim();
+  const cont = document.getElementById('estrada-lista');
+  let itens = abaEstrada === 'hoteis' ? log.hoteis : log.postos;
+  if (termo) itens = itens.filter(i => (i.nome || '').toLowerCase().includes(termo) || (i.cidade || '').toLowerCase().includes(termo));
+  if (itens.length === 0) {
+    const v = abaEstrada === 'hoteis'
+      ? { e:'🛏️', t:'Nenhum hotel ainda', d:'Toque em "Adicionar hotel" para montar sua lista.' }
+      : { e:'⛽', t:'Nenhum posto ainda', d:'Toque em "Adicionar posto" para montar sua lista.' };
+    cont.innerHTML = `<div class="empty-state" style="padding:28px 16px;"><div class="empty-icon">${v.e}</div><div class="empty-titulo">${v.t}</div><div class="empty-desc">${v.d}</div></div>`;
+    return;
+  }
+  cont.innerHTML = (abaEstrada === 'hoteis' ? itens.map(_cardHotel) : itens.map(_cardPosto)).join('');
+}
+
+function _cardHotel(h) {
+  const n = h.estrelas || 0;
+  const estrelas = '★'.repeat(n) + '<span style="color:var(--borda);">' + '★'.repeat(5 - n) + '</span>';
+  const tel = h.telefone ? h.telefone.replace(/\D/g, '') : '';
+  const wpp = h.whatsapp ? h.whatsapp.replace(/\D/g, '') : '';
+  const precos = [];
+  if (h.precoComAr) precos.push(`<span style="font-size:12px;background:rgba(56,189,248,.12);color:#7DD3FC;border-radius:8px;padding:4px 8px;">❄️ Com ar R$ ${h.precoComAr}</span>`);
+  if (h.precoSemAr) precos.push(`<span style="font-size:12px;background:var(--bg2);color:var(--texto2);border-radius:8px;padding:4px 8px;">Sem ar R$ ${h.precoSemAr}</span>`);
+  const chips = [];
+  if (h.cafe) chips.push('<span style="font-size:10.5px;background:rgba(0,214,143,.12);color:var(--verde);border-radius:20px;padding:2px 9px;">☕ Café</span>');
+  if (h.estacionamento) chips.push('<span style="font-size:10.5px;background:rgba(0,214,143,.12);color:var(--verde);border-radius:20px;padding:2px 9px;">🅿️ Estacionamento</span>');
+  return `<div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+      <div style="font-weight:700;font-size:15px;color:var(--texto);">${h.nome}${h.cidade ? `<span style="font-size:12px;color:var(--texto2);font-weight:400;"> · ${h.cidade}</span>` : ''}</div>
+      <div style="color:var(--amarelo);font-size:13px;white-space:nowrap;">${estrelas}</div>
+    </div>
+    ${precos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">${precos.join('')}</div>` : ''}
+    ${chips.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${chips.join('')}</div>` : ''}
+    <div style="display:flex;gap:6px;align-items:center;">
+      ${tel ? `<a href="tel:${tel}" style="text-decoration:none;width:38px;height:38px;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;">📞</a>` : ''}
+      ${wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" style="text-decoration:none;width:38px;height:38px;background:#1C2A1E;border:1px solid #25D366;border-radius:10px;display:flex;align-items:center;justify-content:center;">${WPP_ICON}</a>` : ''}
+      <button onclick="rotaLog('hot','${h.id}')" style="flex:1;background:#33CCFF;border:none;border-radius:10px;padding:10px;color:#000;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🧭 Rota</button>
+      <button onclick="editarLog('hot','${h.id}')" style="width:38px;height:38px;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;color:var(--texto2);font-size:13px;cursor:pointer;">✏️</button>
+      <button onclick="excluirLog('hot','${h.id}')" style="width:38px;height:38px;background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.35);border-radius:10px;color:#FF4D6A;font-size:13px;cursor:pointer;">🗑️</button>
+    </div>
+  </div>`;
+}
+
+function _cardPosto(p) {
+  const precos = [];
+  if (p.gasolina) precos.push(`<span style="font-size:12px;background:var(--bg2);border-radius:8px;padding:4px 8px;">Gasolina <strong>${p.gasolina}</strong></span>`);
+  if (p.etanol) precos.push(`<span style="font-size:12px;background:var(--bg2);border-radius:8px;padding:4px 8px;">Etanol <strong>${p.etanol}</strong></span>`);
+  if (p.diesel) precos.push(`<span style="font-size:12px;background:var(--bg2);border-radius:8px;padding:4px 8px;">Diesel <strong>${p.diesel}</strong></span>`);
+  const chips = [];
+  if (p.dieselS10) chips.push('<span style="font-size:10.5px;background:rgba(0,214,143,.12);color:var(--verde);border-radius:20px;padding:2px 9px;">✓ Diesel S10</span>');
+  if (p.aceitaCartao) chips.push('<span style="font-size:10.5px;background:var(--bg2);color:var(--texto2);border-radius:20px;padding:2px 9px;">💳 Cartão</span>');
+  if (p.conveniencia) chips.push('<span style="font-size:10.5px;background:var(--bg2);color:var(--texto2);border-radius:20px;padding:2px 9px;">🏪 Conveniência</span>');
+  let dataInfo = '';
+  if (precos.length && p.precoData) {
+    const dias = Math.floor((Date.now() - new Date(p.precoData)) / 86400000);
+    if (dias <= 3) dataInfo = `<span style="font-size:10.5px;color:var(--texto3);">🕐 preço de ${dias === 0 ? 'hoje' : dias + ' dia(s) atrás'}</span>`;
+    else dataInfo = `<span style="font-size:10.5px;color:var(--amarelo);">⚠️ preço de ${dias} dias atrás — confirme</span>`;
+  }
+  return `<div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+    <div style="font-weight:700;font-size:15px;color:var(--texto);margin-bottom:6px;">${p.nome}${p.cidade ? `<span style="font-size:12px;color:var(--texto2);font-weight:400;"> · ${p.cidade}</span>` : ''}</div>
+    ${chips.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${chips.join('')}</div>` : ''}
+    ${precos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">${precos.join('')}</div>` : ''}
+    ${dataInfo ? `<div style="margin-bottom:10px;">${dataInfo}</div>` : '<div style="height:4px;"></div>'}
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button onclick="rotaLog('pos','${p.id}')" style="flex:1;background:#33CCFF;border:none;border-radius:10px;padding:10px;color:#000;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🧭 Rota</button>
+      <button onclick="editarLog('pos','${p.id}')" style="width:38px;height:38px;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;color:var(--texto2);font-size:13px;cursor:pointer;">✏️</button>
+      <button onclick="excluirLog('pos','${p.id}')" style="width:38px;height:38px;background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.35);border-radius:10px;color:#FF4D6A;font-size:13px;cursor:pointer;">🗑️</button>
+    </div>
+  </div>`;
+}
+
+function rotaLog(tipo, id) {
+  const log = getLogistica();
+  const item = (tipo === 'hot' ? log.hoteis : log.postos).find(x => x.id === id);
+  if (!item) return;
+  const q = (item.lat && item.lng) ? `${item.lat},${item.lng}` : [item.nome, item.endereco, item.cidade].filter(Boolean).join(', ');
+  if (!q) { toast('Sem endereço para traçar a rota'); return; }
+  abrirRotaCliente(encodeURIComponent(q));
+}
+
+// ----- Seletores Sim/Não e estrelas -----
+function setSimNao(id, val) {
+  const grupo = document.getElementById(id);
+  if (!grupo) return;
+  grupo.dataset.valor = val;
+  const btns = grupo.querySelectorAll('.ssn-btn');
+  btns[0].classList.toggle('ativo', val === 'sim');
+  btns[1].classList.toggle('ativo', val === 'nao');
+}
+function getSimNao(id) { const g = document.getElementById(id); return g && g.dataset.valor === 'sim'; }
+function setEstrelas(n) { estrelasSel = n; _renderEstrelasCad(); }
+function _renderEstrelasCad() {
+  document.querySelectorAll('#hot-estrelas span').forEach((s, i) => {
+    s.style.color = i < estrelasSel ? 'var(--amarelo)' : 'var(--borda)';
+  });
+}
+
+// ----- GPS para o cadastro -----
+function usarLocalizacaoLog(prefix) {
+  const status = document.getElementById(prefix + '-gps-status');
+  if (!navigator.geolocation) { toast('GPS não disponível'); return; }
+  status.style.display = 'block';
+  status.innerHTML = '<span style="color:var(--texto2);">📡 Capturando localização...</span>';
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    document.getElementById(prefix + '-lat').value = lat;
+    document.getElementById(prefix + '-lng').value = lng;
+    try {
+      const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=pt-BR`);
+      const data = await resp.json();
+      const a = data.address || {};
+      const rua = [a.road, a.house_number].filter(Boolean).join(', ');
+      const bairro = a.suburb || a.neighbourhood || '';
+      const cidade = a.city || a.town || a.village || '';
+      const endEl = document.getElementById(prefix + '-endereco');
+      const cidEl = document.getElementById(prefix + '-cidade');
+      if (rua && !endEl.value) endEl.value = bairro ? `${rua} — ${bairro}` : rua;
+      if (cidade && !cidEl.value) cidEl.value = cidade;
+      status.innerHTML = '<span style="color:var(--verde);">✅ Localização capturada!</span>';
+    } catch (e) {
+      status.innerHTML = '<span style="color:var(--verde);">✅ Localização capturada.</span>';
+    }
+  }, () => { status.innerHTML = '<span style="color:var(--vermelho);">❌ Não foi possível obter o GPS.</span>'; }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+// ----- Abrir cadastro -----
+function abrirCadEstrada() { abaEstrada === 'hoteis' ? abrirCadHotel() : abrirCadPosto(); }
+
+function abrirCadHotel(h) {
+  document.getElementById('cad-hotel-titulo').textContent = h ? '✏️ Editar hotel' : '🛏️ Adicionar hotel';
+  document.getElementById('hot-id').value = h ? h.id : '';
+  document.getElementById('hot-nome').value = h ? (h.nome || '') : '';
+  document.getElementById('hot-cidade').value = h ? (h.cidade || '') : (document.getElementById('estrada-busca').value.trim() || '');
+  document.getElementById('hot-endereco').value = h ? (h.endereco || '') : '';
+  document.getElementById('hot-lat').value = h ? (h.lat || '') : '';
+  document.getElementById('hot-lng').value = h ? (h.lng || '') : '';
+  document.getElementById('hot-preco-ar').value = h ? (h.precoComAr || '') : '';
+  document.getElementById('hot-preco-semar').value = h ? (h.precoSemAr || '') : '';
+  document.getElementById('hot-telefone').value = h ? (h.telefone || '') : '';
+  document.getElementById('hot-whatsapp').value = h ? (h.whatsapp || '') : '';
+  setSimNao('hot-cafe', h ? (h.cafe ? 'sim' : 'nao') : 'sim');
+  setSimNao('hot-estac', h ? (h.estacionamento ? 'sim' : 'nao') : 'sim');
+  estrelasSel = h ? (h.estrelas || 0) : 0;
+  _renderEstrelasCad();
+  document.getElementById('hot-gps-status').style.display = 'none';
+  document.getElementById('modal-cad-hotel').classList.add('aberto');
+}
+
+function salvarHotel() {
+  const nome = document.getElementById('hot-nome').value.trim();
+  if (!nome) { toast('Informe o nome do hotel'); return; }
+  const log = getLogistica();
+  const id = document.getElementById('hot-id').value || ('h_' + Date.now());
+  const lat = document.getElementById('hot-lat').value;
+  const lng = document.getElementById('hot-lng').value;
+  const obj = {
+    id, nome,
+    cidade: document.getElementById('hot-cidade').value.trim(),
+    endereco: document.getElementById('hot-endereco').value.trim(),
+    lat: lat || undefined, lng: lng || undefined,
+    precoComAr: document.getElementById('hot-preco-ar').value.trim(),
+    precoSemAr: document.getElementById('hot-preco-semar').value.trim(),
+    cafe: getSimNao('hot-cafe'),
+    estacionamento: getSimNao('hot-estac'),
+    estrelas: estrelasSel,
+    telefone: document.getElementById('hot-telefone').value.trim(),
+    whatsapp: document.getElementById('hot-whatsapp').value.trim()
+  };
+  const idx = log.hoteis.findIndex(x => x.id === id);
+  if (idx >= 0) log.hoteis[idx] = obj; else log.hoteis.unshift(obj);
+  salvarLogistica(log);
+  fecharModal('modal-cad-hotel');
+  renderizarEstrada();
+  toast('🛏️ Hotel salvo!');
+}
+
+function abrirCadPosto(p) {
+  document.getElementById('cad-posto-titulo').textContent = p ? '✏️ Editar posto' : '⛽ Adicionar posto';
+  document.getElementById('pos-id').value = p ? p.id : '';
+  document.getElementById('pos-nome').value = p ? (p.nome || '') : '';
+  document.getElementById('pos-cidade').value = p ? (p.cidade || '') : (document.getElementById('estrada-busca').value.trim() || '');
+  document.getElementById('pos-endereco').value = p ? (p.endereco || '') : '';
+  document.getElementById('pos-lat').value = p ? (p.lat || '') : '';
+  document.getElementById('pos-lng').value = p ? (p.lng || '') : '';
+  document.getElementById('pos-gasolina').value = p ? (p.gasolina || '') : '';
+  document.getElementById('pos-etanol').value = p ? (p.etanol || '') : '';
+  document.getElementById('pos-diesel').value = p ? (p.diesel || '') : '';
+  setSimNao('pos-diesels10', p ? (p.dieselS10 ? 'sim' : 'nao') : 'nao');
+  setSimNao('pos-cartao', p ? (p.aceitaCartao ? 'sim' : 'nao') : 'sim');
+  setSimNao('pos-conv', p ? (p.conveniencia ? 'sim' : 'nao') : 'nao');
+  document.getElementById('pos-gps-status').style.display = 'none';
+  document.getElementById('modal-cad-posto').classList.add('aberto');
+}
+
+function salvarPosto() {
+  const nome = document.getElementById('pos-nome').value.trim();
+  if (!nome) { toast('Informe o nome do posto'); return; }
+  const log = getLogistica();
+  const id = document.getElementById('pos-id').value || ('p_' + Date.now());
+  const lat = document.getElementById('pos-lat').value;
+  const lng = document.getElementById('pos-lng').value;
+  const gas = document.getElementById('pos-gasolina').value.trim();
+  const eta = document.getElementById('pos-etanol').value.trim();
+  const die = document.getElementById('pos-diesel').value.trim();
+  const antigo = log.postos.find(x => x.id === id);
+  const mudouPreco = !antigo || antigo.gasolina !== gas || antigo.etanol !== eta || antigo.diesel !== die;
+  const obj = {
+    id, nome,
+    cidade: document.getElementById('pos-cidade').value.trim(),
+    endereco: document.getElementById('pos-endereco').value.trim(),
+    lat: lat || undefined, lng: lng || undefined,
+    gasolina: gas, etanol: eta, diesel: die,
+    precoData: (gas || eta || die) ? (mudouPreco ? new Date().toISOString() : (antigo && antigo.precoData)) : undefined,
+    dieselS10: getSimNao('pos-diesels10'),
+    aceitaCartao: getSimNao('pos-cartao'),
+    conveniencia: getSimNao('pos-conv')
+  };
+  const idx = log.postos.findIndex(x => x.id === id);
+  if (idx >= 0) log.postos[idx] = obj; else log.postos.unshift(obj);
+  salvarLogistica(log);
+  fecharModal('modal-cad-posto');
+  renderizarEstrada();
+  toast('⛽ Posto salvo!');
+}
+
+function editarLog(tipo, id) {
+  const log = getLogistica();
+  if (tipo === 'hot') { const h = log.hoteis.find(x => x.id === id); if (h) abrirCadHotel(h); }
+  else { const p = log.postos.find(x => x.id === id); if (p) abrirCadPosto(p); }
+}
+
+function excluirLog(tipo, id) {
+  const log = getLogistica();
+  const arr = tipo === 'hot' ? log.hoteis : log.postos;
+  const item = arr.find(x => x.id === id);
+  if (!item) return;
+  if (!confirm(`Excluir "${item.nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
+  if (tipo === 'hot') log.hoteis = log.hoteis.filter(x => x.id !== id);
+  else log.postos = log.postos.filter(x => x.id !== id);
+  salvarLogistica(log);
+  renderizarEstrada();
+  toast('🗑️ Removido');
+}
+
 function salvarClientes(c) { setData('cv_clientes_' + usuarioAtual.email, c); }
 function getConfig() {
   const def = { estoque_alto:21, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguarda_colecao:60, fechou_pedido:45, comprou_concorrente:30, inadimplente:15, fechado:60, nao_vai_comprar:90, dias_esquecidos:60, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''] };

@@ -5476,7 +5476,7 @@ function carregarConfig() {
   });
 }
 function salvarConfig() {
-  const cfg = {};
+  const cfg = getConfig(); // preserva metas e outros campos não gerenciados pelo form
   Object.keys(MOTIVOS_BASE).forEach(k => {
     const el = document.getElementById('cfg-' + k);
     if (el) cfg[k] = parseInt(el.value) || 30;
@@ -5656,19 +5656,26 @@ function _labelPeriodo(meta) {
 function calcularRealMarca(meta) {
   const { inicio, fim } = _periodoMeta(meta);
   const clientes = getClientes();
+  const marcaMeta = (meta.marca || '').trim().toLowerCase();
   let real = 0;
   clientes.forEach(c => {
     (c.historico || []).forEach(h => {
       if (h.motivo !== 'fechou_pedido') return;
       const d = new Date(h.data);
       if (d < inicio || d > fim) return;
-      const itens = (h.pedidos && h.pedidos.length)
-        ? h.pedidos
-        : [{ marca: (c.marcas && c.marcas[0]) || '', valor: h.pedidoValor || 0, qtd: h.pedidoQtd || 0 }];
-      itens.forEach(p => {
-        if ((p.marca || '').trim().toLowerCase() !== (meta.marca || '').trim().toLowerCase()) return;
-        real += meta.sku === 'reais' ? (Number(p.valor) || 0) : (Number(p.qtd) || 0);
-      });
+
+      if (h.pedidos && h.pedidos.length) {
+        // Formato novo — cada item tem marca explícita
+        h.pedidos.forEach(p => {
+          if ((p.marca || '').trim().toLowerCase() !== marcaMeta) return;
+          real += meta.sku === 'reais' ? (Number(p.valor) || 0) : (Number(p.qtd) || 0);
+        });
+      } else {
+        // Formato legado — verifica se o cliente tem a marca no perfil
+        const clienteMarcas = (c.marcas || []).map(m => (m || '').trim().toLowerCase());
+        if (!clienteMarcas.includes(marcaMeta)) return;
+        real += meta.sku === 'reais' ? (Number(h.pedidoValor) || 0) : (Number(h.pedidoQtd) || 0);
+      }
     });
   });
   return real;

@@ -559,7 +559,6 @@
     <div class="saudacao">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div class="saudacao-sub">Bom dia</div>
-        <div id="app-versao" style="font-size:10px;color:var(--texto3);font-weight:600;letter-spacing:.5px;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:2px 8px;"></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div class="saudacao-nome" id="dash-nome">Carregando...</div>
@@ -2059,7 +2058,7 @@ async function buscarHotelOnline(cidade, nome) {
 
     // Busca telefones em paralelo via Nominatim Details
     lista.forEach((d, i) => {
-      const osmType = { N:'N', W:'W', R:'R' }[d.osm_type] || d.osm_type;
+      const osmType = { node:'N', way:'W', relation:'R' }[d.osm_type];
       if (!d.osm_id || !osmType) { _atualizarTelCard(i, null); return; }
       fetch(`https://nominatim.openstreetmap.org/details?osmtype=${osmType}&osmid=${d.osm_id}&format=json`)
         .then(r => r.json())
@@ -5844,8 +5843,8 @@ function renderizarRelatorios() {
     metaTotalN += meta.valor;
     realTotalN += real;
 
-    return `<div class="rel-card" id="rel-card-${meta.id}" style="padding:0;overflow:hidden;">
-      <div onclick="toggleRelCard('${meta.id}')" style="padding:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+    return `<div class="rel-card" id="rel-card-${meta.id}" onclick="toggleRelCard('${meta.id}')" style="padding:0;overflow:hidden;cursor:pointer;">
+      <div style="padding:14px;display:flex;align-items:center;justify-content:space-between;">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           <div class="semaforo-dot ${dotClass}"></div>
           <span style="font-size:15px;font-weight:700;color:var(--texto);font-family:'Syne',sans-serif;">${meta.marca}</span>
@@ -5869,7 +5868,7 @@ function renderizarRelatorios() {
           <span style="font-size:10px;color:var(--texto2);">Projeção: <strong style="color:var(--texto);">${fmtN(projecao)} ${skuLabel}</strong></span>
         </div>
 
-        <div id="rel-detalhe-${meta.id}" style="display:none;">${detalheHTML}</div>
+        <div id="rel-detalhe-${meta.id}" onclick="event.stopPropagation()" style="display:none;">${detalheHTML}</div>
       </div>
     </div>`;
   }).join('');

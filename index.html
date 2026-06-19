@@ -428,6 +428,28 @@
   .cidade-sugestao-item:active { background:rgba(0,214,143,.08); }
   .cidade-sugestao-uf { font-size:11px; font-weight:700; color:var(--verde); background:rgba(0,214,143,.1); border-radius:6px; padding:2px 7px; flex-shrink:0; }
 
+  /* METAS */
+  .meta-card { background:var(--bg2); border:1px solid var(--borda); border-radius:12px; padding:14px; margin-bottom:10px; }
+  .meta-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .meta-marca-label { font-size:14px; font-weight:600; color:var(--texto); }
+  .meta-row { display:flex; gap:8px; margin-bottom:8px; }
+  .meta-periodo-btn { flex:1; background:var(--bg3); border:1px solid var(--borda); border-radius:8px; padding:7px 4px; color:var(--texto2); font-family:'Syne',sans-serif; font-size:11px; font-weight:700; cursor:pointer; transition:.15s; }
+  .meta-periodo-btn.ativo { background:rgba(0,214,143,.12); border-color:var(--verde); color:var(--verde); }
+  .semaforo-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .dot-verde-meta { background:#22C55E; box-shadow:0 0 6px rgba(34,197,94,.5); }
+  .dot-amarelo-meta { background:#F59E0B; box-shadow:0 0 6px rgba(245,158,11,.5); }
+  .dot-vermelho-meta { background:#EF4444; box-shadow:0 0 6px rgba(239,68,68,.5); }
+  .dot-cinza-meta { background:var(--texto3); }
+  .rel-card { background:var(--bg2); border:1px solid var(--borda); border-radius:14px; padding:14px; margin-bottom:12px; }
+  .rel-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:4px; }
+  .rel-col-label { font-size:10px; color:var(--texto2); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+  .rel-col-valor { font-size:16px; font-weight:700; color:var(--texto); }
+  .tend-badge { border-radius:8px; padding:4px 8px; text-align:center; font-size:13px; font-weight:700; }
+  .tend-verde { background:rgba(34,197,94,.15); color:#22C55E; }
+  .tend-amarelo { background:rgba(245,158,11,.15); color:#F59E0B; }
+  .tend-vermelho { background:rgba(239,68,68,.15); color:#EF4444; }
+  .tend-cinza { background:var(--bg3); color:var(--texto3); }
+
   .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--bg3); border:1px solid var(--verde); color:var(--verde); padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; opacity:0; transition:opacity .3s,transform .3s; z-index:300; white-space:nowrap; }
   .toast.visivel { opacity:1; transform:translateX(-50%) translateY(0); }
 
@@ -588,6 +610,18 @@
         </div>
       </div>
       <div style="color:#5C8FCF;font-size:20px;">›</div>
+    </button>
+
+    <!-- BOTÃO RELATÓRIOS META -->
+    <button onclick="abrirRelatorios()" id="btn-relatorios" style="width:100%;background:linear-gradient(135deg,#1a1230,#261840);border:1.5px solid rgba(167,139,250,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(167,139,250,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">📊</div>
+        <div style="text-align:left;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Relatórios · Meta · Tendência</div>
+          <div style="font-size:11px;color:var(--texto2);">Meta × Real × Lacuna × Fechamento</div>
+        </div>
+      </div>
+      <div id="dash-meta-semaforo" style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:80px;"></div>
     </button>
 
     <!-- BOTÃO NA ESTRADA -->
@@ -1153,6 +1187,13 @@
     </div>
 
     <div class="config-secao">
+      <div class="config-secao-titulo">🎯 Metas por marca</div>
+      <div class="config-secao-sub">Cadastre a meta de cada marca que você representa. O app calcula automaticamente a tendência de fechamento com base nas suas vendas registradas.</div>
+      <div id="metas-config-lista"></div>
+      <button onclick="adicionarMetaConfig()" style="width:100%;background:rgba(167,139,250,.1);border:1.5px dashed rgba(167,139,250,.4);border-radius:12px;padding:12px;color:var(--roxo);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;">+ Adicionar meta</button>
+    </div>
+
+    <div class="config-secao">
       <div class="config-secao-titulo">📧 E-mail para relatórios</div>
       <div class="config-secao-sub">Seu e-mail é preenchido automaticamente ao gerar o relatório do dia. Você ainda pode adicionar um C/C na hora de enviar.</div>
       <input type="email" class="campo-input" id="cfg-email-rep" placeholder="seu@email.com" style="margin-top:4px;">
@@ -1518,6 +1559,40 @@
       </div>
 
       <button onclick="gerarRelatorioEmail()" style="width:100%;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));color:#04231A;border:none;border-radius:12px;padding:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px var(--verde-glow);">Gerar e-mail</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RELATÓRIOS META -->
+<div class="modal-overlay" id="modal-relatorios">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="modal-titulo" style="margin-bottom:0;">📊 Meta · Real · Tendência</div>
+      <button onclick="fecharModal('modal-relatorios')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div class="modal-sub" style="margin-bottom:14px;">Acompanhe sua performance por marca e veja a tendência de fechamento.</div>
+
+    <!-- Resumo geral -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
+        <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Meta total</div>
+        <div style="font-size:20px;font-weight:800;color:var(--texto);font-family:'Syne',sans-serif;" id="rel-meta-total">—</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
+        <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Real acumulado</div>
+        <div style="font-size:20px;font-weight:800;color:var(--verde);font-family:'Syne',sans-serif;" id="rel-real-total">—</div>
+      </div>
+    </div>
+
+    <div id="rel-lista"></div>
+
+    <div style="margin-top:8px;padding:10px 12px;background:var(--bg3);border-radius:10px;">
+      <div style="font-size:10px;color:var(--texto2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Legenda tendência</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:5px;"><div class="semaforo-dot dot-verde-meta"></div><span style="font-size:11px;color:var(--texto2);">≥ 100% no ritmo</span></div>
+        <div style="display:flex;align-items:center;gap:5px;"><div class="semaforo-dot dot-amarelo-meta"></div><span style="font-size:11px;color:var(--texto2);">80 – 99%</span></div>
+        <div style="display:flex;align-items:center;gap:5px;"><div class="semaforo-dot dot-vermelho-meta"></div><span style="font-size:11px;color:var(--texto2);">abaixo de 80%</span></div>
+      </div>
     </div>
   </div>
 </div>
@@ -3157,6 +3232,7 @@ function atualizarDashboard() {
   if (subEl) subEl.textContent = saud;
   document.getElementById('dash-nome').textContent = usuarioAtual.nome.split(' ')[0];
   migrarArquivo();
+  atualizarSemaforoDash();
   const clientes = getClientesAtivos();
   const cfg = getConfig();
   document.getElementById('num-total').textContent = clientes.length;
@@ -5377,6 +5453,7 @@ function carregarConfig() {
   });
   document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 60;
   document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
+  renderizarMetasConfig(cfg);
   renderizarSkuGrid(cfg);
   (cfg.skusCustom || ['','','']).forEach((v, i) => {
     const el = document.getElementById('sku-custom-' + i);
@@ -5415,6 +5492,7 @@ function salvarConfig() {
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
   salvarConfigData(cfg);
+  atualizarSemaforoDash();
   toast('Configurações salvas!');
 }
 
@@ -5541,6 +5619,249 @@ function gerarRelatorioEmail() {
   window.location.href = mailto;
 }
 
+// ===== METAS =====
+
+function getMetasConfig() {
+  const cfg = getConfig();
+  return cfg.metas || [];
+}
+
+function _skuLabel(sku) {
+  const todos = [...(window.SKU_OPCOES || []), { value:'reais', label:'R$ Reais' }];
+  const found = todos.find(o => o.value === sku);
+  return found ? found.label : sku;
+}
+
+function _periodoMeta(meta) {
+  if (meta.tipoPeriodo === 'colecao' && meta.dataInicio && meta.dataFim) {
+    return { inicio: new Date(meta.dataInicio + 'T00:00:00'), fim: new Date(meta.dataFim + 'T23:59:59') };
+  }
+  const mes = meta.mes || new Date().toISOString().slice(0, 7);
+  const [ano, m] = mes.split('-').map(Number);
+  const inicio = new Date(ano, m - 1, 1);
+  const fim    = new Date(ano, m, 0, 23, 59, 59);
+  return { inicio, fim };
+}
+
+function _labelPeriodo(meta) {
+  if (meta.tipoPeriodo === 'colecao' && meta.dataInicio && meta.dataFim) {
+    const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+    return `Coleção ${fmt(meta.dataInicio)} – ${fmt(meta.dataFim)}`;
+  }
+  const mes = meta.mes || new Date().toISOString().slice(0, 7);
+  const [ano, m] = mes.split('-').map(Number);
+  return new Date(ano, m - 1, 1).toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
+}
+
+function calcularRealMarca(meta) {
+  const { inicio, fim } = _periodoMeta(meta);
+  const clientes = getClientes();
+  let real = 0;
+  clientes.forEach(c => {
+    (c.historico || []).forEach(h => {
+      if (h.motivo !== 'fechou_pedido') return;
+      const d = new Date(h.data);
+      if (d < inicio || d > fim) return;
+      const itens = (h.pedidos && h.pedidos.length)
+        ? h.pedidos
+        : [{ marca: (c.marcas && c.marcas[0]) || '', valor: h.pedidoValor || 0, qtd: h.pedidoQtd || 0 }];
+      itens.forEach(p => {
+        if ((p.marca || '').trim().toLowerCase() !== (meta.marca || '').trim().toLowerCase()) return;
+        real += meta.sku === 'reais' ? (Number(p.valor) || 0) : (Number(p.qtd) || 0);
+      });
+    });
+  });
+  return real;
+}
+
+function calcularTendencia(meta, real) {
+  const { inicio, fim } = _periodoMeta(meta);
+  const agora = new Date();
+  const diasTotal   = Math.max(1, Math.round((fim - inicio) / 86400000));
+  const diasPassados = Math.max(1, Math.min(Math.round((agora - inicio) / 86400000), diasTotal));
+  const esperado = meta.valor * (diasPassados / diasTotal);
+  if (!esperado) return null;
+  return Math.round((real / esperado) * 100);
+}
+
+function _classeTend(pct) {
+  if (pct === null) return 'tend-cinza';
+  if (pct >= 100) return 'tend-verde';
+  if (pct >= 80)  return 'tend-amarelo';
+  return 'tend-vermelho';
+}
+
+function _dotClasseTend(pct) {
+  if (pct === null) return 'dot-cinza-meta';
+  if (pct >= 100) return 'dot-verde-meta';
+  if (pct >= 80)  return 'dot-amarelo-meta';
+  return 'dot-vermelho-meta';
+}
+
+function atualizarSemaforoDash() {
+  const el = document.getElementById('dash-meta-semaforo');
+  if (!el) return;
+  const metas = getMetasConfig();
+  if (!metas.length) { el.innerHTML = '<span style="font-size:11px;color:var(--texto3);">Sem metas</span>'; return; }
+  el.innerHTML = metas.map(meta => {
+    const real = calcularRealMarca(meta);
+    const pct  = calcularTendencia(meta, real);
+    const dot  = _dotClasseTend(pct);
+    return `<div style="display:flex;align-items:center;gap:5px;">
+      <span style="font-size:11px;color:var(--texto2);max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${meta.marca}</span>
+      <div class="semaforo-dot ${dot}"></div>
+    </div>`;
+  }).join('');
+}
+
+function abrirRelatorios() {
+  renderizarRelatorios();
+  document.getElementById('modal-relatorios').classList.add('aberto');
+}
+
+function renderizarRelatorios() {
+  const metas = getMetasConfig();
+  const lista = document.getElementById('rel-lista');
+
+  if (!metas.length) {
+    lista.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-titulo">Nenhuma meta cadastrada</div><div class="empty-desc">Vá em Configurações → Metas por marca para cadastrar.</div></div>`;
+    document.getElementById('rel-meta-total').textContent = '—';
+    document.getElementById('rel-real-total').textContent = '—';
+    return;
+  }
+
+  const fmtN = n => Number.isInteger(n) ? n.toLocaleString('pt-BR') : n.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+  let metaTotalN = 0, realTotalN = 0;
+  const cards = metas.map(meta => {
+    const real    = calcularRealMarca(meta);
+    const pct     = calcularTendencia(meta, real);
+    const lacuna  = real - meta.valor;
+    const { inicio, fim } = _periodoMeta(meta);
+    const agora   = new Date();
+    const diasTotal    = Math.max(1, Math.round((fim - inicio) / 86400000));
+    const diasPassados = Math.max(1, Math.min(Math.round((agora - inicio) / 86400000), diasTotal));
+    const progresso    = Math.min(100, Math.round((diasPassados / diasTotal) * 100));
+    const projecao     = diasPassados > 0 ? Math.round(real / (diasPassados / diasTotal)) : 0;
+    const skuLabel     = _skuLabel(meta.sku);
+    const labelPer     = _labelPeriodo(meta);
+    const clTend       = _classeTend(pct);
+    const dotClass     = _dotClasseTend(pct);
+    const lacunaCor    = lacuna >= 0 ? 'var(--verde)' : 'var(--vermelho)';
+    const pctTxt       = pct !== null ? pct + '%' : '—';
+
+    metaTotalN += meta.valor;
+    realTotalN += real;
+
+    return `<div class="rel-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="semaforo-dot ${dotClass}"></div>
+          <span style="font-size:15px;font-weight:700;color:var(--texto);font-family:'Syne',sans-serif;">${meta.marca}</span>
+        </div>
+        <span style="font-size:10px;color:var(--texto2);background:var(--bg3);border-radius:8px;padding:3px 8px;">${labelPer} · ${skuLabel}</span>
+      </div>
+      <div class="rel-grid" style="margin-bottom:10px;">
+        <div><div class="rel-col-label">Meta</div><div class="rel-col-valor">${fmtN(meta.valor)}</div></div>
+        <div><div class="rel-col-label">Real</div><div class="rel-col-valor" style="color:var(--verde);">${fmtN(real)}</div></div>
+        <div><div class="rel-col-label">Lacuna</div><div class="rel-col-valor" style="color:${lacunaCor};">${lacuna >= 0 ? '+' : ''}${fmtN(lacuna)}</div></div>
+        <div><div class="rel-col-label">Tendência</div><div class="tend-badge ${clTend}" style="margin-top:0;">${pctTxt}</div></div>
+      </div>
+      <div style="height:5px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:5px;">
+        <div style="width:${progresso}%;height:100%;background:var(--roxo);border-radius:4px;opacity:.5;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-size:10px;color:var(--texto3);">${progresso}% do período passado</span>
+        <span style="font-size:10px;color:var(--texto2);">Projeção: <strong style="color:var(--texto);">${fmtN(projecao)} ${skuLabel}</strong></span>
+      </div>
+    </div>`;
+  }).join('');
+
+  lista.innerHTML = cards;
+  document.getElementById('rel-meta-total').textContent = fmtN(metaTotalN);
+  document.getElementById('rel-real-total').textContent = fmtN(realTotalN);
+}
+
+// ----- Config de metas -----
+
+function adicionarMetaConfig() {
+  const cfg = getConfig();
+  const metas = cfg.metas || [];
+  const marcas = (cfg.marcas || []).filter(Boolean);
+  if (!marcas.length) { toast('Cadastre suas marcas em "Suas representações" antes de adicionar metas.'); return; }
+  metas.push({ id: 'm_' + Date.now(), marca: marcas[0], sku: (cfg.skus && cfg.skus[0]) || 'peças', tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor: 0 });
+  cfg.metas = metas;
+  salvarConfigData(cfg);
+  renderizarMetasConfig(cfg);
+}
+
+function removerMetaConfig(id) {
+  const cfg = getConfig();
+  cfg.metas = (cfg.metas || []).filter(m => m.id !== id);
+  salvarConfigData(cfg);
+  renderizarMetasConfig(cfg);
+}
+
+function renderizarMetasConfig(cfg) {
+  const lista = document.getElementById('metas-config-lista');
+  if (!lista) return;
+  const metas  = cfg.metas || [];
+  const marcas = (cfg.marcas || []).filter(Boolean);
+  const skusDisponiveis = [...(cfg.skus || ['peças']), ...(cfg.skusCustom || []).filter(Boolean), 'reais'];
+
+  if (!metas.length) {
+    lista.innerHTML = '<div style="font-size:12px;color:var(--texto3);padding:8px 0;">Nenhuma meta cadastrada ainda.</div>';
+    return;
+  }
+
+  lista.innerHTML = metas.map(meta => {
+    const marcaOpts = marcas.map(m => `<option value="${m}" ${m === meta.marca ? 'selected' : ''}>${m}</option>`).join('');
+    const skuOpts   = skusDisponiveis.map(s => `<option value="${s}" ${s === meta.sku ? 'selected' : ''}>${_skuLabel(s)}</option>`).join('');
+    const isMes     = meta.tipoPeriodo !== 'colecao';
+    return `<div class="meta-card" id="meta-card-${meta.id}">
+      <div class="meta-card-header">
+        <select class="campo-input" style="flex:1;margin-right:8px;" onchange="editarMetaField('${meta.id}','marca',this.value)">${marcaOpts}</select>
+        <button onclick="removerMetaConfig('${meta.id}')" style="background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.3);border-radius:8px;width:32px;height:32px;color:#FF4D6A;font-size:14px;cursor:pointer;flex-shrink:0;">✕</button>
+      </div>
+      <div class="meta-row">
+        <button class="meta-periodo-btn ${isMes ? 'ativo' : ''}" onclick="alternarPeriodoMeta('${meta.id}','mes')">Mês</button>
+        <button class="meta-periodo-btn ${!isMes ? 'ativo' : ''}" onclick="alternarPeriodoMeta('${meta.id}','colecao')">Coleção</button>
+      </div>
+      <div id="meta-periodo-fields-${meta.id}">
+        ${isMes
+          ? `<input type="month" class="campo-input" style="margin-bottom:8px;" value="${meta.mes || ''}" onchange="editarMetaField('${meta.id}','mes',this.value)">`
+          : `<div style="display:flex;gap:8px;margin-bottom:8px;">
+               <input type="date" class="campo-input" style="flex:1;" value="${meta.dataInicio || ''}" onchange="editarMetaField('${meta.id}','dataInicio',this.value)" placeholder="De">
+               <input type="date" class="campo-input" style="flex:1;" value="${meta.dataFim || ''}" onchange="editarMetaField('${meta.id}','dataFim',this.value)" placeholder="Até">
+             </div>`
+        }
+      </div>
+      <div class="meta-row">
+        <select class="campo-input" style="flex:1;" onchange="editarMetaField('${meta.id}','sku',this.value)">${skuOpts}</select>
+        <input type="number" class="campo-input" style="flex:1;" placeholder="Meta" value="${meta.valor || ''}" onchange="editarMetaField('${meta.id}','valor',Number(this.value))">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function editarMetaField(id, campo, valor) {
+  const cfg = getConfig();
+  const meta = (cfg.metas || []).find(m => m.id === id);
+  if (!meta) return;
+  meta[campo] = valor;
+  salvarConfigData(cfg);
+  atualizarSemaforoDash();
+}
+
+function alternarPeriodoMeta(id, tipo) {
+  const cfg = getConfig();
+  const meta = (cfg.metas || []).find(m => m.id === id);
+  if (!meta) return;
+  meta.tipoPeriodo = tipo;
+  salvarConfigData(cfg);
+  renderizarMetasConfig(cfg);
+}
+
 function preencherEmailRelatorio() {
   const cfg = getConfig();
   const campo = document.getElementById('fd-email-para');
@@ -5554,7 +5875,7 @@ const SKU_OPCOES = [
   { value:'peças', label:'Peças' }, { value:'caixas', label:'Caixas' }, { value:'unidades', label:'Unidades' },
   { value:'kg', label:'Kg' }, { value:'litros', label:'Litros' }, { value:'metros', label:'Metros' },
   { value:'frascos', label:'Frascos' }, { value:'pares', label:'Pares' }, { value:'kits', label:'Kits' },
-  { value:'paletes', label:'Paletes' }
+  { value:'paletes', label:'Paletes' }, { value:'reais', label:'R$ Reais' }
 ];
 function renderizarSkuGrid(cfg) {
   const grid = document.getElementById('sku-grid');

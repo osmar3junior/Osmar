@@ -694,6 +694,9 @@
     <button id="toggle-top20" onclick="setVisualizacao('top20')" style="flex:1;padding:8px;border-radius:9px;font-size:12px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);transition:.2s;">🏆 Top 20</button>
     <button id="toggle-probabilidade" onclick="setVisualizacao('probabilidade')" style="flex:1;padding:8px;border-radius:9px;font-size:12px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);transition:.2s;">🎯 Mais propícios</button>
   </div>
+  <div id="chips-marca-wrap" style="padding:8px 16px 0;overflow-x:auto;scrollbar-width:none;display:none;">
+    <div id="chips-marca-inner" style="display:flex;gap:6px;width:max-content;padding-bottom:2px;"></div>
+  </div>
   <div class="search-bar" id="busca-wrapper">
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
@@ -2785,7 +2788,7 @@ function irPara(tela) {
   el.style.display = 'flex';
   el.classList.add('ativa');
   if (tela === 'dashboard') { atualizarDashboard(); setTimeout(() => renderizarClientes(), 100); }
-  if (tela === 'clientes') renderizarClientes();
+  if (tela === 'clientes') { renderizarChipsMarca(); renderizarClientes(); }
   if (tela === 'esquecidos') renderizarEsquecidos();
   if (tela === 'config') carregarConfig();
   if (tela === 'mapa') setTimeout(() => renderizarMapa(), 150);
@@ -3838,6 +3841,34 @@ function verificarENotificarEsquecidos() {
 
 // ===== VISUALIZAÇÃO POR CIDADE =====
 let visualizacaoAtual = 'lista';
+let marcaFiltroAtual = '';
+
+function _filtrarPorMarca(clientes) {
+  if (!marcaFiltroAtual) return clientes;
+  return clientes.filter(c => (c.marcas || []).map(m => (m||'').trim().toLowerCase()).includes(marcaFiltroAtual.trim().toLowerCase()));
+}
+
+function renderizarChipsMarca() {
+  const wrap = document.getElementById('chips-marca-wrap');
+  const inner = document.getElementById('chips-marca-inner');
+  if (!wrap || !inner) return;
+  const marcas = (getConfig().marcas || []).filter(Boolean);
+  if (!marcas.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const btnStyle = (ativo) => `display:inline-block;padding:5px 13px;border-radius:20px;font-size:12px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;white-space:nowrap;border:1.5px solid ${ativo ? 'var(--verde)' : 'var(--borda)'};background:${ativo ? 'rgba(0,214,143,.15)' : 'var(--bg3)'};color:${ativo ? 'var(--verde)' : 'var(--texto2)'};transition:.15s;`;
+  inner.innerHTML = `<span onclick="setMarcaFiltro('')" style="${btnStyle(!marcaFiltroAtual)}">Todas</span>` +
+    marcas.map(m => `<span onclick="setMarcaFiltro('${m.replace(/'/g,"\\'")}')" style="${btnStyle(marcaFiltroAtual===m)}">${m}</span>`).join('');
+}
+
+function setMarcaFiltro(marca) {
+  marcaFiltroAtual = marca;
+  renderizarChipsMarca();
+  if (visualizacaoAtual === 'lista') renderizarClientes(document.getElementById('busca-cliente')?.value || '');
+  else if (visualizacaoAtual === 'cidade') renderizarPorCidade();
+  else if (visualizacaoAtual === 'proximos') renderizarPorProximidade();
+  else if (visualizacaoAtual === 'top20') renderizarTop20();
+  else renderizarProbabilidade();
+}
 
 function setVisualizacao(modo) {
   visualizacaoAtual = modo;
@@ -3856,6 +3887,7 @@ function setVisualizacao(modo) {
   const ativo = mapaBtn[modo];
   ativo.style.background = 'var(--verde)'; ativo.style.color = '#000'; ativo.style.borderColor = 'var(--verde)';
   if (busca) busca.style.display = 'block';
+  renderizarChipsMarca();
   if (modo === 'lista') renderizarClientes();
   else if (modo === 'cidade') renderizarPorCidade();
   else if (modo === 'proximos') renderizarPorProximidade();
@@ -3869,7 +3901,7 @@ function getPedidosCliente(c) {
 
 function renderizarTop20() {
   const lista = document.getElementById('lista-clientes');
-  const ranking = getClientes()
+  const ranking = _filtrarPorMarca(getClientes())
     .map(c => ({ c, total: getPedidosCliente(c).reduce((s, h) => s + h.pedidoValor, 0) }))
     .filter(x => x.total > 0)
     .sort((a, b) => b.total - a.total)
@@ -3894,7 +3926,7 @@ function renderizarTop20() {
 
 function renderizarProbabilidade() {
   const lista = document.getElementById('lista-clientes');
-  const candidatos = getClientes().map(c => {
+  const candidatos = _filtrarPorMarca(getClientes()).map(c => {
     const datas = getPedidosCliente(c).map(h => new Date(h.data)).sort((a, b) => a - b);
     if (datas.length < 2) return null;
     let intervalos = [];
@@ -3930,7 +3962,7 @@ function renderizarProbabilidade() {
 
 function renderizarPorProximidade() {
   const lista = document.getElementById('lista-clientes');
-  const clientes = getClientes().filter(c => c.lat && c.lng);
+  const clientes = _filtrarPorMarca(getClientes()).filter(c => c.lat && c.lng);
   if (clientes.length === 0) {
     lista.innerHTML = `<div class="empty-state"><div class="empty-icon">📍</div><div class="empty-titulo">Nenhum cliente com localização</div><div class="empty-desc">Cadastre o endereço dos clientes para usar esta busca.</div></div>`;
     return;
@@ -3971,7 +4003,7 @@ function renderizarPorProximidade() {
 }
 
 function renderizarPorCidade() {
-  const clientes = getClientes();
+  const clientes = _filtrarPorMarca(getClientes());
   const lista = document.getElementById('lista-clientes');
   if (clientes.length === 0) {
     lista.innerHTML = `<div class="empty-state"><div class="empty-icon">🏙️</div><div class="empty-titulo">Nenhum cliente ainda</div></div>`;
@@ -4576,7 +4608,7 @@ function copiarTexto(txt) {
 
 // ===== CLIENTES =====
 function renderizarClientes(filtro = '') {
-  const clientes = getClientesAtivos();
+  const clientes = _filtrarPorMarca(getClientesAtivos());
   const lista = document.getElementById('lista-clientes');
   const filtrados = (filtro
     ? clientes.filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()) || c.loja.toLowerCase().includes(filtro.toLowerCase()))
@@ -5866,6 +5898,33 @@ function renderizarRelatorios() {
     const pctTxt       = pct !== null ? pct + '%' : '—';
     const detalheHTML  = _detalheVendasMarca(meta);
 
+    // Média diária necessária
+    const diasRestantes = Math.max(0, Math.round((fim - agora) / 86400000));
+    const falta         = meta.valor - real;
+    const mediaDiaria   = (diasRestantes > 0 && falta > 0) ? falta / diasRestantes : null;
+    const dataFimFmt    = fim.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const fmtMedia = v => {
+      if (meta.sku === 'reais') {
+        if (v >= 1000000) return 'R$ ' + (v/1000000).toFixed(1).replace('.',',') + 'M';
+        if (v >= 1000) return 'R$ ' + Math.round(v/1000) + 'k';
+        return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+      }
+      return Math.ceil(v).toLocaleString('pt-BR');
+    };
+    const mediaCorHex = falta <= 0 ? '#00D68F' : pct === null ? '#6b7a8d' : pct >= 100 ? '#00D68F' : pct >= 80 ? '#F59E0B' : '#FF4D6A';
+    const mediaBg     = falta <= 0 ? 'rgba(0,214,143,.06)' : pct !== null && pct < 80 ? 'rgba(255,77,106,.05)' : 'var(--bg3)';
+    const mediaBorda  = falta <= 0 ? 'rgba(0,214,143,.2)' : pct !== null && pct >= 100 ? 'rgba(0,214,143,.2)' : pct !== null && pct >= 80 ? 'rgba(245,158,11,.2)' : pct !== null ? 'rgba(255,77,106,.25)' : 'var(--borda)';
+    let mediaNumTxt, mediaUnitTxt, mediaSubTxt;
+    if (diasRestantes === 0) {
+      mediaNumTxt = '—'; mediaUnitTxt = ''; mediaSubTxt = 'Período encerrado';
+    } else if (falta <= 0) {
+      mediaNumTxt = '✓'; mediaUnitTxt = 'meta batida!'; mediaSubTxt = 'Continue vendendo para superar a meta';
+    } else {
+      mediaNumTxt = fmtMedia(mediaDiaria);
+      mediaUnitTxt = meta.sku === 'reais' ? 'por dia' : `${skuLabel} / dia`;
+      mediaSubTxt = `Faltam ${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''} · ainda falta ${fmtN(Math.round(falta))} ${skuLabel}`;
+    }
+
     metaTotalN += meta.valor;
     realTotalN += real;
 
@@ -5889,9 +5948,21 @@ function renderizarRelatorios() {
         <div style="height:5px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:5px;">
           <div style="width:${progresso}%;height:100%;background:#F97316;border-radius:4px;opacity:.7;"></div>
         </div>
-        <div style="display:flex;justify-content:space-between;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
           <span style="font-size:10px;color:var(--texto3);">${progresso}% do período passado</span>
           <span style="font-size:10px;color:var(--texto2);">Projeção: <strong style="color:var(--texto);">${fmtN(projecao)} ${skuLabel}</strong></span>
+        </div>
+
+        <div style="background:${mediaBg};border:1px solid ${mediaBorda};border-radius:10px;padding:10px 12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Meta diária necessária</span>
+            <span style="font-size:10px;color:var(--texto3);">até ${dataFimFmt}</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:7px;">
+            <span style="font-size:22px;font-weight:800;color:${mediaCorHex};letter-spacing:-.5px;font-family:'Syne',sans-serif;">${mediaNumTxt}</span>
+            <span style="font-size:11px;color:var(--texto3);">${mediaUnitTxt}</span>
+          </div>
+          <div style="font-size:10px;color:var(--texto3);margin-top:3px;">${mediaSubTxt}</div>
         </div>
 
         <div id="rel-detalhe-${meta.id}" onclick="event.stopPropagation()" style="display:none;">${detalheHTML}</div>

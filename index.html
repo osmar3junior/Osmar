@@ -2155,19 +2155,26 @@ function _cardHotel(h) {
     </div>
     ${precos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">${precos.join('')}</div>` : `<div style="margin-bottom:8px;"><span onclick="editarLog('hot','${h.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:#F59E0B;background:rgba(245,158,11,.1);border:1px dashed rgba(245,158,11,.45);border-radius:8px;padding:4px 10px;cursor:pointer;">✏️ Preencher preço na 1ª hospedagem</span></div>`}
     ${chips.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${chips.join('')}</div>` : ''}
-    <div style="display:flex;gap:6px;align-items:center;">
-      ${tel ? `<a href="tel:${tel}" style="text-decoration:none;width:38px;height:38px;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">📞</a>` : ''}
-      ${wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" style="text-decoration:none;width:38px;height:38px;background:#1C2A1E;border:1px solid #25D366;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${WPP_ICON}</a>` : ''}
-      <button onclick="registrarPernoite('${h.id}')" style="flex:1;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);border-radius:10px;padding:10px 8px;color:var(--verde);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3;">🌙 Pernoitei<br><span style="font-size:10px;font-weight:400;opacity:.8;">aqui hoje</span></button>
-      <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">
-        <button onclick="rotaLog('hot','${h.id}')" style="width:48px;height:38px;background:#33CCFF;border:none;border-radius:10px;color:#000;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🧭</button>
-        <div style="display:flex;gap:5px;">
-          <button onclick="editarLog('hot','${h.id}')" style="width:21px;height:32px;background:var(--bg2);border:1px solid var(--borda);border-radius:8px;color:var(--texto2);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✏️</button>
-          <button onclick="excluirLog('hot','${h.id}')" style="width:21px;height:32px;background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.35);border-radius:8px;color:#FF4D6A;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>
+    <div style="display:flex;gap:8px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:6px;flex:1;">
+        <div style="display:flex;gap:6px;">
+          ${tel ? `<a href="tel:${tel}" style="text-decoration:none;width:38px;height:38px;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">📞</a>` : ''}
+          ${wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" style="text-decoration:none;width:38px;height:38px;background:#1C2A1E;border:1px solid #25D366;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${WPP_ICON}</a>` : ''}
+        </div>
+        <div style="padding-top:4px;border-top:1px solid var(--borda);">
+          <div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">📅 Últimas hospedagens</div>
+          ${(h.pernoites && h.pernoites.length)
+            ? `<div style="display:flex;gap:5px;flex-wrap:wrap;">${h.pernoites.slice(-5).reverse().map(d => `<span style="font-size:11px;color:var(--texto2);background:var(--bg2);border-radius:6px;padding:3px 8px;">🌙 ${formatarData(d)}</span>`).join('')}</div>`
+            : `<span style="font-size:11px;color:var(--texto3);font-style:italic;">Toque em 🌙 para registrar</span>`}
         </div>
       </div>
+      <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">
+        <button onclick="rotaLog('hot','${h.id}')" style="width:46px;height:38px;background:#33CCFF;border:none;border-radius:10px;color:#000;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🧭</button>
+        <button onclick="registrarPernoite('${h.id}')" title="Registrar pernoite hoje" style="width:46px;height:38px;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);border-radius:10px;color:var(--verde);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🌙</button>
+        <button onclick="editarLog('hot','${h.id}')" style="width:46px;height:38px;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✏️</button>
+        <button onclick="excluirLog('hot','${h.id}')" style="width:46px;height:38px;background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.35);border-radius:10px;color:#FF4D6A;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>
+      </div>
     </div>
-    ${(h.pernoites && h.pernoites.length) ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--borda);display:flex;gap:6px;flex-wrap:wrap;">${h.pernoites.slice(-4).reverse().map(d => `<span style="font-size:10.5px;color:var(--texto3);background:var(--bg2);border-radius:6px;padding:2px 8px;">🌙 ${formatarData(d)}</span>`).join('')}</div>` : ''}
   </div>`;
 }
 

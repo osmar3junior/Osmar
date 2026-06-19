@@ -5726,6 +5726,89 @@ function abrirRelatorios() {
   document.getElementById('modal-relatorios').classList.add('aberto');
 }
 
+function _detalheVendasMarca(meta) {
+  const { inicio, fim } = _periodoMeta(meta);
+  const marcaMeta = (meta.marca || '').trim().toLowerCase();
+  const clientes  = getClientes();
+  const fmtV = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  const fmtD = d => new Date(d).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  const skuLabel = _skuLabel(meta.sku);
+  const linhas = [];
+  let totalQtd = 0, totalVal = 0;
+
+  clientes.forEach(c => {
+    (c.historico || []).forEach(h => {
+      if (h.motivo !== 'fechou_pedido') return;
+      const d = new Date(h.data);
+      if (d < inicio || d > fim) return;
+
+      if (h.pedidos && h.pedidos.length) {
+        h.pedidos.forEach(p => {
+          if ((p.marca || '').trim().toLowerCase() !== marcaMeta) return;
+          const qtd = Number(p.qtd) || 0;
+          const val = Number(p.valor) || 0;
+          totalQtd += meta.sku === 'reais' ? val : qtd;
+          totalVal += val;
+          linhas.push({ nome: c.nome, loja: c.loja || '', cidade: c.cidade || '', qtd, val, data: h.data, unidade: p.unidade || meta.sku });
+        });
+      } else {
+        const clienteMarcas = (c.marcas || []).map(m => (m || '').trim().toLowerCase());
+        if (!clienteMarcas.includes(marcaMeta)) return;
+        const qtd = Number(h.pedidoQtd) || 0;
+        const val = Number(h.pedidoValor) || 0;
+        totalQtd += meta.sku === 'reais' ? val : qtd;
+        totalVal += val;
+        linhas.push({ nome: c.nome, loja: c.loja || '', cidade: c.cidade || '', qtd, val, data: h.data, unidade: h.pedidoUnidade || meta.sku });
+      }
+    });
+  });
+
+  if (!linhas.length) return `<div style="padding:12px 0;text-align:center;font-size:13px;color:var(--texto3);">Nenhuma venda registrada no período.</div>`;
+
+  linhas.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+  const itens = linhas.map(l => {
+    const local = [l.loja, l.cidade].filter(Boolean).join(' · ');
+    const qtdTxt = meta.sku === 'reais' ? `R$ ${fmtV(l.val)}` : `${l.qtd} ${_skuLabel(l.unidade)}`;
+    const valTxt = meta.sku === 'reais' ? '' : `R$ ${fmtV(l.val)}`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--borda);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.nome}</div>
+        <div style="font-size:11px;color:var(--texto2);">${local || '—'} <span style="color:var(--texto3);">· ${fmtD(l.data)}</span></div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;margin-left:10px;">
+        <div style="font-size:13px;font-weight:500;color:var(--texto);">${qtdTxt}</div>
+        ${valTxt ? `<div style="font-size:11px;color:var(--texto2);">${valTxt}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const totalQtdTxt = meta.sku === 'reais' ? `R$ ${fmtV(totalQtd)}` : `${totalQtd} ${skuLabel}`;
+
+  return `<div style="border-top:1px solid var(--borda);padding:10px 0 0;">
+    <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">${linhas.length} venda${linhas.length !== 1 ? 's' : ''} no período</div>
+    ${itens}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 0;margin-top:2px;">
+      <span style="font-size:11px;color:var(--texto2);">${linhas.length} cliente${linhas.length !== 1 ? 's' : ''}</span>
+      <div style="text-align:right;">
+        <span style="font-size:13px;font-weight:700;color:var(--texto);">${totalQtdTxt}</span>
+        ${meta.sku !== 'reais' ? `<span style="font-size:11px;color:var(--texto2);margin-left:8px;">R$ ${fmtV(totalVal)}</span>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleRelCard(id) {
+  const detalhe = document.getElementById('rel-detalhe-' + id);
+  const chevron = document.getElementById('rel-chevron-' + id);
+  const card    = document.getElementById('rel-card-' + id);
+  if (!detalhe) return;
+  const aberto = detalhe.style.display !== 'none';
+  detalhe.style.display = aberto ? 'none' : 'block';
+  if (chevron) chevron.style.transform = aberto ? 'rotate(0deg)' : 'rotate(90deg)';
+  if (card) card.style.borderColor = aberto ? 'var(--borda)' : 'var(--roxo)';
+}
+
 function renderizarRelatorios() {
   const metas = getMetasConfig();
   const lista = document.getElementById('rel-lista');
@@ -5756,30 +5839,37 @@ function renderizarRelatorios() {
     const dotClass     = _dotClasseTend(pct);
     const lacunaCor    = lacuna >= 0 ? 'var(--verde)' : 'var(--vermelho)';
     const pctTxt       = pct !== null ? pct + '%' : '—';
+    const detalheHTML  = _detalheVendasMarca(meta);
 
     metaTotalN += meta.valor;
     realTotalN += real;
 
-    return `<div class="rel-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div style="display:flex;align-items:center;gap:8px;">
+    return `<div class="rel-card" id="rel-card-${meta.id}" style="padding:0;overflow:hidden;">
+      <div onclick="toggleRelCard('${meta.id}')" style="padding:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           <div class="semaforo-dot ${dotClass}"></div>
           <span style="font-size:15px;font-weight:700;color:var(--texto);font-family:'Syne',sans-serif;">${meta.marca}</span>
+          <span style="font-size:10px;color:var(--texto2);background:var(--bg3);border-radius:8px;padding:3px 8px;white-space:nowrap;">${labelPer} · ${skuLabel}</span>
         </div>
-        <span style="font-size:10px;color:var(--texto2);background:var(--bg3);border-radius:8px;padding:3px 8px;">${labelPer} · ${skuLabel}</span>
+        <span id="rel-chevron-${meta.id}" style="color:var(--texto3);font-size:18px;transition:transform .2s;flex-shrink:0;margin-left:6px;">›</span>
       </div>
-      <div class="rel-grid" style="margin-bottom:10px;">
-        <div><div class="rel-col-label">Meta</div><div class="rel-col-valor">${fmtN(meta.valor)}</div></div>
-        <div><div class="rel-col-label">Real</div><div class="rel-col-valor" style="color:var(--verde);">${fmtN(real)}</div></div>
-        <div><div class="rel-col-label">Lacuna</div><div class="rel-col-valor" style="color:${lacunaCor};">${lacuna >= 0 ? '+' : ''}${fmtN(lacuna)}</div></div>
-        <div><div class="rel-col-label">Tendência</div><div class="tend-badge ${clTend}" style="margin-top:0;">${pctTxt}</div></div>
-      </div>
-      <div style="height:5px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:5px;">
-        <div style="width:${progresso}%;height:100%;background:var(--roxo);border-radius:4px;opacity:.5;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;">
-        <span style="font-size:10px;color:var(--texto3);">${progresso}% do período passado</span>
-        <span style="font-size:10px;color:var(--texto2);">Projeção: <strong style="color:var(--texto);">${fmtN(projecao)} ${skuLabel}</strong></span>
+
+      <div style="padding:0 14px 14px;">
+        <div class="rel-grid" style="margin-bottom:10px;">
+          <div><div class="rel-col-label">Meta</div><div class="rel-col-valor">${fmtN(meta.valor)}</div></div>
+          <div><div class="rel-col-label">Real</div><div class="rel-col-valor" style="color:var(--verde);">${fmtN(real)}</div></div>
+          <div><div class="rel-col-label">Lacuna</div><div class="rel-col-valor" style="color:${lacunaCor};">${lacuna >= 0 ? '+' : ''}${fmtN(lacuna)}</div></div>
+          <div><div class="rel-col-label">Tendência</div><div class="tend-badge ${clTend}">${pctTxt}</div></div>
+        </div>
+        <div style="height:5px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:5px;">
+          <div style="width:${progresso}%;height:100%;background:var(--roxo);border-radius:4px;opacity:.6;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="font-size:10px;color:var(--texto3);">${progresso}% do período passado</span>
+          <span style="font-size:10px;color:var(--texto2);">Projeção: <strong style="color:var(--texto);">${fmtN(projecao)} ${skuLabel}</strong></span>
+        </div>
+
+        <div id="rel-detalhe-${meta.id}" style="display:none;">${detalheHTML}</div>
       </div>
     </div>`;
   }).join('');

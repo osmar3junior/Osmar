@@ -1602,7 +1602,6 @@
       <label class="campo-label">Endereço</label>
       <div style="display:flex;gap:8px;align-items:flex-start;">
         <input type="text" class="campo-input" id="hot-endereco" placeholder="Rua, número — bairro" style="flex:1;">
-        <button onclick="usarLocalizacaoLog('hot')" id="hot-gps-btn" title="Usar minha localização" style="background:rgba(0,214,143,.12);border:1px solid rgba(0,214,143,.35);border-radius:10px;padding:11px 12px;color:var(--verde);font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0;">📡 GPS</button>
       </div>
       <input type="hidden" id="hot-lat"><input type="hidden" id="hot-lng">
       <div id="hot-gps-status" style="display:none;margin-top:6px;font-size:12px;"></div>
@@ -1949,7 +1948,6 @@ function _cardResultadoHotel(i, nomePOI, cidadeR, estadoR, enderecoR, telefone) 
         </div>
       </div>
       <div style="display:flex;gap:6px;">
-        <button onclick="event.stopPropagation();abrirExterno('https://www.trivago.com.br/?query=${busca}')" style="flex:1;background:#003580;border:none;border-radius:9px;padding:8px 4px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">🔵 Trivago</button>
         <button onclick="event.stopPropagation();abrirExterno('https://www.tripadvisor.com.br/Search?q=${busca}')" style="flex:1;background:#34E0A1;border:none;border-radius:9px;padding:8px 4px;color:#000;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">🟢 TripAdvisor</button>
         <button onclick="selecionarHotelBusca(${i})" style="flex:2;background:linear-gradient(135deg,#7DD3FC,#38BDF8);border:none;border-radius:9px;padding:8px 10px;color:#000;font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">✅ Pré-cadastrar</button>
       </div>

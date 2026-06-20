@@ -4859,8 +4859,12 @@ function renderizarClientes(filtro = '') {
               const metaCompact = ehHoje && _mCliente
                 ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:1px 5px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(_mCliente.meta)}${skuSigla}</span>`
                 : d.avg > 0 ? `<span style="background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:4px;padding:0 4px;white-space:nowrap;">~${fmtK(d.avg)}</span>` : '';
-              const potCompact = d.count > 0
-                ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.7);">${fmtK(d.avg)}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(d.max)}</strong>`
+              const _cm = (getConfig().metas || []).find(m => m.marca === marca);
+              const _exEm = _cm?.exibirEm || 'reais';
+              const _pv = _exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
+              const _un = _exEm === 'sku' ? _skuLabel(_cm.sku).slice(0,2) : '';
+              const potCompact = _pv.n > 0
+                ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.7);">${fmtK(_pv.avg)}${_un}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(_pv.max)}${_un}</strong>`
                 : '';
               return `<div style="font-size:${ehHoje ? 10 : 9}px;display:flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.5);font-weight:700;min-width:${ehHoje ? 32 : 26}px;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.2);">|</span>${potCompact}` : ''}</div>`;
               });
@@ -4992,13 +4996,18 @@ function abrirDetalhe(clienteId, telaOrigem) {
         if (mCliente) {
           const skuL = mCliente.sku === 'reais' ? '' : ' ' + _skuLabel(mCliente.sku);
           const pesoTxt = mCliente.peso ? ` <span style="opacity:.5;font-size:10px;">(${mCliente.peso}%)</span>` : '';
-          metaHtml = `<span style="font-size:11px;background:rgba(249,115,22,.12);color:#F97316;border-radius:6px;padding:2px 7px;margin-left:6px;">🎯 ${fmtK(mCliente.meta)}${skuL}${pesoTxt}</span>`;
+          metaHtml = `<span class="meta-hoje-pisca" style="font-size:11px;background:rgba(249,115,22,.18);color:#F97316;border-radius:6px;padding:2px 7px;margin-left:6px;font-weight:700;">🎯 ${fmtK(mCliente.meta)}${skuL}${pesoTxt}</span>`;
         }
       } else if (d.avg > 0) {
         metaHtml = `<span style="font-size:11px;background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:6px;padding:2px 7px;margin-left:6px;">🎯 ~${fmtK(d.avg)} média</span>`;
       }
-      const potHtml = d.count > 0
-        ? `<span style="font-size:11px;color:var(--texto2);">méd <strong style="color:var(--texto);">${fmtK(d.avg)}</strong></span><span style="font-size:11px;color:var(--texto3);margin:0 4px;">·</span><span style="font-size:11px;color:var(--texto2);">máx <strong style="color:var(--verde);">${fmtK(d.max)}</strong></span>`
+      const _cfgMeta = (getConfig().metas || []).find(m => m.marca === marca);
+      const _exibirEm = _cfgMeta?.exibirEm || 'reais';
+      const _skuNome = _cfgMeta ? _skuLabel(_cfgMeta.sku) : '';
+      const _potVal  = _exibirEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
+      const _unidade = _exibirEm === 'sku' ? ` ${_skuNome}` : '';
+      const potHtml = _potVal.n > 0
+        ? `<span style="font-size:11px;color:var(--texto2);">méd <strong style="color:var(--texto);">${fmtK(_potVal.avg)}${_unidade}</strong></span><span style="font-size:11px;color:var(--texto3);margin:0 4px;">·</span><span style="font-size:11px;color:var(--texto2);">máx <strong style="color:var(--verde);">${fmtK(_potVal.max)}${_unidade}</strong></span>`
         : `<span style="font-size:11px;color:var(--texto3);font-style:italic;">sem histórico</span>`;
       return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;${marcas.length > 1 ? 'border-bottom:1px solid var(--borda);' : ''}">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -6288,6 +6297,11 @@ function renderizarMetasConfig(cfg) {
         <input type="number" min="0" max="100" step="0.1" class="campo-input" style="flex:1;padding:5px 8px;font-size:13px;" placeholder="%" value="${meta.comissao || ''}" onchange="editarMetaField('${meta.id}','comissao',Number(this.value))">
         <span style="font-size:13px;color:var(--texto2);font-weight:700;">%</span>
       </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+        <span style="font-size:11px;color:var(--texto2);white-space:nowrap;">Potencial exibir em:</span>
+        <button onclick="alternarExibirEmMeta('${meta.id}','reais')" style="flex:1;padding:5px 8px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid ${(meta.exibirEm || 'reais') === 'reais' ? 'var(--verde)' : 'var(--borda)'};background:${(meta.exibirEm || 'reais') === 'reais' ? 'rgba(0,214,143,.12)' : 'var(--bg3)'};color:${(meta.exibirEm || 'reais') === 'reais' ? 'var(--verde)' : 'var(--texto2)'};">R$</button>
+        <button onclick="alternarExibirEmMeta('${meta.id}','sku')" style="flex:1;padding:5px 8px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid ${meta.exibirEm === 'sku' ? 'var(--verde)' : 'var(--borda)'};background:${meta.exibirEm === 'sku' ? 'rgba(0,214,143,.12)' : 'var(--bg3)'};color:${meta.exibirEm === 'sku' ? 'var(--verde)' : 'var(--texto2)'};">${_skuLabel(meta.sku)}</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -6299,6 +6313,15 @@ function editarMetaField(id, campo, valor) {
   meta[campo] = valor;
   salvarConfigData(cfg);
   atualizarSemaforoDash();
+}
+
+function alternarExibirEmMeta(id, tipo) {
+  const cfg = getConfig();
+  const meta = (cfg.metas || []).find(m => m.id === id);
+  if (!meta) return;
+  meta.exibirEm = tipo;
+  salvarConfigData(cfg);
+  renderizarMetasConfig(cfg);
 }
 
 function alternarPeriodoMeta(id, tipo) {
@@ -6428,35 +6451,48 @@ function fmtK(v) {
 }
 
 function calcularPotencialCliente(cliente) {
-  // Retorna { marca: { avg, max, count } } baseado no historico de pedidos
+  // Retorna { marca: { avg, max, count, avgQtd, maxQtd, countQtd } }
   const resultado = {};
   if (!cliente.historico) return resultado;
   const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
-  marcas.forEach(m => { resultado[m || '_'] = { soma: 0, max: 0, count: 0 }; });
+  const _init = () => ({ soma: 0, max: 0, count: 0, somaQtd: 0, maxQtd: 0, countQtd: 0 });
+  marcas.forEach(m => { resultado[m || '_'] = _init(); });
   cliente.historico.forEach(h => {
     if (h.motivo !== 'fechou_pedido') return;
     if (h.pedidos && h.pedidos.length) {
       h.pedidos.forEach(p => {
         const chave = p.marca || '_';
-        if (!resultado[chave]) resultado[chave] = { soma: 0, max: 0, count: 0 };
+        if (!resultado[chave]) resultado[chave] = _init();
         const val = p.valor || 0;
+        const qtd = p.qtd || 0;
         if (val > 0) {
-          resultado[chave].soma  += val;
-          resultado[chave].max    = Math.max(resultado[chave].max, val);
+          resultado[chave].soma += val;
+          resultado[chave].max   = Math.max(resultado[chave].max, val);
           resultado[chave].count++;
+        }
+        if (qtd > 0) {
+          resultado[chave].somaQtd += qtd;
+          resultado[chave].maxQtd   = Math.max(resultado[chave].maxQtd, qtd);
+          resultado[chave].countQtd++;
         }
       });
     } else if (h.pedidoValor > 0) {
       const chave = (marcas[0]) || '_';
-      if (!resultado[chave]) resultado[chave] = { soma: 0, max: 0, count: 0 };
-      resultado[chave].soma  += h.pedidoValor;
-      resultado[chave].max    = Math.max(resultado[chave].max, h.pedidoValor);
+      if (!resultado[chave]) resultado[chave] = _init();
+      resultado[chave].soma += h.pedidoValor;
+      resultado[chave].max   = Math.max(resultado[chave].max, h.pedidoValor);
       resultado[chave].count++;
+      if (h.pedidoQtd > 0) {
+        resultado[chave].somaQtd += h.pedidoQtd;
+        resultado[chave].maxQtd   = Math.max(resultado[chave].maxQtd, h.pedidoQtd);
+        resultado[chave].countQtd++;
+      }
     }
   });
   Object.keys(resultado).forEach(k => {
     const r = resultado[k];
-    r.avg = r.count > 0 ? r.soma / r.count : 0;
+    r.avg    = r.count    > 0 ? r.soma    / r.count    : 0;
+    r.avgQtd = r.countQtd > 0 ? r.somaQtd / r.countQtd : 0;
   });
   return resultado;
 }

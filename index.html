@@ -385,6 +385,11 @@
   .campo-destaque { animation:destacaCampo .85s ease-in-out 3; }
 
   /* Notificação piscante de pernoite no card do hotel */
+  @keyframes piscaMeta {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:.45; transform:scale(.96); }
+  }
+  .meta-hoje-pisca { animation:piscaMeta 1.1s ease-in-out infinite; }
   @keyframes piscaPernoite {
     0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(99,211,149,0); }
     50%     { opacity:.7; box-shadow:0 0 0 6px rgba(99,211,149,.35); }
@@ -1234,6 +1239,23 @@
       <div class="config-secao-sub">Cadastre a meta de cada marca que você representa. O app calcula automaticamente a tendência de fechamento com base nas suas vendas registradas.</div>
       <div id="metas-config-lista"></div>
       <button onclick="adicionarMetaConfig()" style="width:100%;background:rgba(249,115,22,.1);border:1.5px dashed rgba(249,115,22,.45);border-radius:12px;padding:12px;color:#F97316;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;">+ Adicionar meta</button>
+    </div>
+
+    <div class="config-secao">
+      <div class="config-secao-titulo">📈 Margem de segurança da meta diária</div>
+      <div class="config-secao-sub">Adiciona um percentual extra à meta diária necessária. Se você precisa vender 100 peças/dia e configura 20%, o app mostra <strong>120 peças/dia</strong> — assim, mesmo nos dias mais fracos, você chega ao fim do mês dentro da meta.<br><br>💡 <em>Representantes experientes costumam usar entre 20% e 30% para ter uma folga real sem depender de um sprint no final do mês.</em></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <label style="font-size:13px;color:var(--texto2);align-self:center;">Meta exibida com:</label>
+        <select class="campo-input" id="cfg-buffer-meta" style="width:auto;min-width:120px;">
+          <option value="0">Sem margem (0%)</option>
+          <option value="10">+10%</option>
+          <option value="20" selected>+20% (recomendado)</option>
+          <option value="30">+30%</option>
+          <option value="40">+40%</option>
+          <option value="50">+50%</option>
+        </select>
+        <span id="cfg-buffer-preview" style="font-size:12px;color:var(--verde);align-self:center;"></span>
+      </div>
     </div>
 
     <div class="config-secao">
@@ -4765,13 +4787,8 @@ function renderizarClientes(filtro = '') {
     lista.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-titulo">${filtro ? 'Nenhum resultado' : 'Nenhum cliente ainda'}</div><div class="empty-desc">${filtro ? 'Tente outro termo.' : 'Toque em "+ Novo" para adicionar.'}</div></div>`;
     return;
   }
-  // Pré-computa meta diária por marca para clientes de hoje
-  const _metaHojeCache = {};
-  const _todasMarcasHoje = [...new Set(filtrados.filter(c => getDiffDiasCliente(c) === 0).flatMap(c => c.marcas || []))];
-  if (_todasMarcasHoje.length) {
-    const m = calcularMetaDiariaHoje(_todasMarcasHoje);
-    Object.assign(_metaHojeCache, m);
-  }
+  // Pré-computa meta ponderada por cliente×marca para clientes de hoje
+  const _metaHojeCache = calcularMetaDiariaHoje(); // { clienteId: { marca: { meta, sku } } }
 
   const cores = ['verde','amarelo','vermelho','azul'];
   lista.innerHTML = filtrados.map((c, i) => {
@@ -4813,8 +4830,8 @@ function renderizarClientes(filtro = '') {
 
     return `
       <div class="cliente-item" style="background:${cardBg};border-color:${cardBorda};position:relative;border-width:1.5px;">
-        <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;" onclick="abrirDetalhe('${c.id}','clientes')">
-          <div class="cliente-avatar avatar-${cor}" style="background:rgba(0,0,0,.25);">${c.nome.charAt(0).toUpperCase()}</div>
+        <div style="display:flex;align-items:center;gap:${getDiffDiasCliente(c) === 0 ? 8 : 14}px;flex:1;min-width:0;" onclick="abrirDetalhe('${c.id}','clientes')">
+          ${getDiffDiasCliente(c) !== 0 ? `<div class="cliente-avatar avatar-${cor}" style="background:rgba(0,0,0,.25);">${c.nome.charAt(0).toUpperCase()}</div>` : ''}
           <div class="cliente-info">
             <div class="cliente-nome" style="color:${cardTextColor};">${c.nome}</div>
             <div class="cliente-loja" style="color:${cardTextColor};opacity:.75;">${c.loja}${c.cidade ? ' · ' + c.cidade : ''}</div>
@@ -4837,13 +4854,15 @@ function renderizarClientes(filtro = '') {
                 const potStr = d.count > 0
                   ? `<span style="color:rgba(255,255,255,.5);">méd</span> <strong style="color:rgba(255,255,255,.8);">${fmtK(d.avg)}</strong> <span style="color:rgba(255,255,255,.3);">·</span> <span style="color:rgba(255,255,255,.5);">máx</span> <strong style="color:#00D68F;">${fmtK(d.max)}</strong>`
                   : `<span style="color:rgba(255,255,255,.3);font-style:italic;">sem pedidos</span>`;
-                const metaCompact = ehHoje && _metaHojeCache[marca]
-                ? `<span style="background:rgba(249,115,22,.18);color:#F97316;border-radius:4px;padding:0 4px;white-space:nowrap;">🎯 ${fmtK(_metaHojeCache[marca].meta)}${_metaHojeCache[marca].sku !== 'reais' ? _skuLabel(_metaHojeCache[marca].sku).slice(0,2) : ''}</span>`
+                const _mCliente = _metaHojeCache[c.id] && _metaHojeCache[c.id][marca];
+              const skuSigla = _mCliente && _mCliente.sku !== 'reais' ? _skuLabel(_mCliente.sku).slice(0,2) : '';
+              const metaCompact = ehHoje && _mCliente
+                ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:1px 5px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(_mCliente.meta)}${skuSigla}</span>`
                 : d.avg > 0 ? `<span style="background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:4px;padding:0 4px;white-space:nowrap;">~${fmtK(d.avg)}</span>` : '';
               const potCompact = d.count > 0
                 ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.7);">${fmtK(d.avg)}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(d.max)}</strong>`
                 : '';
-              return `<div style="font-size:9px;display:flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.45);font-weight:600;min-width:26px;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.2);">|</span>${potCompact}` : ''}</div>`;
+              return `<div style="font-size:${ehHoje ? 10 : 9}px;display:flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.5);font-weight:700;min-width:${ehHoje ? 32 : 26}px;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.2);">|</span>${potCompact}` : ''}</div>`;
               });
               return `<div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">${itens.join('')}</div>`;
             })()}
@@ -4968,10 +4987,12 @@ function abrirDetalhe(clienteId, telaOrigem) {
       const ehHoje = diff === 0;
       let metaHtml = '';
       if (ehHoje) {
-        const mHoje = calcularMetaDiariaHoje([marca]);
-        if (mHoje[marca]) {
-          const skuL = mHoje[marca].sku === 'reais' ? '' : ' ' + _skuLabel(mHoje[marca].sku);
-          metaHtml = `<span style="font-size:11px;background:rgba(249,115,22,.12);color:#F97316;border-radius:6px;padding:2px 7px;margin-left:6px;">🎯 ${fmtK(mHoje[marca].meta)}${skuL}/cliente</span>`;
+        const mHoje = calcularMetaDiariaHoje();
+        const mCliente = mHoje[cliente.id] && mHoje[cliente.id][marca];
+        if (mCliente) {
+          const skuL = mCliente.sku === 'reais' ? '' : ' ' + _skuLabel(mCliente.sku);
+          const pesoTxt = mCliente.peso ? ` <span style="opacity:.5;font-size:10px;">(${mCliente.peso}%)</span>` : '';
+          metaHtml = `<span style="font-size:11px;background:rgba(249,115,22,.12);color:#F97316;border-radius:6px;padding:2px 7px;margin-left:6px;">🎯 ${fmtK(mCliente.meta)}${skuL}${pesoTxt}</span>`;
         }
       } else if (d.avg > 0) {
         metaHtml = `<span style="font-size:11px;background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:6px;padding:2px 7px;margin-left:6px;">🎯 ~${fmtK(d.avg)} média</span>`;
@@ -5733,6 +5754,8 @@ function carregarConfig() {
   });
   document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 60;
   document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
+  const bufferEl = document.getElementById('cfg-buffer-meta');
+  if (bufferEl) bufferEl.value = cfg.bufferMeta !== undefined ? cfg.bufferMeta : 20;
   renderizarMetasConfig(cfg);
   renderizarSkuGrid(cfg);
   (cfg.skusCustom || ['','','']).forEach((v, i) => {
@@ -5771,6 +5794,7 @@ function salvarConfig() {
   cfg.skusCustom = [0, 1, 2].map(i => (document.getElementById('sku-custom-' + i)?.value || '').trim());
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
+  cfg.bufferMeta = parseInt(document.getElementById('cfg-buffer-meta')?.value) || 0;
   salvarConfigData(cfg);
   atualizarSemaforoDash();
   toast('Configurações salvas!');
@@ -6121,10 +6145,12 @@ function renderizarRelatorios() {
     const pctTxt       = pct !== null ? pct + '%' : '—';
     const detalheHTML  = _detalheVendasMarca(meta);
 
-    // Média diária necessária
+    // Média diária necessária (com margem de segurança configurada)
     const diasRestantes = Math.max(0, Math.round((fim - agora) / 86400000));
     const falta         = meta.valor - real;
-    const mediaDiaria   = (diasRestantes > 0 && falta > 0) ? falta / diasRestantes : null;
+    const _buffer       = 1 + ((cfg.bufferMeta || 0) / 100);
+    const mediaDiaria   = (diasRestantes > 0 && falta > 0) ? (falta / diasRestantes) * _buffer : null;
+    const _bufferLabel  = cfg.bufferMeta > 0 ? ` <span style="font-size:10px;color:var(--verde);opacity:.7;">(+${cfg.bufferMeta}% margem)</span>` : '';
     const dataFimFmt    = fim.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
     const fmtMedia = v => {
       if (meta.sku === 'reais') {
@@ -6178,7 +6204,7 @@ function renderizarRelatorios() {
 
         <div style="background:${mediaBg};border:1px solid ${mediaBorda};border-radius:10px;padding:10px 12px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
-            <span style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Meta diária necessária</span>
+            <span style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Meta diária necessária${_bufferLabel}</span>
             <span style="font-size:10px;color:var(--texto3);">até ${dataFimFmt}</span>
           </div>
           <div style="display:flex;align-items:baseline;gap:7px;">
@@ -6435,17 +6461,21 @@ function calcularPotencialCliente(cliente) {
   return resultado;
 }
 
-function calcularMetaDiariaHoje(marcasCliente) {
-  // Retorna { marca: metaPorCliente } para clientes da rota do dia
+function calcularMetaDiariaHoje() {
+  // Retorna { [clienteId]: { [marca]: { meta, sku } } }
+  // Distribuição ponderada pelo potencial histórico de compra de cada cliente
   const cfg = getConfig();
   const metas = cfg.metas || [];
   const clientes = getClientesAtivos();
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
   const resultado = {};
-  (marcasCliente || []).forEach(marca => {
+
+  const marcasHoje = [...new Set(
+    clientes.filter(c => getDiffDiasCliente(c) === 0).flatMap(c => c.marcas || [])
+  )];
+
+  marcasHoje.forEach(marca => {
     const meta = metas.find(m => m.marca === marca);
     if (!meta) return;
-    // Calcula meta diária da marca
     const agora = new Date();
     let fim;
     if (meta.tipoPeriodo === 'colecao') {
@@ -6459,16 +6489,37 @@ function calcularMetaDiariaHoje(marcasCliente) {
     const diasRestantes = Math.max(1, Math.round((fim - agora) / 86400000));
     const real = calcularRealMarca(meta);
     const falta = Math.max(0, meta.valor - real);
-    const mediaDiaria = falta / diasRestantes;
+    const buffer = 1 + ((cfg.bufferMeta || 0) / 100);
+    const mediaDiaria = (falta / diasRestantes) * buffer;
     if (mediaDiaria <= 0) return;
-    // Conta clientes urgentes (retomar hoje) com essa marca
-    const clientesHoje = clientes.filter(c => {
-      const diff = getDiffDiasCliente(c);
-      if (diff !== 0) return false;
-      return (c.marcas || []).includes(marca);
+
+    const clientesHoje = clientes.filter(c =>
+      getDiffDiasCliente(c) === 0 && (c.marcas || []).includes(marca)
+    );
+    if (!clientesHoje.length) return;
+
+    // Calcula avg histórico por cliente para esta marca
+    const avgs = clientesHoje.map(c => {
+      const pot = calcularPotencialCliente(c);
+      return (pot[marca] && pot[marca].avg > 0) ? pot[marca].avg : 0;
     });
-    const n = Math.max(1, clientesHoje.length);
-    resultado[marca] = { meta: mediaDiaria / n, sku: meta.sku };
+
+    const comHistorico = avgs.filter(a => a > 0);
+    // Clientes sem histórico recebem 50% da média dos demais como peso base
+    const mediaGeral = comHistorico.length > 0
+      ? comHistorico.reduce((s, a) => s + a, 0) / comHistorico.length
+      : mediaDiaria / clientesHoje.length;
+    const pesos = avgs.map(a => a > 0 ? a : mediaGeral * 0.5);
+    const totalPesos = pesos.reduce((s, p) => s + p, 0);
+
+    clientesHoje.forEach((c, i) => {
+      if (!resultado[c.id]) resultado[c.id] = {};
+      resultado[c.id][marca] = {
+        meta: mediaDiaria * (pesos[i] / totalPesos),
+        sku: meta.sku,
+        peso: Math.round((pesos[i] / totalPesos) * 100) // % do peso para debug
+      };
+    });
   });
   return resultado;
 }

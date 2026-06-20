@@ -393,7 +393,12 @@
     0%,100% { border-color:var(--borda); }
     50%     { border-color:#4ADE80; box-shadow:0 0 12px rgba(74,222,128,.25); }
   }
+  @keyframes piscaCidade {
+    0%,100% { border-color:#38BDF8; box-shadow:0 0 0 0 rgba(56,189,248,0); }
+    50%     { border-color:#7DD3FC; box-shadow:0 0 10px rgba(56,189,248,.3); }
+  }
   .hotel-card-proximo { animation:piscaBordaHotel 1.4s ease-in-out infinite; }
+  .hotel-card-cidade { border-color:#38BDF8 !important; animation:piscaCidade 1s ease-in-out 6; }
   .notif-pernoite {
     display:flex; align-items:center; gap:8px; margin-top:8px;
     background:rgba(74,222,128,.1); border:1px solid rgba(74,222,128,.4);
@@ -1951,6 +1956,7 @@ function abrirNaEstrada() {
   atualizarAbaEstrada();
   renderizarEstrada();
   document.getElementById('modal-na-estrada').classList.add('aberto');
+  detectarCidadeHoteis();
   verificarProximidadeHotelNoturna();
 }
 function atualizarAbaEstrada() {
@@ -2174,55 +2180,64 @@ function renderizarEstrada() {
     cont.innerHTML = `<div class="empty-state" style="padding:28px 16px;"><div class="empty-icon">${v.e}</div><div class="empty-titulo">${v.t}</div><div class="empty-desc">${v.d}</div></div>`;
     return;
   }
+  if (abaEstrada === 'hoteis' && window._cidadeAtualEstrada) {
+    const c = window._cidadeAtualEstrada.toLowerCase();
+    itens = [...itens].sort((a, b) => {
+      const aM = (a.cidade || '').toLowerCase().includes(c) ? 1 : 0;
+      const bM = (b.cidade || '').toLowerCase().includes(c) ? 1 : 0;
+      return bM - aM;
+    });
+  }
   cont.innerHTML = (abaEstrada === 'hoteis' ? itens.map(_cardHotel) : itens.map(_cardPosto)).join('');
 }
 
 function _cardHotel(h) {
   const n = h.estrelas || 0;
-  const estrelas = '★'.repeat(n) + '<span style="color:var(--borda);">' + '★'.repeat(5 - n) + '</span>';
+  const estrelas = n > 0 ? '<span style="color:var(--amarelo);">' + '★'.repeat(n) + '</span>' : '';
   const tel = h.telefone ? h.telefone.replace(/\D/g, '') : '';
   const wpp = h.whatsapp ? h.whatsapp.replace(/\D/g, '') : '';
   const precos = [];
-  if (h.precoComAr) precos.push(`<span style="font-size:12px;background:rgba(56,189,248,.12);color:#7DD3FC;border-radius:8px;padding:4px 8px;">❄️ Com ar R$ ${h.precoComAr}</span>`);
-  if (h.precoSemAr) precos.push(`<span style="font-size:12px;background:var(--bg2);color:var(--texto2);border-radius:8px;padding:4px 8px;">Sem ar R$ ${h.precoSemAr}</span>`);
+  if (h.precoComAr) precos.push(`<span style="font-size:11px;background:rgba(56,189,248,.12);color:#7DD3FC;border-radius:7px;padding:3px 7px;">❄️ R$ ${h.precoComAr}</span>`);
+  if (h.precoSemAr) precos.push(`<span style="font-size:11px;background:var(--bg2);color:var(--texto2);border-radius:7px;padding:3px 7px;">Sem ar R$ ${h.precoSemAr}</span>`);
   const chips = [];
-  if (h.cafe) chips.push('<span style="font-size:10.5px;background:rgba(0,214,143,.12);color:var(--verde);border-radius:20px;padding:2px 9px;">☕ Café</span>');
-  if (h.estacionamento) chips.push('<span style="font-size:10.5px;background:rgba(0,214,143,.12);color:var(--verde);border-radius:20px;padding:2px 9px;">🅿️ Estacionamento</span>');
+  if (h.cafe) chips.push('<span style="font-size:10px;background:rgba(0,214,143,.12);color:var(--verde);border-radius:20px;padding:2px 7px;">☕</span>');
+  if (h.estacionamento) chips.push('<span style="font-size:10px;background:rgba(0,214,143,.12);color:var(--verde);border-radius:20px;padding:2px 7px;">🅿️</span>');
   const ultimaHosp = (h.pernoites && h.pernoites.length)
-    ? `<span style="font-size:11px;color:var(--texto2);background:var(--bg2);border-radius:6px;padding:3px 8px;">🌙 ${formatarData(h.pernoites[h.pernoites.length - 1])}</span>`
-    : `<span style="font-size:11px;color:var(--texto3);font-style:italic;">Toque em 🌙 para registrar</span>`;
+    ? `<span style="font-size:11px;color:var(--texto2);background:var(--bg2);border-radius:6px;padding:2px 7px;">🌙 ${formatarData(h.pernoites[h.pernoites.length - 1])}</span>`
+    : `<span style="font-size:11px;color:var(--texto3);font-style:italic;">registrar</span>`;
   const ehProximo = window._hotelProximoId === h.id;
+  const cidadeAtual = (window._cidadeAtualEstrada || '').toLowerCase();
+  const ehCidade = cidadeAtual && (h.cidade || '').toLowerCase().includes(cidadeAtual);
+  const classe = ehProximo ? 'hotel-card-proximo' : ehCidade ? 'hotel-card-cidade' : '';
   const notifBanner = ehProximo ? `
-    <div class="notif-pernoite">
-      <span style="font-size:16px;">🏨</span>
+    <div class="notif-pernoite" style="margin-top:6px;">
+      <span style="font-size:14px;">🏨</span>
       <span class="notif-pernoite-txt">Vai pernoitar aqui hoje?</span>
       <button class="notif-pernoite-sim" onclick="confirmarPernoiteProximo('${h.id}')">Sim</button>
       <button class="notif-pernoite-nao" onclick="dispensarNotifPernoite()">Não</button>
     </div>` : '';
-  return `<div class="${ehProximo ? 'hotel-card-proximo' : ''}" style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px;">
-      <div style="font-weight:700;font-size:15px;color:var(--texto);">${h.nome}${h.cidade ? `<span style="font-size:12px;color:var(--texto2);font-weight:400;"> · ${h.cidade}</span>` : ''}</div>
-      <div style="color:var(--amarelo);font-size:13px;white-space:nowrap;">${estrelas}</div>
+  const btnStyle = 'border:none;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;width:36px;height:32px;font-size:16px;';
+  return `<div class="${classe}" style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
+      <div style="font-weight:700;font-size:14px;color:var(--texto);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h.nome}${h.cidade ? `<span style="font-size:11px;color:var(--texto2);font-weight:400;"> · ${h.cidade}</span>` : ''}</div>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">${chips.join('')}${estrelas ? `<span style="font-size:11px;">${estrelas}</span>` : ''}</div>
     </div>
-    ${precos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px;">${precos.join('')}</div>` : `<div style="margin-bottom:5px;"><span onclick="editarLog('hot','${h.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:#F59E0B;background:rgba(245,158,11,.1);border:1px dashed rgba(245,158,11,.45);border-radius:8px;padding:4px 10px;cursor:pointer;">✏️ Preencher preço na 1ª hospedagem</span></div>`}
-    ${chips.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">${chips.join('')}</div>` : ''}
+    ${precos.length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px;">${precos.join('')}</div>` : `<div style="margin-bottom:5px;"><span onclick="editarLog('hot','${h.id}')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#F59E0B;background:rgba(245,158,11,.1);border:1px dashed rgba(245,158,11,.45);border-radius:7px;padding:3px 8px;cursor:pointer;">✏️ Preencher preço</span></div>`}
     <div style="display:flex;gap:8px;align-items:center;">
-      <div style="flex:1;">
-        <div style="display:flex;gap:6px;margin-bottom:5px;">
-          ${tel ? `<a href="tel:${tel}" style="text-decoration:none;width:36px;height:34px;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">📞</a>` : ''}
-          ${wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" style="text-decoration:none;width:36px;height:34px;background:#1C2A1E;border:1px solid #25D366;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${WPP_ICON}</a>` : ''}
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;">📅 Última:</span>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+          ${tel ? `<a href="tel:${tel}" style="text-decoration:none;width:30px;height:28px;background:var(--bg2);border:1px solid var(--borda);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">📞</a>` : ''}
+          ${wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" style="text-decoration:none;width:30px;height:28px;background:#1C2A1E;border:1px solid #25D366;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${WPP_ICON}</a>` : ''}
+          <span style="font-size:10px;color:var(--texto3);white-space:nowrap;">📅</span>
           ${ultimaHosp}
         </div>
         ${notifBanner}
       </div>
-      <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">
-        <button onclick="rotaLog('hot','${h.id}')" style="width:44px;height:36px;background:#33CCFF;border:none;border-radius:10px;color:#000;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🧭</button>
-        <button onclick="registrarPernoite('${h.id}')" title="Registrar pernoite hoje" style="width:44px;height:36px;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);border-radius:10px;color:var(--verde);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🌙</button>
-        <button onclick="editarLog('hot','${h.id}')" style="width:44px;height:36px;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✏️</button>
-        <button onclick="excluirLog('hot','${h.id}')" style="width:44px;height:36px;background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.35);border-radius:10px;color:#FF4D6A;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>
+      <div style="display:grid;grid-template-columns:repeat(2,36px);gap:4px;flex-shrink:0;">
+        <button onclick="rotaLog('hot','${h.id}')" style="${btnStyle}background:#33CCFF;color:#000;">🧭</button>
+        <button onclick="registrarPernoite('${h.id}')" title="Registrar pernoite" style="${btnStyle}background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);color:var(--verde);">🌙</button>
+        <button onclick="editarLog('hot','${h.id}')" style="${btnStyle}background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">✏️</button>
+        <button onclick="excluirLog('hot','${h.id}')" style="${btnStyle}background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.35);color:#FF4D6A;">🗑️</button>
       </div>
     </div>
   </div>`;
@@ -2422,6 +2437,26 @@ function registrarPernoite(id) {
   setData('cv_logistica', log);
   renderizarEstrada();
   toast('🌙 Pernoite registrado!');
+}
+
+// --- Detecção de cidade atual (ordena hotéis da cidade no topo) ---
+window._cidadeAtualEstrada = null;
+
+function detectarCidadeHoteis() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=pt-BR`);
+      const data = await resp.json();
+      const a = data.address || {};
+      const cidade = a.city || a.town || a.village || a.municipality || '';
+      if (cidade && cidade.toLowerCase() !== (window._cidadeAtualEstrada || '').toLowerCase()) {
+        window._cidadeAtualEstrada = cidade;
+        renderizarEstrada();
+      }
+    } catch(e) {}
+  }, () => {}, { maximumAge: 120000, timeout: 10000, enableHighAccuracy: false });
 }
 
 // --- Detecção automática de proximidade ao hotel (noturna) ---

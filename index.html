@@ -4837,9 +4837,15 @@ function renderizarClientes(filtro = '') {
                 const potStr = d.count > 0
                   ? `<span style="color:rgba(255,255,255,.5);">méd</span> <strong style="color:rgba(255,255,255,.8);">${fmtK(d.avg)}</strong> <span style="color:rgba(255,255,255,.3);">·</span> <span style="color:rgba(255,255,255,.5);">máx</span> <strong style="color:#00D68F;">${fmtK(d.max)}</strong>`
                   : `<span style="color:rgba(255,255,255,.3);font-style:italic;">sem pedidos</span>`;
-                return `<span style="font-size:10px;display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,.2);border-radius:6px;padding:2px 7px;"><span style="color:rgba(255,255,255,.6);font-weight:700;">${marca}</span> ${metaStr} ${potStr}</span>`;
+                const metaCompact = ehHoje && _metaHojeCache[marca]
+                ? `<span style="background:rgba(249,115,22,.18);color:#F97316;border-radius:4px;padding:0 4px;white-space:nowrap;">🎯 ${fmtK(_metaHojeCache[marca].meta)}${_metaHojeCache[marca].sku !== 'reais' ? _skuLabel(_metaHojeCache[marca].sku).slice(0,2) : ''}</span>`
+                : d.avg > 0 ? `<span style="background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:4px;padding:0 4px;white-space:nowrap;">~${fmtK(d.avg)}</span>` : '';
+              const potCompact = d.count > 0
+                ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.7);">${fmtK(d.avg)}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(d.max)}</strong>`
+                : '';
+              return `<div style="font-size:9px;display:flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.45);font-weight:600;min-width:26px;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.2);">|</span>${potCompact}` : ''}</div>`;
               });
-              return `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${itens.join('')}</div>`;
+              return `<div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">${itens.join('')}</div>`;
             })()}
           </div>
         </div>
@@ -4983,7 +4989,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
     }).filter(Boolean);
     if (linhas.length) {
       potBox.style.display = 'block';
-      potBox.innerHTML = `<div style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">📊 Potencial · R$</div>${linhas.join('')}`;
+      potBox.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">🎯 Meta de venda hoje</span><span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Potencial de compra atual</span></div>${linhas.join('')}`;
     } else {
       potBox.style.display = 'none';
     }

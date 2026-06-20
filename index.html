@@ -2949,6 +2949,7 @@ function irPara(tela) {
   if (!el) return;
   el.style.display = 'flex';
   el.classList.add('ativa');
+  el.scrollTop = 0;
   if (tela === 'dashboard') { atualizarDashboard(); setTimeout(() => renderizarClientes(), 100); }
   if (tela === 'clientes') { renderizarChipsMarca(); renderizarClientes(); }
   if (tela === 'esquecidos') renderizarEsquecidos();
@@ -6123,6 +6124,7 @@ function toggleRelCard(id) {
 }
 
 function renderizarRelatorios() {
+  const cfg   = getConfig();
   const metas = getMetasConfig();
   const lista = document.getElementById('rel-lista');
 

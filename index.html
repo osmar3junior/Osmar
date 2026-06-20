@@ -818,6 +818,9 @@
     </div>
   </div>
   <div class="detalhe-content">
+    <!-- POTENCIAL DO CLIENTE -->
+    <div id="det-potencial-box" style="display:none;background:var(--bg2);border:1px solid var(--borda);border-radius:14px;padding:12px 14px;margin-bottom:14px;"></div>
+
     <div id="det-status-box" style="display:none">
       <div class="status-atual" onclick="editarContato(0)" style="cursor:pointer;transition:border-color .2s;" onmouseenter="this.style.borderColor='var(--verde)'" onmouseleave="this.style.borderColor='var(--borda)'">
         <div class="status-titulo" style="display:flex;align-items:center;justify-content:space-between;">
@@ -827,6 +830,25 @@
         <div class="status-motivo" id="det-motivo">-</div>
         <div class="status-data" id="det-data-contato">-</div>
         <div id="det-pedido-resumo" style="display:none;margin-top:8px;"></div>
+      </div>
+
+      <div class="proxima-acao" id="det-proxima-box">
+        <div class="proxima-titulo">📅 Próxima ação</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+          <div id="det-proxima-data" class="proxima-data" style="flex:1;">-</div>
+        </div>
+        <div style="position:relative;">
+          <input type="date" id="input-data-retorno" onchange="salvarDataRetorno(this.value)"
+            style="position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0;margin:0;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button id="chip-data-retorno" onclick="abrirSeletorData()" style="flex:1;display:flex;align-items:center;gap:10px;background:var(--bg3);border:1.5px dashed rgba(0,214,143,.5);border-radius:12px;padding:13px 14px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;">
+              <span style="font-size:18px;line-height:1;">📅</span>
+              <span id="chip-data-texto" style="flex:1;">Tocar para escolher a data de retorno</span>
+            </button>
+            <button onclick="limparDataRetorno()" id="btn-limpar-data" title="Remover data e voltar à sugerida" style="display:none;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:13px 15px;color:var(--texto2);font-size:14px;cursor:pointer;flex-shrink:0;">✕</button>
+          </div>
+        </div>
+        <div id="det-data-personalizada" style="display:none;font-size:12px;color:var(--amarelo);margin-top:8px;">📌 Data personalizada pelo representante</div>
       </div>
 
       <!-- LEMBRETE RÁPIDO -->
@@ -843,28 +865,6 @@
           onfocus="this.style.borderColor='var(--amarelo)';document.getElementById('btn-salvar-lembrete').style.display='block'"
           onblur="this.style.borderColor='var(--borda)'"
         ></textarea>
-      </div>
-
-      <div class="proxima-acao" id="det-proxima-box">
-        <!-- BLOCO 1: PRÓXIMA AÇÃO + CALENDÁRIO -->
-        <div class="proxima-titulo">📅 Próxima ação</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
-          <div id="det-proxima-data" class="proxima-data" style="flex:1;">-</div>
-        </div>
-        <!-- Seletor de data: chip clicável que abre o calendário nativo -->
-        <div style="position:relative;">
-          <input type="date" id="input-data-retorno" onchange="salvarDataRetorno(this.value)"
-            style="position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0;margin:0;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <button id="chip-data-retorno" onclick="abrirSeletorData()" style="flex:1;display:flex;align-items:center;gap:10px;background:var(--bg3);border:1.5px dashed rgba(0,214,143,.5);border-radius:12px;padding:13px 14px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;">
-              <span style="font-size:18px;line-height:1;">📅</span>
-              <span id="chip-data-texto" style="flex:1;">Tocar para escolher a data de retorno</span>
-            </button>
-            <button onclick="limparDataRetorno()" id="btn-limpar-data" title="Remover data e voltar à sugerida" style="display:none;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:13px 15px;color:var(--texto2);font-size:14px;cursor:pointer;flex-shrink:0;">✕</button>
-          </div>
-        </div>
-
-        <div id="det-data-personalizada" style="display:none;font-size:12px;color:var(--amarelo);margin-top:8px;">📌 Data personalizada pelo representante</div>
       </div>
 
       <!-- BLOCO 2: MENSAGENS COM GATILHOS - ACORDEÃO -->
@@ -1613,7 +1613,16 @@
       <div class="modal-titulo" style="margin-bottom:0;">📊 Meta · Real · Tendência</div>
       <button onclick="fecharModal('modal-relatorios')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
-    <div class="modal-sub" style="margin-bottom:14px;">Acompanhe sua performance por marca e veja a tendência de fechamento.</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button onclick="fecharModal('modal-relatorios');setTimeout(()=>abrirRotaDeHoje(),200);" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#0D1F18,#1a3328);border:1.5px solid rgba(0,214,143,.35);border-radius:12px;padding:10px;cursor:pointer;">
+        <span style="font-size:18px;">🗺️</span>
+        <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--texto);">Rota de hoje</span>
+      </button>
+      <button onclick="fecharModal('modal-relatorios');setTimeout(()=>irPara('clientes'),200);" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#10192b,#16243f);border:1.5px solid rgba(56,113,189,.35);border-radius:12px;padding:10px;cursor:pointer;">
+        <span style="font-size:18px;">👥</span>
+        <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--texto);">Clientes</span>
+      </button>
+    </div>
 
     <!-- Resumo geral -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
@@ -4756,6 +4765,14 @@ function renderizarClientes(filtro = '') {
     lista.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-titulo">${filtro ? 'Nenhum resultado' : 'Nenhum cliente ainda'}</div><div class="empty-desc">${filtro ? 'Tente outro termo.' : 'Toque em "+ Novo" para adicionar.'}</div></div>`;
     return;
   }
+  // Pré-computa meta diária por marca para clientes de hoje
+  const _metaHojeCache = {};
+  const _todasMarcasHoje = [...new Set(filtrados.filter(c => getDiffDiasCliente(c) === 0).flatMap(c => c.marcas || []))];
+  if (_todasMarcasHoje.length) {
+    const m = calcularMetaDiariaHoje(_todasMarcasHoje);
+    Object.assign(_metaHojeCache, m);
+  }
+
   const cores = ['verde','amarelo','vermelho','azul'];
   lista.innerHTML = filtrados.map((c, i) => {
     const cor = cores[i % cores.length];
@@ -4805,6 +4822,25 @@ function renderizarClientes(filtro = '') {
               <span style="font-size:10px;color:${cardTextColor};opacity:.6;background:rgba(0,0,0,.2);border-radius:6px;padding:2px 7px;">${getSegLabel(c.segmento)}</span>
               ${statusHtml}
             </div>
+            ${(() => {
+              const marcas = c.marcas || [];
+              if (!marcas.length) return '';
+              const ehHoje = getDiffDiasCliente(c) === 0;
+              const pot = calcularPotencialCliente(c);
+              const itens = marcas.map(marca => {
+                const d = pot[marca] || { avg:0, max:0, count:0 };
+                let metaStr = '';
+                if (ehHoje && _metaHojeCache[marca]) {
+                  const sku = _metaHojeCache[marca].sku === 'reais' ? '' : ' ' + _skuLabel(_metaHojeCache[marca].sku);
+                  metaStr = `<span style="background:rgba(249,115,22,.15);color:#F97316;border-radius:5px;padding:1px 5px;">🎯 ${fmtK(_metaHojeCache[marca].meta)}${sku}</span>`;
+                }
+                const potStr = d.count > 0
+                  ? `<span style="color:rgba(255,255,255,.5);">méd</span> <strong style="color:rgba(255,255,255,.8);">${fmtK(d.avg)}</strong> <span style="color:rgba(255,255,255,.3);">·</span> <span style="color:rgba(255,255,255,.5);">máx</span> <strong style="color:#00D68F;">${fmtK(d.max)}</strong>`
+                  : `<span style="color:rgba(255,255,255,.3);font-style:italic;">sem pedidos</span>`;
+                return `<span style="font-size:10px;display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,.2);border-radius:6px;padding:2px 7px;"><span style="color:rgba(255,255,255,.6);font-weight:700;">${marca}</span> ${metaStr} ${potStr}</span>`;
+              });
+              return `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${itens.join('')}</div>`;
+            })()}
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-left:8px;flex-shrink:0;">
@@ -4914,6 +4950,44 @@ function abrirDetalhe(clienteId, telaOrigem) {
     document.getElementById('det-loja').after(segEl);
   }
   segEl.textContent = getSegLabel(cliente.segmento);
+
+  // Potencial do cliente
+  const potBox = document.getElementById('det-potencial-box');
+  if (potBox) {
+    const pot = calcularPotencialCliente(cliente);
+    const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [];
+    const linhas = marcas.map(marca => {
+      const d = pot[marca] || { avg: 0, max: 0, count: 0 };
+      const diff = getDiffDiasCliente(cliente);
+      const ehHoje = diff === 0;
+      let metaHtml = '';
+      if (ehHoje) {
+        const mHoje = calcularMetaDiariaHoje([marca]);
+        if (mHoje[marca]) {
+          const skuL = mHoje[marca].sku === 'reais' ? '' : ' ' + _skuLabel(mHoje[marca].sku);
+          metaHtml = `<span style="font-size:11px;background:rgba(249,115,22,.12);color:#F97316;border-radius:6px;padding:2px 7px;margin-left:6px;">🎯 ${fmtK(mHoje[marca].meta)}${skuL}/cliente</span>`;
+        }
+      } else if (d.avg > 0) {
+        metaHtml = `<span style="font-size:11px;background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:6px;padding:2px 7px;margin-left:6px;">🎯 ~${fmtK(d.avg)} média</span>`;
+      }
+      const potHtml = d.count > 0
+        ? `<span style="font-size:11px;color:var(--texto2);">méd <strong style="color:var(--texto);">${fmtK(d.avg)}</strong></span><span style="font-size:11px;color:var(--texto3);margin:0 4px;">·</span><span style="font-size:11px;color:var(--texto2);">máx <strong style="color:var(--verde);">${fmtK(d.max)}</strong></span>`
+        : `<span style="font-size:11px;color:var(--texto3);font-style:italic;">sem histórico</span>`;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;${marcas.length > 1 ? 'border-bottom:1px solid var(--borda);' : ''}">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:12px;font-weight:700;color:var(--texto);">🏷️ ${marca}</span>
+          ${metaHtml}
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">${potHtml}</div>
+      </div>`;
+    }).filter(Boolean);
+    if (linhas.length) {
+      potBox.style.display = 'block';
+      potBox.innerHTML = `<div style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">📊 Potencial · R$</div>${linhas.join('')}`;
+    } else {
+      potBox.style.display = 'none';
+    }
+  }
 
   // Lembrete rápido
   const lembreteEl = document.getElementById('det-lembrete');
@@ -5372,6 +5446,18 @@ function salvarContato() {
   if (motivoSelecionado === 'fechou_pedido') {
     const cliente = clientes[idx];
     const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
+    // Valida: pelo menos uma marca com valor preenchido
+    const temValor = marcas.some((_, i) => {
+      const el = document.getElementById('pedido-valor-' + i);
+      return el && valorParaFloat(el.value) > 0;
+    });
+    if (!temValor) {
+      toast('⚠️ Informe o valor do pedido para continuar');
+      document.getElementById('modal-pedido').classList.add('aberto');
+      const primeiro = document.getElementById('pedido-valor-0');
+      if (primeiro) { primeiro.focus(); primeiro.style.borderColor = '#FF4D6A'; setTimeout(() => primeiro.style.borderColor = '', 2000); }
+      return;
+    }
     const pedidos = [];
     let valorTotal = 0;
     marcas.forEach((marca, i) => {
@@ -6113,7 +6199,7 @@ function adicionarMetaConfig() {
   const metas = cfg.metas || [];
   const marcas = (cfg.marcas || []).filter(Boolean);
   if (!marcas.length) { toast('Cadastre suas marcas em "Suas representações" antes de adicionar metas.'); return; }
-  metas.push({ id: 'm_' + Date.now(), marca: marcas[0], sku: (cfg.skus && cfg.skus[0]) || 'peças', tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor: 0 });
+  metas.push({ id: 'm_' + Date.now(), marca: marcas[0], sku: (cfg.skus && cfg.skus[0]) || 'peças', tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor: 0, comissao: 0 });
   cfg.metas = metas;
   salvarConfigData(cfg);
   renderizarMetasConfig(cfg);
@@ -6145,6 +6231,7 @@ function renderizarMetasConfig(cfg) {
     return `<div class="meta-card" id="meta-card-${meta.id}">
       <div class="meta-card-header">
         <select class="campo-input" style="flex:1;margin-right:8px;" onchange="editarMetaField('${meta.id}','marca',this.value)">${marcaOpts}</select>
+        <button onclick="salvarConfig();toast('✅ Meta salva!');" title="Salvar meta" style="background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);border-radius:8px;width:32px;height:32px;color:var(--verde);font-size:18px;cursor:pointer;flex-shrink:0;margin-right:4px;">✓</button>
         <button onclick="removerMetaConfig('${meta.id}')" style="background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.3);border-radius:8px;width:32px;height:32px;color:#FF4D6A;font-size:14px;cursor:pointer;flex-shrink:0;">✕</button>
       </div>
       <div class="meta-row">
@@ -6163,6 +6250,11 @@ function renderizarMetasConfig(cfg) {
       <div class="meta-row">
         <select class="campo-input" style="flex:1;" onchange="editarMetaField('${meta.id}','sku',this.value)">${skuOpts}</select>
         <input type="number" class="campo-input" style="flex:1;" placeholder="Meta" value="${meta.valor || ''}" onchange="editarMetaField('${meta.id}','valor',Number(this.value))">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:8px 10px;">
+        <span style="font-size:12px;color:var(--amarelo);white-space:nowrap;">💰 Comissão</span>
+        <input type="number" min="0" max="100" step="0.1" class="campo-input" style="flex:1;padding:5px 8px;font-size:13px;" placeholder="%" value="${meta.comissao || ''}" onchange="editarMetaField('${meta.id}','comissao',Number(this.value))">
+        <span style="font-size:13px;color:var(--texto2);font-weight:700;">%</span>
       </div>
     </div>`;
   }).join('');
@@ -6295,6 +6387,85 @@ function copiarMensagemEsquecido() {
   navigator.clipboard.writeText(msg).then(() => toast('Mensagem copiada!')).catch(() => toast('Copie manualmente'));
 }
 function formatarData(iso) { return new Date(iso).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' }); }
+
+function fmtK(v) {
+  if (!v || isNaN(v)) return '0';
+  if (v >= 1000000) return (v/1000000).toFixed(1).replace(/\.0$/,'').replace('.',',') + 'M';
+  if (v >= 1000)    return (v/1000).toFixed(1).replace(/\.0$/,'').replace('.',',') + 'k';
+  return Math.round(v).toLocaleString('pt-BR');
+}
+
+function calcularPotencialCliente(cliente) {
+  // Retorna { marca: { avg, max, count } } baseado no historico de pedidos
+  const resultado = {};
+  if (!cliente.historico) return resultado;
+  const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
+  marcas.forEach(m => { resultado[m || '_'] = { soma: 0, max: 0, count: 0 }; });
+  cliente.historico.forEach(h => {
+    if (h.motivo !== 'fechou_pedido') return;
+    if (h.pedidos && h.pedidos.length) {
+      h.pedidos.forEach(p => {
+        const chave = p.marca || '_';
+        if (!resultado[chave]) resultado[chave] = { soma: 0, max: 0, count: 0 };
+        const val = p.valor || 0;
+        if (val > 0) {
+          resultado[chave].soma  += val;
+          resultado[chave].max    = Math.max(resultado[chave].max, val);
+          resultado[chave].count++;
+        }
+      });
+    } else if (h.pedidoValor > 0) {
+      const chave = (marcas[0]) || '_';
+      if (!resultado[chave]) resultado[chave] = { soma: 0, max: 0, count: 0 };
+      resultado[chave].soma  += h.pedidoValor;
+      resultado[chave].max    = Math.max(resultado[chave].max, h.pedidoValor);
+      resultado[chave].count++;
+    }
+  });
+  Object.keys(resultado).forEach(k => {
+    const r = resultado[k];
+    r.avg = r.count > 0 ? r.soma / r.count : 0;
+  });
+  return resultado;
+}
+
+function calcularMetaDiariaHoje(marcasCliente) {
+  // Retorna { marca: metaPorCliente } para clientes da rota do dia
+  const cfg = getConfig();
+  const metas = cfg.metas || [];
+  const clientes = getClientesAtivos();
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const resultado = {};
+  (marcasCliente || []).forEach(marca => {
+    const meta = metas.find(m => m.marca === marca);
+    if (!meta) return;
+    // Calcula meta diária da marca
+    const agora = new Date();
+    let fim;
+    if (meta.tipoPeriodo === 'colecao') {
+      fim = meta.dataFim ? new Date(meta.dataFim + 'T23:59:59') : null;
+    } else {
+      const mes = meta.mes || agora.toISOString().slice(0,7);
+      const [y, m2] = mes.split('-').map(Number);
+      fim = new Date(y, m2, 0, 23, 59, 59);
+    }
+    if (!fim) return;
+    const diasRestantes = Math.max(1, Math.round((fim - agora) / 86400000));
+    const real = calcularRealMarca(meta);
+    const falta = Math.max(0, meta.valor - real);
+    const mediaDiaria = falta / diasRestantes;
+    if (mediaDiaria <= 0) return;
+    // Conta clientes urgentes (retomar hoje) com essa marca
+    const clientesHoje = clientes.filter(c => {
+      const diff = getDiffDiasCliente(c);
+      if (diff !== 0) return false;
+      return (c.marcas || []).includes(marca);
+    });
+    const n = Math.max(1, clientesHoje.length);
+    resultado[marca] = { meta: mediaDiaria / n, sku: meta.sku };
+  });
+  return resultado;
+}
 function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg;

@@ -3255,9 +3255,12 @@ async function fazerCadastro() {
   toast('🔄 Verificando acesso...');
   try {
     const { data, error } = await _sb.from('whitelist').select('email').ilike('email', email).maybeSingle();
-    if (error || !data) {
-      console.log('[WL] whitelist erro:', error?.message, '| email:', email);
-      toast('❌ Acesso não autorizado. Fale com o administrador.');
+    if (error) {
+      toast('❌ Erro whitelist: ' + (error.message || 'desconhecido'));
+      return;
+    }
+    if (!data) {
+      toast('❌ Email não encontrado na lista: ' + email);
       return;
     }
   } catch(e) {

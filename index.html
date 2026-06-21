@@ -6812,7 +6812,7 @@ function _detalheVendasMarca(meta) {
           const val = Number(p.valor) || 0;
           totalQtd += meta.sku === 'reais' ? val : qtd;
           totalVal += val;
-          linhas.push({ nome: c.nome, loja: c.loja || '', cidade: c.cidade || '', qtd, val, data: h.data, unidade: p.unidade || meta.sku });
+          linhas.push({ id: c.id, nome: c.nome, loja: c.loja || '', cidade: c.cidade || '', qtd, val, data: h.data, unidade: p.unidade || meta.sku });
         });
       } else {
         const clienteMarcas = (c.marcas || []).map(m => (m || '').trim().toLowerCase());
@@ -6821,7 +6821,7 @@ function _detalheVendasMarca(meta) {
         const val = Number(h.pedidoValor) || 0;
         totalQtd += meta.sku === 'reais' ? val : qtd;
         totalVal += val;
-        linhas.push({ nome: c.nome, loja: c.loja || '', cidade: c.cidade || '', qtd, val, data: h.data, unidade: h.pedidoUnidade || meta.sku });
+        linhas.push({ id: c.id, nome: c.nome, loja: c.loja || '', cidade: c.cidade || '', qtd, val, data: h.data, unidade: h.pedidoUnidade || meta.sku });
       }
     });
   });
@@ -6831,17 +6831,20 @@ function _detalheVendasMarca(meta) {
   linhas.sort((a, b) => new Date(b.data) - new Date(a.data));
 
   const itens = linhas.map(l => {
-    const local = [l.loja, l.cidade].filter(Boolean).join(' · ');
+    const local  = [l.loja, l.cidade].filter(Boolean).join(' · ');
     const qtdTxt = meta.sku === 'reais' ? `R$ ${fmtV(l.val)}` : `${l.qtd} ${_skuLabel(l.unidade)}`;
     const valTxt = meta.sku === 'reais' ? '' : `R$ ${fmtV(l.val)}`;
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--borda);">
+    return `<div onclick="abrirDetalheDoRelatorio('${l.id}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--borda);border-radius:10px;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent;" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background='transparent'">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:500;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.nome}</div>
-        <div style="font-size:11px;color:var(--texto2);">${local || '—'} <span style="color:var(--texto3);">· ${fmtD(l.data)}</span></div>
+        <div style="font-size:13px;font-weight:600;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.nome}</div>
+        <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${local || '—'} <span style="color:var(--texto3);">· ${fmtD(l.data)}</span></div>
       </div>
-      <div style="text-align:right;flex-shrink:0;margin-left:10px;">
-        <div style="font-size:13px;font-weight:500;color:var(--texto);">${qtdTxt}</div>
-        ${valTxt ? `<div style="font-size:11px;color:var(--texto2);">${valTxt}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:10px;">
+        <div style="text-align:right;">
+          <div style="font-size:13px;font-weight:600;color:var(--texto);">${qtdTxt}</div>
+          ${valTxt ? `<div style="font-size:11px;color:var(--texto2);">${valTxt}</div>` : ''}
+        </div>
+        <span style="color:var(--texto3);font-size:16px;line-height:1;">›</span>
       </div>
     </div>`;
   }).join('');
@@ -6859,6 +6862,12 @@ function _detalheVendasMarca(meta) {
       </div>
     </div>
   </div>`;
+}
+
+function abrirDetalheDoRelatorio(clienteId) {
+  // Fecha todos os modais abertos
+  document.querySelectorAll('.modal-overlay.aberto').forEach(m => m.classList.remove('aberto'));
+  abrirDetalhe(clienteId, 'dashboard');
 }
 
 function toggleRelCard(id) {

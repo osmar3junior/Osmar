@@ -4831,7 +4831,7 @@ function renderizarClientes(filtro = '') {
 
     return `
       <div class="cliente-item" style="background:${cardBg};border-color:${cardBorda};position:relative;border-width:1.5px;">
-        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;" onclick="abrirDetalhe('${c.id}','clientes')">`
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;" onclick="abrirDetalhe('${c.id}','clientes')">
           <div class="cliente-info">
             <div class="cliente-nome" style="color:${cardTextColor};">${c.nome}</div>
             <div class="cliente-loja" style="color:${cardTextColor};opacity:.75;">${c.loja}${c.cidade ? ' · ' + c.cidade : ''}</div>

@@ -4856,7 +4856,7 @@ function abrirFiltrado(tipo) {
         const potSpan = pv.n > 0
           ? `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.8);">${fmtK(pv.avg)}${skuA?' '+skuA:''}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(pv.max)}${skuA?' '+skuA:''}</strong></span>`
           : '';
-        return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;margin-bottom:3px;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;">${marca}</span>${metaSpan}${potSpan?`<span style="color:rgba(255,255,255,.15);">|</span>${potSpan}`:''}</div>`;
+        return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;margin-bottom:3px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${metaSpan}${potSpan?`<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potSpan}`:''}</div>`;
       }).join('');
 
       return `
@@ -4986,7 +4986,7 @@ function renderizarClientes(filtro = '') {
               const potCompact = _pv.n > 0
                 ? `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.8);">${fmtK(_pv.avg)}${_un ? ' '+_un : ''}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(_pv.max)}${_un ? ' '+_un : ''}</strong></span>`
                 : '';
-              return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;margin-bottom:2px;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.15);">|</span>${potCompact}` : ''}</div>`;
+              return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;margin-bottom:2px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potCompact}` : ''}</div>`;
               });
               return `<div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">${itens.join('')}</div>`;
             })()}
@@ -5036,7 +5036,7 @@ function renderizarEsquecidos() {
       const potSpan = pv.n > 0
         ? `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.8);">${fmtK(pv.avg)}${skuA?' '+skuA:''}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(pv.max)}${skuA?' '+skuA:''}</strong></span>`
         : '';
-      return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;margin-bottom:2px;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;">${marca}</span>${potSpan?`<span style="color:rgba(255,255,255,.15);">|</span>${potSpan}`:''}</div>`;
+      return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;margin-bottom:2px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${potSpan?`<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potSpan}`:''}</div>`;
     }).join('');
     return `
     <div class="esquecido-item" onclick="abrirDetalhe('${cliente.id}','esquecidos')">

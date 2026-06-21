@@ -20,6 +20,7 @@
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
 <script>
 (function() {
@@ -2308,6 +2309,92 @@
 <script>
 // ===== ESTADO =====
 const APP_VERSION = 'v1.6 · 13/06';
+
+// ===== SUPABASE =====
+const _SB_URL = 'https://brqljqenucopwktkdwme.supabase.co';
+const _SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJycWxqcWVudWNvcHdrdGtkd21lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwNTQ1MzcsImV4cCI6MjA5NzYzMDUzN30.I__iyJFZSBkV9OvwXyc7abrjqy4yvHX3RgJvDTc8mgg';
+const _sb = window.supabase.createClient(_SB_URL, _SB_KEY);
+let _sbUserId = null;
+
+async function _sbAuth(email, senha) {
+  try {
+    let { data, error } = await _sb.auth.signInWithPassword({ email, password: senha });
+    if (error) {
+      ({ data, error } = await _sb.auth.signUp({ email, password: senha }));
+    }
+    if (data?.user) {
+      _sbUserId = data.user.id;
+      setTimeout(_sbPull, 800);
+    }
+  } catch(e) {}
+}
+
+async function _sbPull() {
+  if (!_sbUserId || !navigator.onLine || !usuarioAtual) return;
+  try {
+    const email = usuarioAtual.email;
+    const [rc, rf, rd] = await Promise.all([
+      _sb.from('clientes').select('dados,atualizado_em').eq('user_id', _sbUserId).maybeSingle(),
+      _sb.from('config').select('dados,atualizado_em').eq('user_id', _sbUserId).maybeSingle(),
+      _sb.from('despesas').select('dados,atualizado_em').eq('user_id', _sbUserId).maybeSingle()
+    ]);
+    let atualizou = false;
+    if (rc.data) {
+      const sbTs = new Date(rc.data.atualizado_em).getTime();
+      if (sbTs > (getData('cv_clientes_' + email + '_ts') || 0)) {
+        setData('cv_clientes_' + email, rc.data.dados);
+        setData('cv_clientes_' + email + '_ts', sbTs);
+        atualizou = true;
+      }
+    }
+    if (rf.data) {
+      const sbTs = new Date(rf.data.atualizado_em).getTime();
+      if (sbTs > (getData('cv_config_' + email + '_ts') || 0)) {
+        setData('cv_config_' + email, rf.data.dados);
+        setData('cv_config_' + email + '_ts', sbTs);
+        atualizou = true;
+      }
+    }
+    if (rd.data) {
+      const sbTs = new Date(rd.data.atualizado_em).getTime();
+      if (sbTs > (getData('cv_despesas_' + email + '_ts') || 0)) {
+        setData('cv_despesas_' + email, rd.data.dados);
+        setData('cv_despesas_' + email + '_ts', sbTs);
+      }
+    }
+    if (atualizou) atualizarDashboard();
+  } catch(e) {}
+}
+
+async function _sbPushClientes() {
+  if (!_sbUserId || !navigator.onLine || !usuarioAtual) return;
+  try {
+    const dados = getData('cv_clientes_' + usuarioAtual.email) || [];
+    const ts = new Date().toISOString();
+    await _sb.from('clientes').upsert({ user_id: _sbUserId, dados, atualizado_em: ts });
+    setData('cv_clientes_' + usuarioAtual.email + '_ts', Date.now());
+  } catch(e) {}
+}
+
+async function _sbPushConfig() {
+  if (!_sbUserId || !navigator.onLine || !usuarioAtual) return;
+  try {
+    const dados = getData('cv_config_' + usuarioAtual.email) || {};
+    const ts = new Date().toISOString();
+    await _sb.from('config').upsert({ user_id: _sbUserId, dados, atualizado_em: ts });
+    setData('cv_config_' + usuarioAtual.email + '_ts', Date.now());
+  } catch(e) {}
+}
+
+async function _sbPushDespesas() {
+  if (!_sbUserId || !navigator.onLine || !usuarioAtual) return;
+  try {
+    const dados = getData('cv_despesas_' + usuarioAtual.email) || [];
+    const ts = new Date().toISOString();
+    await _sb.from('despesas').upsert({ user_id: _sbUserId, dados, atualizado_em: ts });
+    setData('cv_despesas_' + usuarioAtual.email + '_ts', Date.now());
+  } catch(e) {}
+}
 let usuarioAtual = null;
 let clienteAtualId = null;
 let tipoContatoAtual = null;
@@ -2999,12 +3086,12 @@ function excluirLog(tipo, id) {
   toast('🗑️ Removido');
 }
 
-function salvarClientes(c) { setData('cv_clientes_' + usuarioAtual.email, c); }
+function salvarClientes(c) { setData('cv_clientes_' + usuarioAtual.email, c); _sbPushClientes(); }
 function getConfig() {
   const def = { estoque_alto:21, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguarda_colecao:60, fechou_pedido:45, comprou_concorrente:30, inadimplente:15, fechado:60, nao_vai_comprar:90, dias_esquecidos:60, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''] };
   return Object.assign(def, getData('cv_config_' + (usuarioAtual?.email || '')) || {});
 }
-function salvarConfigData(cfg) { setData('cv_config_' + usuarioAtual.email, cfg); }
+function salvarConfigData(cfg) { setData('cv_config_' + usuarioAtual.email, cfg); _sbPushConfig(); }
 
 // ===== AUTH =====
 function fazerLogin() {
@@ -3017,6 +3104,7 @@ function fazerLogin() {
   usuarioAtual = { email, nome: usuarios[email].nome };
   setData('cv_session', usuarioAtual);
   irPara('dashboard');
+  _sbAuth(email, senha);
 }
 function fazerCadastro() {
   const nome = document.getElementById('cad-nome').value.trim();
@@ -3031,8 +3119,15 @@ function fazerCadastro() {
   usuarioAtual = { email, nome };
   setData('cv_session', usuarioAtual);
   irPara('dashboard');
+  _sbAuth(email, senha);
 }
-function sair() { usuarioAtual = null; localStorage.removeItem('cv_session'); irPara('login'); }
+function sair() {
+  usuarioAtual = null;
+  _sbUserId = null;
+  localStorage.removeItem('cv_session');
+  _sb.auth.signOut().catch(() => {});
+  irPara('login');
+}
 
 function abrirNotificacoes() {
   const alertasMarca = calcularAlertasMarcas();
@@ -8303,6 +8398,7 @@ function getDespesas() {
 function salvarDespesasData(arr) {
   if (!usuarioAtual) return;
   setData('cv_despesas_' + usuarioAtual.email, arr);
+  _sbPushDespesas();
 }
 
 function fmtValorDesp(v) {
@@ -8986,15 +9082,26 @@ function ajustarAlturaListaMotivos() {
     setTimeout(verificarEnderecosPendentes, 3000);
     setTimeout(solicitarPermissaoNotificacao, 2000);
     setTimeout(verificarENotificarEsquecidos, 5000);
+    // Restaura sessão Supabase e puxa dados mais recentes
+    _sb.auth.getSession().then(({ data: { session: sbSession } }) => {
+      if (sbSession?.user) {
+        _sbUserId = sbSession.user.id;
+        setTimeout(_sbPull, 1200);
+      } else {
+        const u = getUsuarios()[session.email];
+        if (u) _sbAuth(session.email, u.senha);
+      }
+    }).catch(() => {});
   } else {
     const el = document.getElementById('tela-login');
     el.style.display = 'flex';
     el.classList.add('ativa');
   }
-  // Quando voltar online, verifica pendentes
+  // Quando voltar online, verifica pendentes e sincroniza
   window.addEventListener('online', () => {
     toast('🌐 Conexão restaurada!');
     setTimeout(verificarEnderecosPendentes, 1500);
+    if (_sbUserId) setTimeout(_sbPull, 2000);
   });
 })();
 </script>

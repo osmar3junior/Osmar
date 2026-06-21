@@ -1941,6 +1941,21 @@
 
     <div style="font-size:11px;color:var(--texto3);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:10px;">Lançamentos</div>
     <div id="desp-lista"></div>
+
+    <!-- EXPORTAR -->
+    <div style="margin-top:20px;border-top:1px solid var(--borda);padding-top:16px;">
+      <div style="font-size:11px;color:var(--texto3);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:10px;">Compartilhar relatório do mês</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <button onclick="compartilharDespesasWpp()" style="background:linear-gradient(135deg,#0d2a1e,#14402d);border:1.5px solid rgba(37,211,102,.4);border-radius:12px;padding:13px 10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <span style="font-size:18px;">💬</span>
+          <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#25D366;">WhatsApp</span>
+        </button>
+        <button onclick="compartilharDespesasEmail()" style="background:linear-gradient(135deg,#0D1F18,#1a3328);border:1.5px solid rgba(0,214,143,.35);border-radius:12px;padding:13px 10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <span style="font-size:18px;">✉️</span>
+          <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--verde);">E-mail</span>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -7966,6 +7981,78 @@ function excluirDespesa(id) {
 function abrirGuiaApi() {
   document.getElementById('guia-gemini-key').value = getConfig().geminiKey || '';
   document.getElementById('modal-guia-api').classList.add('aberto');
+}
+
+function _montarTextoRelatorioDesp() {
+  const [y,m] = _despMesAtual.split('-').map(Number);
+  const labelMes = new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  const labelFmt = labelMes.charAt(0).toUpperCase() + labelMes.slice(1);
+  const rep = usuarioAtual?.nome || 'Representante';
+  const agora = new Date();
+  const doMes = getDespesas().filter(d => d.data.startsWith(_despMesAtual));
+
+  const totais = {};
+  Object.keys(DESP_CATS).forEach(k => { totais[k] = 0; });
+  doMes.forEach(d => { totais[d.categoria] = (totais[d.categoria]||0) + d.valor; });
+  const totalGeral = Object.values(totais).reduce((a,b)=>a+b,0);
+  const comissao   = calcularComissaoMes();
+  const liquido    = comissao - totalGeral;
+
+  let txt = `💰 *RELATÓRIO DE DESPESAS — ${labelFmt.toUpperCase()}*\n`;
+  txt += `👤 ${rep}\n`;
+  txt += `📅 Gerado em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}\n`;
+  txt += `\n━━━━━━━━━━━━━━━━━━━\n`;
+  txt += `*DESPESAS POR CATEGORIA*\n`;
+
+  Object.entries(DESP_CATS).forEach(([k,cat]) => {
+    if (totais[k] > 0) txt += `${cat.icon} ${cat.label}: *R$ ${fmtValorDesp(totais[k])}*\n`;
+  });
+
+  txt += `\n💸 *Total despesas: R$ ${fmtValorDesp(totalGeral)}*\n`;
+
+  if (doMes.length > 0) {
+    txt += `\n━━━━━━━━━━━━━━━━━━━\n`;
+    txt += `*LANÇAMENTOS (${doMes.length})*\n`;
+    [...doMes].sort((a,b)=>a.data.localeCompare(b.data)).forEach(d => {
+      const cat = DESP_CATS[d.categoria] || DESP_CATS.outra;
+      const dtFmt = new Date(d.data+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+      txt += `• ${dtFmt} — ${d.descricao || cat.label}: R$ ${fmtValorDesp(d.valor)}\n`;
+    });
+  }
+
+  if (comissao > 0) {
+    txt += `\n━━━━━━━━━━━━━━━━━━━\n`;
+    txt += `*RESULTADO FINANCEIRO*\n`;
+    txt += `💵 Comissão estimada : *R$ ${fmtValorDesp(comissao)}*\n`;
+    txt += `💸 Total despesas    : *R$ ${fmtValorDesp(totalGeral)}*\n`;
+    txt += `${liquido >= 0 ? '✅' : '⚠️'} Resultado líquido  : *R$ ${fmtValorDesp(liquido)}*\n`;
+  }
+
+  txt += `\n━━━━━━━━━━━━━━━━━━━\n`;
+  txt += `_Carteira Viva · ${labelFmt}_`;
+  return txt;
+}
+
+function compartilharDespesasWpp() {
+  const cfg = getConfig();
+  const wpp = cfg.wppRep;
+  const txt = _montarTextoRelatorioDesp();
+  if (wpp) {
+    window.open(`https://wa.me/55${wpp}?text=${encodeURIComponent(txt)}`, '_blank');
+  } else {
+    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
+  }
+}
+
+function compartilharDespesasEmail() {
+  const cfg  = getConfig();
+  const rep  = usuarioAtual?.nome || 'Representante';
+  const [y,m] = _despMesAtual.split('-').map(Number);
+  const labelMes = new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  const assunto  = encodeURIComponent(`Relatório de despesas — ${labelMes} — ${rep}`);
+  const corpo    = encodeURIComponent(_montarTextoRelatorioDesp().replace(/\*/g,''));
+  const para     = cfg.emailRep ? encodeURIComponent(cfg.emailRep) : '';
+  window.open(`mailto:${para}?subject=${assunto}&body=${corpo}`, '_blank');
 }
 
 function salvarChaveDoGuia() {

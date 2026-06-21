@@ -2410,7 +2410,7 @@ async function _sbPushClientes() {
 async function _sbPushConfig() {
   if (!_sbUserId || !navigator.onLine || !usuarioAtual) return;
   try {
-    const dados = getData('cv_config_' + usuarioAtual.email) || {};
+    const dados = { ...(getData('cv_config_' + usuarioAtual.email) || {}), _nomeRep: usuarioAtual.nome };
     const ts = new Date().toISOString();
     await _sb.from('config').upsert({ user_id: _sbUserId, dados, atualizado_em: ts });
     setData('cv_config_' + usuarioAtual.email + '_ts', Date.now());
@@ -3147,14 +3147,47 @@ function salvarConfigData(cfg) { setData('cv_config_' + usuarioAtual.email, cfg)
 function fazerLogin() {
   const email = document.getElementById('login-email').value.trim();
   const senha = document.getElementById('login-senha').value;
-  const usuarios = getUsuarios();
   if (!email || !senha) { toast('Preencha email e senha'); return; }
-  if (!usuarios[email]) { toast('Email não encontrado'); return; }
-  if (usuarios[email].senha !== senha) { toast('Senha incorreta'); return; }
-  usuarioAtual = { email, nome: usuarios[email].nome };
-  setData('cv_session', usuarioAtual);
-  irPara('dashboard');
-  _sbAuth(email, senha);
+  const usuarios = getUsuarios();
+  if (usuarios[email]) {
+    if (usuarios[email].senha !== senha) { toast('Senha incorreta'); return; }
+    usuarioAtual = { email, nome: usuarios[email].nome };
+    setData('cv_session', usuarioAtual);
+    irPara('dashboard');
+    _sbAuth(email, senha);
+  } else {
+    // Cache foi limpo — tenta recuperar pelo Supabase
+    toast('🔄 Recuperando dados da nuvem...');
+    _sbRecuperarLogin(email, senha);
+  }
+}
+
+async function _sbRecuperarLogin(email, senha) {
+  try {
+    const { data, error } = await _sb.auth.signInWithPassword({ email, password: senha });
+    if (error || !data?.session) { toast('Email ou senha incorretos'); return; }
+
+    _sbUserId = data.session.user.id;
+
+    // Recupera o nome do rep da config salva no Supabase
+    const { data: cfgRow } = await _sb.from('config').select('dados').eq('user_id', _sbUserId).maybeSingle();
+    const nome = cfgRow?.dados?._nomeRep || email.split('@')[0];
+
+    // Reconstrói o usuário local
+    const usuarios = getUsuarios();
+    usuarios[email] = { nome, senha };
+    setData('cv_usuarios', usuarios);
+    usuarioAtual = { email, nome };
+    setData('cv_session', usuarioAtual);
+
+    // Puxa todos os dados do Supabase
+    await _sbPull();
+    irPara('dashboard');
+    toast('✅ Dados recuperados da nuvem!');
+  } catch(e) {
+    console.log('[SB] erro recuperação:', e);
+    toast('Erro ao recuperar. Verifique sua conexão.');
+  }
 }
 function fazerCadastro() {
   const nome = document.getElementById('cad-nome').value.trim();

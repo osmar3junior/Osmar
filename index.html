@@ -394,7 +394,7 @@
     0%,100% { border-color:rgba(0,214,143,.25); box-shadow:none; }
     50%      { border-color:#00D68F; box-shadow:0 0 28px rgba(0,214,143,.8), 0 0 60px rgba(0,214,143,.4), inset 0 0 8px rgba(0,214,143,.2); }
   }
-  .btn-rota-pulsa { animation:pulsaRota 1.4s ease-in-out 7; }
+  .btn-rota-pulsa { animation:pulsaRota 1.4s ease-in-out 5; }
   @keyframes piscaPernoite {
     0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(99,211,149,0); }
     50%     { opacity:.7; box-shadow:0 0 0 6px rgba(99,211,149,.35); }
@@ -4954,14 +4954,14 @@ function renderizarClientes(filtro = '') {
                 const _mCliente = _metaHojeCache[c.id] && _metaHojeCache[c.id][marca];
               const skuSigla = _mCliente && _mCliente.sku !== 'reais' ? _skuAbrev(_mCliente.sku) : '';
               const metaCompact = ehHoje && _mCliente
-                ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:1px 5px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(_mCliente.meta)}${skuSigla}</span>`
+                ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:1px 5px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(_mCliente.meta)}${skuSigla ? ' '+skuSigla : ''}</span>`
                 : d.avg > 0 ? `<span style="background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:4px;padding:0 4px;white-space:nowrap;">~${fmtK(d.avg)}</span>` : '';
               const _cm = (getConfig().metas || []).find(m => m.marca === marca);
               const _exEm = _cm?.exibirEm || 'reais';
               const _pv = _exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
               const _un = _exEm === 'sku' ? _skuAbrev(_cm.sku) : '';
               const potCompact = _pv.n > 0
-                ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.7);">${fmtK(_pv.avg)}${_un}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(_pv.max)}${_un}</strong>`
+                ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.7);"> ${fmtK(_pv.avg)}${_un ? ' '+_un : ''}</strong><span style="color:rgba(255,255,255,.2);margin:0 2px;">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;"> ${fmtK(_pv.max)}${_un ? ' '+_un : ''}</strong>`
                 : '';
               return `<div style="font-size:${ehHoje ? 10 : 9}px;display:flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.5);font-weight:700;min-width:${ehHoje ? 32 : 26}px;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.2);">|</span>${potCompact}` : ''}</div>`;
               });

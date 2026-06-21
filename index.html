@@ -6313,11 +6313,13 @@ function renderizarRelatorios() {
     const pctTxt       = pct !== null ? pct + '%' : '—';
     const detalheHTML  = _detalheVendasMarca(meta);
 
-    // Média diária necessária (com margem de segurança configurada)
-    const diasRestantes = Math.max(0, Math.round((fim - agora) / 86400000));
+    // Média diária necessária — dias úteis + margem de segurança + taxa de conversão
+    const diasRestantes = _diasUteisRestantes(agora, fim);
     const falta         = meta.valor - real;
     const _buffer       = 1 + ((cfg.bufferMeta ?? 20) / 100);
-    const mediaDiaria   = (diasRestantes > 0 && falta > 0) ? (falta / diasRestantes) * _buffer : null;
+    const _taxa         = calcularTaxaConversao();
+    const mediaDiaria   = (diasRestantes > 0 && falta > 0) ? (falta / diasRestantes) * _buffer / _taxa : null;
+    const _taxaLabel    = _taxa < 1 ? ` <span style="font-size:10px;color:#7DD3FC;opacity:.75;">· conv. ${Math.round(_taxa*100)}%</span>` : '';
     const _bufferLabel  = cfg.bufferMeta > 0 ? ` <span style="font-size:10px;color:var(--verde);opacity:.7;">(+${cfg.bufferMeta}% margem)</span>` : '';
     const dataFimFmt    = fim.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
     const fmtMedia = v => {
@@ -6339,7 +6341,7 @@ function renderizarRelatorios() {
     } else {
       mediaNumTxt = fmtMedia(mediaDiaria);
       mediaUnitTxt = meta.sku === 'reais' ? 'por dia' : `${skuLabel} / dia`;
-      mediaSubTxt = `Faltam ${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''} · ainda falta ${fmtN(Math.round(falta))} ${skuLabel}`;
+      mediaSubTxt = `${diasRestantes} dia${diasRestantes !== 1 ? 's úteis' : ' útil'} restante${diasRestantes !== 1 ? 's' : ''} · faltam ${fmtN(Math.round(falta))} ${skuLabel}`;
     }
 
     metaTotalN += meta.valor;
@@ -6372,7 +6374,7 @@ function renderizarRelatorios() {
 
         <div style="background:${mediaBg};border:1px solid ${mediaBorda};border-radius:12px;padding:14px 16px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.8px;">📅 Meta diária necessária${_bufferLabel}</span>
+            <span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.8px;">📅 Meta diária necessária${_bufferLabel}${_taxaLabel}</span>
             <span style="font-size:10px;color:var(--texto3);background:var(--bg3);border-radius:6px;padding:2px 7px;">até ${dataFimFmt}</span>
           </div>
           <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:8px;">
@@ -6944,13 +6946,42 @@ function calcularPotencialCliente(cliente) {
   return resultado;
 }
 
+function _diasUteisRestantes(from, to) {
+  // Conta apenas dias úteis (seg–sex) entre from e to
+  const d = new Date(from); d.setHours(0,0,0,0);
+  const fim = new Date(to);
+  if (d > fim) return 0;
+  let count = 0;
+  while (d <= fim) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+function calcularTaxaConversao() {
+  // Percentual de contatos que resultaram em pedido fechado (histórico global)
+  const clientes = getClientes();
+  let totalContatos = 0, totalFechou = 0;
+  clientes.forEach(c => {
+    (c.historico || []).forEach(h => {
+      totalContatos++;
+      if (h.motivo === 'fechou_pedido') totalFechou++;
+    });
+  });
+  if (totalContatos < 5) return 1; // dados insuficientes → usa 100%
+  return Math.max(0.25, Math.min(1, totalFechou / totalContatos));
+}
+
 function calcularMetaDiariaHoje() {
-  // Retorna { [clienteId]: { [marca]: { meta, sku } } }
-  // Distribuição ponderada pelo potencial histórico de compra de cada cliente
+  // Retorna { [clienteId]: { [marca]: { meta, sku, peso, diasUteis, taxa } } }
+  // Melhorias: dias úteis, ciclo de compra no peso, taxa de conversão
   const cfg = getConfig();
   const metas = cfg.metas || [];
   const clientes = getClientesAtivos();
   const resultado = {};
+  const taxa = calcularTaxaConversao(); // melhoria #3: taxa de conversão global
 
   const marcasHoje = [...new Set(
     clientes.filter(c => getDiffDiasCliente(c) === 0).flatMap(c => c.marcas || [])
@@ -6969,11 +7000,14 @@ function calcularMetaDiariaHoje() {
       fim = new Date(y, m2, 0, 23, 59, 59);
     }
     if (!fim) return;
-    const diasRestantes = Math.max(1, Math.round((fim - agora) / 86400000));
+
+    // Melhoria #1: dias ÚTEIS restantes (seg–sex)
+    const diasUteis = Math.max(1, _diasUteisRestantes(agora, fim));
+
     const real = calcularRealMarca(meta);
     const falta = Math.max(0, meta.valor - real);
     const buffer = 1 + ((cfg.bufferMeta ?? 20) / 100);
-    const mediaDiaria = (falta / diasRestantes) * buffer;
+    const mediaDiaria = (falta / diasUteis) * buffer;
     if (mediaDiaria <= 0) return;
 
     const clientesHoje = clientes.filter(c =>
@@ -6981,26 +7015,49 @@ function calcularMetaDiariaHoje() {
     );
     if (!clientesHoje.length) return;
 
-    // Calcula avg histórico por cliente para esta marca
-    const avgs = clientesHoje.map(c => {
+    // Melhoria #2: peso = avg histórico × ciclo de compra (quem está "na hora" de comprar pesa mais)
+    const pesosBase = clientesHoje.map(c => {
       const pot = calcularPotencialCliente(c);
-      return (pot[marca] && pot[marca].avg > 0) ? pot[marca].avg : 0;
+      const avg = (pot[marca] && pot[marca].avg > 0) ? pot[marca].avg : 0;
+
+      // Ciclo de compra: quanto tempo este cliente costuma demorar entre pedidos
+      const datas = (c.historico || [])
+        .filter(h => h.motivo === 'fechou_pedido')
+        .map(h => new Date(h.data))
+        .sort((a, b) => a - b);
+
+      let cicloScore = 1; // neutro se não há dados suficientes
+      if (datas.length >= 2) {
+        const intervalos = [];
+        for (let i = 1; i < datas.length; i++)
+          intervalos.push((datas[i] - datas[i-1]) / 86400000);
+        const ciclo = Math.max(1, intervalos.reduce((a, b) => a + b, 0) / intervalos.length);
+        const diasDesde = (agora - datas[datas.length - 1]) / 86400000;
+        // Score: 2 = muito propício, 0.3 = acabou de comprar
+        cicloScore = Math.min(2, Math.max(0.3, diasDesde / ciclo));
+      }
+
+      return avg > 0 ? avg * cicloScore : null; // null = sem histórico
     });
 
-    const comHistorico = avgs.filter(a => a > 0);
-    // Clientes sem histórico recebem 50% da média dos demais como peso base
+    const comHistorico = pesosBase.filter(p => p !== null);
     const mediaGeral = comHistorico.length > 0
-      ? comHistorico.reduce((s, a) => s + a, 0) / comHistorico.length
+      ? comHistorico.reduce((s, p) => s + p, 0) / comHistorico.length
       : mediaDiaria / clientesHoje.length;
-    const pesos = avgs.map(a => a > 0 ? a : mediaGeral * 0.5);
+
+    const pesos = pesosBase.map(p => p !== null ? p : mediaGeral * 0.5);
     const totalPesos = pesos.reduce((s, p) => s + p, 0);
 
     clientesHoje.forEach((c, i) => {
       if (!resultado[c.id]) resultado[c.id] = {};
+      const metaBruta = mediaDiaria * (pesos[i] / totalPesos);
       resultado[c.id][marca] = {
-        meta: mediaDiaria * (pesos[i] / totalPesos),
+        // Melhoria #3: infla pela taxa de conversão (se fecha 60%, cada cliente precisa compensar os 40% que não fecham)
+        meta: metaBruta / taxa,
         sku: meta.sku,
-        peso: Math.round((pesos[i] / totalPesos) * 100) // % do peso para debug
+        peso: Math.round((pesos[i] / totalPesos) * 100),
+        diasUteis,
+        taxa: Math.round(taxa * 100)
       };
     });
   });

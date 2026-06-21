@@ -618,7 +618,7 @@
     <div class="resumo-grid">
       <div class="resumo-card verde" onclick="irPara('clientes')" style="cursor:pointer">
         <div class="resumo-numero" id="num-total">0</div>
-        <div class="resumo-label">Total de clientes</div>
+        <div class="resumo-label">Base total de clientes</div>
         <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">Ver todos →</div>
       </div>
       <div class="resumo-card vermelho" onclick="abrirFiltrado('urgentes')" style="cursor:pointer">
@@ -734,6 +734,10 @@
 <div class="tela" id="tela-clientes">
   <div class="header">
     <div class="header-logo" onclick="irPara('dashboard')" style="cursor:pointer;"><div class="header-logo-icon"><svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="5" y="22" width="5" height="9" rx="1.5" fill="white" opacity=".8"/><rect x="13" y="16" width="5" height="15" rx="1.5" fill="white" opacity=".9"/><rect x="21" y="10" width="5" height="21" rx="1.5" fill="white"/><path d="M28 5L31 5L31 8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 11L31 5" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg></div></div>
+    <button onclick="enviarRotaWhatsApp()" title="Enviar rota de hoje para meu WhatsApp" style="display:flex;align-items:center;gap:7px;background:#1C2A1E;border:1.5px solid #25D366;border-radius:11px;padding:8px 14px;cursor:pointer;transition:background .15s;" onmouseenter="this.style.background='#243d28'" onmouseleave="this.style.background='#1C2A1E'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+      <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:#25D366;">Rota de hoje</span>
+    </button>
   </div>
   <!-- Toggle lista / por cidade -->
   <div style="display:flex;gap:6px;padding:10px 16px 0;">
@@ -1269,6 +1273,12 @@
       <input type="email" class="campo-input" id="cfg-email-rep" placeholder="seu@email.com" style="margin-top:4px;">
     </div>
 
+    <div class="config-secao">
+      <div class="config-secao-titulo">💬 Seu WhatsApp</div>
+      <div class="config-secao-sub">Usado para enviar sua rota do dia diretamente para o seu WhatsApp com um toque — nome do cliente, marca, meta, histórico e potencial de compra.</div>
+      <input type="tel" class="campo-input" id="cfg-wpp-rep" placeholder="(00) 00000-0000" style="margin-top:4px;">
+    </div>
+
     <button class="btn-primario" onclick="salvarConfig()">Salvar configurações</button>
 
     <div class="config-secao" style="margin-top:8px;background:linear-gradient(135deg,rgba(0,214,143,.05),rgba(56,189,248,.05));border:1px solid rgba(0,214,143,.2);border-radius:16px;padding:18px;">
@@ -1424,6 +1434,7 @@
     </div>
     <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="nc-cidade" placeholder="Cidade"></div>
     <div class="campo-grupo"><label class="campo-label">WhatsApp</label><input type="tel" class="campo-input" id="nc-telefone" placeholder="(00) 00000-0000"></div>
+    <div class="campo-grupo"><label class="campo-label">E-mail do cliente</label><input type="email" class="campo-input" id="nc-email" placeholder="cliente@email.com"></div>
     <div class="campo-grupo"><label class="campo-label">Marcas representadas <span style="color:var(--texto3);font-weight:400;">(até 5)</span></label><div class="sku-grid" id="nc-marcas-grid"></div></div>
 
     <div class="modal-btns">
@@ -1461,6 +1472,7 @@
     </div>
     <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="ec-cidade" placeholder="Cidade"></div>
     <div class="campo-grupo"><label class="campo-label">WhatsApp</label><input type="tel" class="campo-input" id="ec-telefone" placeholder="(00) 00000-0000"></div>
+    <div class="campo-grupo"><label class="campo-label">E-mail do cliente</label><input type="email" class="campo-input" id="ec-email" placeholder="cliente@email.com"></div>
     <div class="campo-grupo"><label class="campo-label">Marcas representadas <span style="color:var(--texto3);font-weight:400;">(até 5)</span></label><div class="sku-grid" id="ec-marcas-grid"></div></div>
 
     <!-- ENDEREÇO COM VALIDAÇÃO -->
@@ -2975,6 +2987,8 @@ function irPara(tela) {
   el.style.display = 'flex';
   el.classList.add('ativa');
   el.scrollTop = 0;
+  const scrollable = el.querySelector('.dash-content, .detalhe-content, .modal-box');
+  if (scrollable) scrollable.scrollTop = 0;
   if (tela === 'dashboard') { atualizarDashboard(); setTimeout(() => renderizarClientes(), 100); }
   if (tela === 'clientes') { renderizarChipsMarca(); renderizarClientes(); }
   if (tela === 'esquecidos') renderizarEsquecidos();
@@ -5013,6 +5027,22 @@ function abrirDetalhe(clienteId, telaOrigem) {
   }
   segEl.textContent = getSegLabel(cliente.segmento);
 
+  // E-mail do cliente
+  let emailDetEl = document.getElementById('det-email-cliente');
+  if (!emailDetEl) {
+    emailDetEl = document.createElement('div');
+    emailDetEl.id = 'det-email-cliente';
+    emailDetEl.style.cssText = 'font-size:12px;margin-bottom:8px;';
+    segEl.after(emailDetEl);
+  }
+  if (cliente.emailCliente) {
+    emailDetEl.style.display = 'block';
+    emailDetEl.innerHTML = `<a href="mailto:${cliente.emailCliente}" style="color:var(--texto2);text-decoration:none;display:inline-flex;align-items:center;gap:5px;"><span style="font-size:14px;">✉️</span>${cliente.emailCliente}</a>`;
+  } else {
+    emailDetEl.style.display = 'none';
+    emailDetEl.innerHTML = '';
+  }
+
   // Potencial do cliente
   const potBox = document.getElementById('det-potencial-box');
   if (potBox) {
@@ -5052,7 +5082,11 @@ function abrirDetalhe(clienteId, telaOrigem) {
     }).filter(Boolean);
     if (linhas.length) {
       potBox.style.display = 'block';
-      potBox.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">🎯 Meta de venda hoje</span><span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Potencial de compra atual</span></div>${linhas.join('')}`;
+      const _ehHojeHeader = getDiffDiasCliente(cliente) === 0;
+      const _metaLabelHtml = _ehHojeHeader
+        ? `<span class="meta-hoje-pisca" style="font-size:10px;font-weight:700;color:#F97316;text-transform:uppercase;letter-spacing:.5px;">🎯 Meta de venda hoje</span>`
+        : `<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">🎯 Meta de venda hoje</span>`;
+      potBox.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">${_metaLabelHtml}<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Histórico/Potencial</span></div>${linhas.join('')}`;
     } else {
       potBox.style.display = 'none';
     }
@@ -5627,6 +5661,7 @@ function abrirModalEditarCliente() {
   document.getElementById('ec-segmento').value = cliente.segmento || 'geral';
   document.getElementById('ec-cidade').value = cliente.cidade || '';
   document.getElementById('ec-telefone').value = cliente.telefone || '';
+  document.getElementById('ec-email').value = cliente.emailCliente || '';
   renderizarMarcasGrid('ec-marcas-grid', cliente.marcas || []);
   document.getElementById('ec-endereco').value = cliente.enderecoPendente || cliente.endereco || '';
   // Reseta validação
@@ -5656,6 +5691,7 @@ function salvarEdicaoCliente() {
   clientes[idx].segmento = document.getElementById('ec-segmento').value || 'geral';
   clientes[idx].cidade = document.getElementById('ec-cidade').value.trim();
   clientes[idx].telefone = document.getElementById('ec-telefone').value.trim();
+  clientes[idx].emailCliente = document.getElementById('ec-email').value.trim();
   clientes[idx].marcas = getMarcasSelecionadas('ec-marcas-grid');
 
   const endDigitado = document.getElementById('ec-endereco').value.trim();
@@ -5706,7 +5742,7 @@ function confirmarExcluirCliente() {
 
 // ===== NOVO CLIENTE =====
 function abrirModalNovoCliente() {
-  ['nc-nome','nc-loja','nc-cidade','nc-telefone','nc-endereco','nc-lat','nc-lng','nc-cnpj'].forEach(id => {
+  ['nc-nome','nc-loja','nc-cidade','nc-telefone','nc-email','nc-endereco','nc-lat','nc-lng','nc-cnpj'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const cnpjSt = document.getElementById('nc-cnpj-status');
@@ -5756,6 +5792,7 @@ function salvarNovoCliente() {
     segmento: document.getElementById('nc-segmento').value || 'geral',
     cidade: document.getElementById('nc-cidade').value.trim(),
     telefone: document.getElementById('nc-telefone').value.trim(),
+    emailCliente: document.getElementById('nc-email').value.trim(),
     marcas: getMarcasSelecionadas('nc-marcas-grid'),
     historico: [], criadoEm: new Date().toISOString()
   };
@@ -5796,6 +5833,7 @@ function carregarConfig() {
   });
   document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 60;
   document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
+  document.getElementById('cfg-wpp-rep').value = cfg.wppRep ? cfg.wppRep.replace(/^55/, '') : '';
   const bufferEl = document.getElementById('cfg-buffer-meta');
   if (bufferEl) bufferEl.value = cfg.bufferMeta !== undefined ? cfg.bufferMeta : 20;
   renderizarMetasConfig(cfg);
@@ -5836,6 +5874,7 @@ function salvarConfig() {
   cfg.skusCustom = [0, 1, 2].map(i => (document.getElementById('sku-custom-' + i)?.value || '').trim());
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
+  cfg.wppRep = (document.getElementById('cfg-wpp-rep')?.value || '').replace(/\D/g,'');
   const _bufEl = document.getElementById('cfg-buffer-meta');
   cfg.bufferMeta = _bufEl ? Number(_bufEl.value) : 20;
   salvarConfigData(cfg);
@@ -5981,7 +6020,7 @@ function _skuLabel(sku) {
 function _skuAbrev(sku) {
   const map = {
     'peças':'pçs', 'caixas':'cxs', 'unidades':'unid',
-    'litros':'Lts', 'metros':'Mts', 'pares':'Prs', 'paletes':'Plts', 'pacotes':'Pcts', 'faturamento':'Fat',
+    'litros':'Lts', 'metros':'Mts', 'pares':'Prs', 'paletes':'Plts', 'pacotes':'Pcts', 'dúzias':'Dz', 'faturamento':'Fat',
     'reais':'R$'
   };
   return map[sku] || _skuLabel(sku).slice(0,3);
@@ -6370,6 +6409,94 @@ function enviarFeedbackApp() {
   toast('📨 Abrindo seu e-mail para enviar a sugestão...');
 }
 
+function enviarRotaWhatsApp() {
+  const cfg = getConfig();
+  const wpp = cfg.wppRep;
+  if (!wpp) { toast('Cadastre seu WhatsApp em Configurações primeiro 📲'); return; }
+
+  const clientes = getClientesAtivos();
+  const hoje = new Date();
+  const clientesHoje = clientes.filter(c => getDiffDiasCliente(c) === 0);
+
+  if (!clientesHoje.length) { toast('Nenhum cliente para visitar hoje 👍'); return; }
+
+  const metaHoje = calcularMetaDiariaHoje();
+  const fmtD = iso => new Date(iso).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  const fmtN = v => v >= 1000 ? fmtK(v) : Math.round(v).toLocaleString('pt-BR');
+
+  const dataTxt = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
+  let msg = `🗺️ *ROTA DE HOJE — ${dataTxt.toUpperCase()}*\n_Gerado pelo Carteira Viva_\n`;
+
+  clientesHoje.forEach(c => {
+    const marcas = (c.marcas && c.marcas.length) ? c.marcas : [];
+    const pot = calcularPotencialCliente(c);
+    const mCliente = metaHoje[c.id] || {};
+
+    msg += `\n━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `🏪 *${c.nome.toUpperCase()}*`;
+    if (c.loja) msg += ` — ${c.loja}`;
+    if (c.cidade) msg += ` · ${c.cidade}`;
+    msg += `\n━━━━━━━━━━━━━━━━━━━\n`;
+
+    if (!marcas.length) {
+      msg += `_(sem marca cadastrada)_\n`;
+    } else {
+      marcas.forEach(marca => {
+        const d = pot[marca] || { avg:0, max:0, count:0, avgQtd:0, maxQtd:0, countQtd:0 };
+        const mMarca = mCliente[marca];
+        const cfgMeta = (cfg.metas || []).find(m => m.marca === marca);
+        const exibirEm = cfgMeta?.exibirEm || 'reais';
+        const skuAbr = cfgMeta ? _skuAbrev(cfgMeta.sku) : '';
+        const potAvg = exibirEm === 'sku' ? d.avgQtd : d.avg;
+        const potMax = exibirEm === 'sku' ? d.maxQtd : d.max;
+
+        msg += `\n🏷️ *${marca}*\n`;
+
+        if (mMarca) {
+          msg += `🎯 Meta de hoje: *${fmtN(mMarca.meta)} ${skuAbr}*`;
+          if (mMarca.peso) msg += ` _(${mMarca.peso}% do total)_`;
+          msg += `\n`;
+        }
+
+        if (d.count > 0 || d.countQtd > 0) {
+          msg += `📊 Média: ${fmtN(potAvg)}${skuAbr ? ' '+skuAbr : ''}`;
+          if (potMax > 0) msg += ` | Máx: ${fmtN(potMax)}${skuAbr ? ' '+skuAbr : ''}`;
+          msg += `\n`;
+        }
+
+        // Últimos 3 pedidos desta marca
+        const pedidos3 = [];
+        let maxPedido = { val: 0, data: '' };
+        (c.historico || []).forEach(h => {
+          if (h.motivo !== 'fechou_pedido') return;
+          const pedMarca = h.pedidos ? h.pedidos.find(p => p.marca === marca) : null;
+          const val = pedMarca ? (exibirEm === 'sku' ? (pedMarca.qtd || 0) : (pedMarca.valor || 0)) : 0;
+          const legacyVal = (!h.pedidos && exibirEm !== 'sku') ? (h.pedidoValor || 0) : 0;
+          const v = val || legacyVal;
+          if (v > 0) {
+            if (pedidos3.length < 3) pedidos3.push({ v, data: h.data });
+            if (v > maxPedido.val) maxPedido = { val: v, data: h.data };
+          }
+        });
+
+        if (pedidos3.length) {
+          msg += `📦 Últimos pedidos:\n`;
+          pedidos3.forEach(p => { msg += `   • ${fmtN(p.v)}${skuAbr ? ' '+skuAbr : ''} — ${fmtD(p.data)}\n`; });
+          if (maxPedido.val > 0) msg += `🏆 Maior pedido: ${fmtN(maxPedido.val)}${skuAbr ? ' '+skuAbr : ''} em ${fmtD(maxPedido.data)}\n`;
+        } else {
+          msg += `_(sem pedidos registrados para ${marca})_\n`;
+        }
+      });
+    }
+  });
+
+  msg += `\n━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `_${clientesHoje.length} cliente${clientesHoje.length > 1 ? 's' : ''} na rota de hoje · Carteira Viva_`;
+
+  const url = `https://wa.me/55${wpp}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
 function salvarBufferMeta(valor) {
   const cfg = getConfig();
   cfg.bufferMeta = Number(valor);
@@ -6411,7 +6538,7 @@ const SKU_OPCOES = [
   { value:'peças', label:'Peças' }, { value:'caixas', label:'Caixas' }, { value:'unidades', label:'Unidades' },
   { value:'kg', label:'Kg' }, { value:'litros', label:'Litros' }, { value:'metros', label:'Metros' },
   { value:'frascos', label:'Frascos' }, { value:'pares', label:'Pares' }, { value:'kits', label:'Kits' },
-  { value:'paletes', label:'Paletes' }, { value:'pacotes', label:'Pacotes' }, { value:'faturamento', label:'Faturamento' }, { value:'reais', label:'R$ Reais' }
+  { value:'paletes', label:'Paletes' }, { value:'pacotes', label:'Pacotes' }, { value:'dúzias', label:'Dúzias' }, { value:'faturamento', label:'Faturamento' }, { value:'reais', label:'R$ Reais' }
 ];
 function renderizarSkuGrid(cfg) {
   const grid = document.getElementById('sku-grid');

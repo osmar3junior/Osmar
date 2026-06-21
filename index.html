@@ -606,6 +606,7 @@
       </div>
       <button class="btn-primario" onclick="fazerLogin()">Entrar</button>
       <div class="login-link">Não tem conta? <a onclick="mostrarCadastro()">Criar conta grátis</a></div>
+      <div class="login-link" style="margin-top:10px;"><a onclick="abrirEsqueciSenha()">Esqueci minha senha</a></div>
     </div>
     <div id="form-cadastro" style="display:none">
       <div class="campo-grupo">
@@ -1399,6 +1400,14 @@
       <button onclick="enviarFeedbackApp()" style="width:100%;margin-top:10px;background:linear-gradient(135deg,rgba(0,214,143,.15),rgba(0,214,143,.08));border:1.5px solid rgba(0,214,143,.5);border-radius:12px;padding:13px;color:var(--verde);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s;">
         📨 Enviar sugestão
       </button>
+    <div class="config-secao">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="config-secao-titulo" style="margin:0;">📋 Eventos dos representantes</div>
+        <button onclick="carregarEventos()" style="background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--texto2);cursor:pointer;">Atualizar</button>
+      </div>
+      <div id="eventos-lista"><div style="font-size:13px;color:var(--texto3);text-align:center;padding:16px 0;">Toque em Atualizar para carregar</div></div>
+    </div>
+
     </div>
 
   </div>
@@ -1926,6 +1935,41 @@
     </div>
 
     <button id="estrada-add-btn" onclick="abrirCadEstrada()" style="display:none;width:100%;margin-top:12px;background:rgba(56,189,248,.1);border:1.5px dashed rgba(56,189,248,.5);border-radius:12px;padding:13px;color:#7DD3FC;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">+ Adicionar posto</button>
+  </div>
+</div>
+
+<!-- MODAL ESQUECI SENHA -->
+<div class="modal-overlay" id="modal-esqueci-senha">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="modal-titulo" style="margin-bottom:0;">🔑 Recuperar senha</div>
+      <button onclick="fecharModal('modal-esqueci-senha')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div class="modal-sub">Digite seu email e enviaremos um link para criar uma nova senha.</div>
+    <div class="campo-grupo" style="margin-top:16px;">
+      <label class="campo-label">Email</label>
+      <input type="email" class="campo-input" id="reset-email" placeholder="seu@email.com">
+    </div>
+    <button class="btn-primario" onclick="enviarResetSenha()">📧 Enviar link de recuperação</button>
+  </div>
+</div>
+
+<!-- MODAL NOVA SENHA -->
+<div class="modal-overlay" id="modal-nova-senha">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="modal-titulo" style="margin-bottom:0;">🔒 Criar nova senha</div>
+    </div>
+    <div class="modal-sub">Escolha uma senha nova para sua conta.</div>
+    <div class="campo-grupo" style="margin-top:16px;">
+      <label class="campo-label">Nova senha</label>
+      <input type="password" class="campo-input" id="nova-senha-input" placeholder="Mínimo 6 caracteres">
+    </div>
+    <div class="campo-grupo">
+      <label class="campo-label">Confirmar senha</label>
+      <input type="password" class="campo-input" id="nova-senha-confirma" placeholder="Repita a senha">
+    </div>
+    <button class="btn-primario" onclick="aplicarNovaSenha()">✅ Salvar nova senha</button>
   </div>
 </div>
 
@@ -3508,6 +3552,90 @@ function limparCacheApp() {
 }
 function mostrarCadastro() { document.getElementById('form-login').style.display='none'; document.getElementById('form-cadastro').style.display='block'; }
 function mostrarLogin() { document.getElementById('form-cadastro').style.display='none'; document.getElementById('form-login').style.display='block'; }
+
+// ===== RECUPERAÇÃO DE SENHA =====
+function abrirEsqueciSenha() {
+  const email = document.getElementById('login-email').value.trim();
+  if (email) document.getElementById('reset-email').value = email;
+  document.getElementById('modal-esqueci-senha').classList.add('aberto');
+}
+
+async function enviarResetSenha() {
+  const email = document.getElementById('reset-email').value.trim().toLowerCase();
+  if (!email) { toast('Informe seu email'); return; }
+  try {
+    const { error } = await _sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) { toast('Erro ao enviar. Verifique o email.'); return; }
+    fecharModal('modal-esqueci-senha');
+    toast('📧 Link enviado! Verifique seu email.');
+    await _sbLogEvento('solicitou_reset_senha', email);
+  } catch(e) { toast('Sem conexão. Tente novamente.'); }
+}
+
+async function aplicarNovaSenha() {
+  const nova    = document.getElementById('nova-senha-input').value;
+  const confirma = document.getElementById('nova-senha-confirma').value;
+  if (!nova || nova.length < 6) { toast('Senha deve ter pelo menos 6 caracteres'); return; }
+  if (nova !== confirma) { toast('As senhas não conferem'); return; }
+  try {
+    const { error } = await _sb.auth.updateUser({ password: nova });
+    if (error) { toast('Erro ao salvar senha: ' + error.message); return; }
+
+    // Atualiza também no localStorage local
+    if (usuarioAtual) {
+      const usuarios = getUsuarios();
+      if (usuarios[usuarioAtual.email]) {
+        usuarios[usuarioAtual.email].senha = nova;
+        setData('cv_usuarios', usuarios);
+      }
+    }
+
+    fecharModal('modal-nova-senha');
+    await _sbLogEvento('redefiniu_senha', usuarioAtual?.email || '');
+    toast('✅ Senha atualizada com sucesso!');
+    irPara('dashboard');
+  } catch(e) { toast('Erro ao salvar senha.'); }
+}
+
+async function _sbLogEvento(tipo, email_rep) {
+  if (!_sbUserId) return;
+  try {
+    await _sb.from('eventos').insert({ tipo, email_rep });
+  } catch(e) {}
+}
+
+async function carregarEventos() {
+  const lista = document.getElementById('eventos-lista');
+  if (!lista) return;
+  if (!_sbUserId) { lista.innerHTML = '<div style="font-size:13px;color:var(--texto3);text-align:center;padding:16px 0;">Entre no app para ver os eventos.</div>'; return; }
+  lista.innerHTML = '<div style="font-size:13px;color:var(--texto3);text-align:center;padding:16px 0;">⏳ Carregando...</div>';
+  try {
+    const { data, error } = await _sb.from('eventos').select('*').order('criado_em', { ascending: false }).limit(30);
+    if (error || !data?.length) {
+      lista.innerHTML = '<div style="font-size:13px;color:var(--texto3);text-align:center;padding:16px 0;">Nenhum evento registrado ainda.</div>';
+      return;
+    }
+    const fmtTipo = t => ({
+      'solicitou_reset_senha': '🔑 Solicitou reset de senha',
+      'redefiniu_senha':       '✅ Redefiniu a senha',
+      'login':                 '🔓 Fez login'
+    }[t] || t);
+    lista.innerHTML = data.map(e => {
+      const dt = new Date(e.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--borda);">
+        <div>
+          <div style="font-size:13px;color:var(--texto);">${fmtTipo(e.tipo)}</div>
+          <div style="font-size:11px;color:var(--texto3);">${e.email_rep}</div>
+        </div>
+        <div style="font-size:11px;color:var(--texto3);white-space:nowrap;margin-left:8px;">${dt}</div>
+      </div>`;
+    }).join('');
+  } catch(err) {
+    lista.innerHTML = '<div style="font-size:13px;color:var(--texto3);text-align:center;padding:16px 0;">Erro ao carregar eventos.</div>';
+  }
+}
 
 // ===== NAVEGAÇÃO =====
 // ===== MAPA =====
@@ -9169,6 +9297,24 @@ function ajustarAlturaListaMotivos() {
 
 // INIT
 (function() {
+  // Detecta link de reset de senha no hash da URL
+  const hash = window.location.hash;
+  if (hash.includes('type=recovery')) {
+    _sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        _sbUserId = session.user.id;
+        usuarioAtual = { email: session.user.email, nome: session.user.email.split('@')[0] };
+        document.querySelectorAll('.tela').forEach(t => { t.style.display='none'; t.classList.remove('ativa'); });
+        document.getElementById('modal-nova-senha').classList.add('aberto');
+        const loginTela = document.getElementById('tela-login');
+        loginTela.style.display = 'flex';
+        loginTela.classList.add('ativa');
+        history.replaceState(null, '', window.location.pathname);
+      }
+    }).catch(() => {});
+    return;
+  }
+
   const versaoEl = document.getElementById('app-versao');
   if (versaoEl) versaoEl.textContent = APP_VERSION;
   document.querySelectorAll('.tela').forEach(t => { t.style.display='none'; t.classList.remove('ativa'); });

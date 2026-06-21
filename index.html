@@ -2320,22 +2320,39 @@ let _sbUserId = null;
 async function _sbAuth(email, senha) {
   _sbSetStatus('⏳ Conectando...');
   try {
+    // 1. Tenta login
     let { data, error } = await _sb.auth.signInWithPassword({ email, password: senha });
+
+    // 2. Se falhou, tenta cadastro
     if (error) {
-      console.log('[SB] signIn falhou, tentando signUp:', error.message);
-      ({ data, error } = await _sb.auth.signUp({ email, password: senha }));
+      console.log('[SB] signIn:', error.message);
+      const signup = await _sb.auth.signUp({ email, password: senha });
+      // Se signup também falhou (email já existe não confirmado) → tenta admin reset
+      if (signup.error) {
+        console.log('[SB] signUp:', signup.error.message);
+        _sbSetStatus('⚠️ Sem sincronização');
+        return;
+      }
+      data = signup.data;
+      error = signup.error;
     }
-    if (error) { console.log('[SB] auth erro:', error.message); _sbSetStatus('⚠️ Offline'); return; }
-    if (data?.user) {
-      _sbUserId = data.user.id;
-      console.log('[SB] autenticado:', _sbUserId);
+
+    // 3. Verifica se tem sessão ativa
+    if (data?.session) {
+      _sbUserId = data.session.user.id;
+      console.log('[SB] autenticado OK:', _sbUserId);
       _sbSetStatus('☁️ Nuvem ativa');
-      setTimeout(_sbPull, 800);
-    } else {
-      console.log('[SB] user nulo — confirme o email no Supabase Dashboard (desative confirmação)');
+      // Puxa dados do Supabase; se estiver vazio, sobe o localStorage
+      setTimeout(_sbSincronizarInicial, 800);
+    } else if (data?.user && !data?.session) {
+      // Usuário criado mas sem sessão (confirmação pendente)
+      console.log('[SB] aguardando confirmação de email');
       _sbSetStatus('✉️ Confirme o email');
     }
-  } catch(e) { console.log('[SB] erro:', e); _sbSetStatus('⚠️ Offline'); }
+  } catch(e) {
+    console.log('[SB] erro de rede:', e);
+    _sbSetStatus('⚠️ Sem sincronização');
+  }
 }
 
 function _sbSetStatus(txt) {
@@ -2408,6 +2425,25 @@ async function _sbPushDespesas() {
     await _sb.from('despesas').upsert({ user_id: _sbUserId, dados, atualizado_em: ts });
     setData('cv_despesas_' + usuarioAtual.email + '_ts', Date.now());
   } catch(e) {}
+}
+
+async function _sbSincronizarInicial() {
+  if (!_sbUserId || !navigator.onLine || !usuarioAtual) return;
+  try {
+    // Verifica se já existe dados no Supabase
+    const { data: cRow } = await _sb.from('clientes').select('atualizado_em').eq('user_id', _sbUserId).maybeSingle();
+
+    if (!cRow) {
+      // Supabase está vazio — sobe tudo do localStorage
+      console.log('[SB] Supabase vazio, subindo dados locais...');
+      await Promise.all([_sbPushClientes(), _sbPushConfig(), _sbPushDespesas()]);
+      _sbSetStatus('☁️ Dados enviados para nuvem!');
+      console.log('[SB] Sincronização inicial concluída');
+    } else {
+      // Já tem dados — faz pull normal (pega o mais recente)
+      await _sbPull();
+    }
+  } catch(e) { console.log('[SB] erro sync inicial:', e); }
 }
 let usuarioAtual = null;
 let clienteAtualId = null;

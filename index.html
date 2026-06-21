@@ -207,21 +207,26 @@
   .saudacao-nome { font-size:22px; font-weight:800; letter-spacing:-.3px; }
 
   .resumo-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:28px; }
-  .resumo-card { background:linear-gradient(160deg,var(--bg2),var(--bg)); border:1px solid var(--borda); border-radius:16px; padding:17px; position:relative; overflow:hidden; transition:transform .1s, box-shadow .1s; cursor:pointer; box-shadow:0 6px 0 rgba(0,0,0,.4), 0 10px 16px rgba(0,0,0,.3); }
-  .resumo-card:active { transform:translateY(4px); box-shadow:0 2px 0 rgba(0,0,0,.4), 0 4px 8px rgba(0,0,0,.2); }
-  .resumo-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
-  .resumo-card.verde::before { background:var(--verde); }
-  .resumo-card.amarelo::before { background:var(--amarelo); }
-  .resumo-card.vermelho::before { background:var(--vermelho); }
-  .resumo-card.roxo::before { background:var(--roxo); }
-  .resumo-card.azul::before { background:#58A6FF; }
-  .resumo-numero { font-family:'DM Sans',sans-serif; font-size:52px; font-weight:300; line-height:1; margin-bottom:4px; letter-spacing:-3px; }
-  .resumo-card.verde .resumo-numero { color:var(--verde); }
-  .resumo-card.amarelo .resumo-numero { color:var(--amarelo); }
-  .resumo-card.vermelho .resumo-numero { color:var(--vermelho); }
-  .resumo-card.roxo .resumo-numero { color:var(--roxo); }
-  .resumo-card.azul .resumo-numero { color:#58A6FF; }
-  .resumo-label { font-size:11px; color:var(--texto2); font-weight:500; text-transform:uppercase; letter-spacing:.5px; }
+  .resumo-card { border-radius:18px; padding:16px; position:relative; overflow:hidden; transition:transform .1s, box-shadow .1s; cursor:pointer; border:none; }
+  .resumo-card:active { transform:translateY(5px); }
+  .resumo-card.verde  { background:linear-gradient(145deg,#006644,#004D33); }
+  .resumo-card.vermelho { background:linear-gradient(145deg,#8B1A2A,#6B1020); }
+  .resumo-card.amarelo  { background:linear-gradient(145deg,#7A5500,#5C3F00); }
+  .resumo-card.roxo   { background:linear-gradient(145deg,#3D2080,#2D1660); }
+  .resumo-card.azul   { background:linear-gradient(145deg,#1A4A8A,#0F3068); }
+  .resumo-card-icone { font-size:22px; margin-bottom:8px; display:block; }
+  .resumo-numero { font-family:'DM Sans',sans-serif; font-size:42px; font-weight:800; line-height:1; letter-spacing:-2px; color:#fff; }
+  .resumo-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; margin-bottom:6px; }
+  .resumo-card.verde  .resumo-label { color:rgba(100,255,180,.75); }
+  .resumo-card.vermelho .resumo-label { color:rgba(255,160,170,.75); }
+  .resumo-card.amarelo  .resumo-label { color:rgba(255,210,100,.75); }
+  .resumo-card.roxo   .resumo-label { color:rgba(200,180,255,.75); }
+  .resumo-card.azul   .resumo-label { color:rgba(150,200,255,.75); }
+  .resumo-link { font-size:10px; font-weight:600; margin-top:8px; opacity:.6; }
+  .resumo-card.verde  .resumo-link { color:rgba(100,255,180,.9); }
+  .resumo-card.vermelho .resumo-link { color:rgba(255,160,170,.9); }
+  .resumo-card.amarelo  .resumo-link { color:rgba(255,210,100,.9); }
+  .resumo-card.roxo   .resumo-link { color:rgba(200,180,255,.9); }
 
   .secao-titulo { font-size:13px; font-weight:700; color:var(--texto2); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; }
   .alerta-lista { margin-bottom:28px; }
@@ -539,11 +544,11 @@
   .empty-desc { font-size:14px; line-height:1.5; }
 
   /* NAV */
-  .resumo-card.verde { box-shadow:0 6px 0 #052E16, 0 10px 16px rgba(0,0,0,.3); }
-  .resumo-card.vermelho { box-shadow:0 6px 0 #7F1D1D, 0 10px 16px rgba(0,0,0,.3); }
-  .resumo-card.amarelo { box-shadow:0 6px 0 #713F12, 0 10px 16px rgba(0,0,0,.3); }
-  .resumo-card.roxo { box-shadow:0 6px 0 #2D1B69, 0 10px 16px rgba(0,0,0,.3); }
-  .resumo-card.verde:active, .resumo-card.vermelho:active, .resumo-card.amarelo:active, .resumo-card.roxo:active { transform:translateY(4px); box-shadow:0 2px 0 rgba(0,0,0,.3) !important; }
+  .resumo-card.verde   { box-shadow:0 7px 0 #002D1A, 0 12px 20px rgba(0,0,0,.4); }
+  .resumo-card.vermelho { box-shadow:0 7px 0 #4A0910, 0 12px 20px rgba(0,0,0,.4); }
+  .resumo-card.amarelo  { box-shadow:0 7px 0 #3A2800, 0 12px 20px rgba(0,0,0,.4); }
+  .resumo-card.roxo    { box-shadow:0 7px 0 #180A40, 0 12px 20px rgba(0,0,0,.4); }
+  .resumo-card.verde:active, .resumo-card.vermelho:active, .resumo-card.amarelo:active, .resumo-card.roxo:active { transform:translateY(5px); box-shadow:0 2px 0 rgba(0,0,0,.4) !important; }
 
   /* MAPA */
   #tela-mapa { background:var(--bg); }
@@ -652,25 +657,29 @@
       </div>
     </div>
     <div class="resumo-grid">
-      <div class="resumo-card verde" onclick="irPara('clientes')" style="cursor:pointer">
+      <div class="resumo-card verde" onclick="irPara('clientes')">
+        <span class="resumo-card-icone">👥</span>
+        <div class="resumo-label">Base total</div>
         <div class="resumo-numero" id="num-total">0</div>
-        <div class="resumo-label">Base total de clientes</div>
-        <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">Ver todos →</div>
+        <div class="resumo-link">Ver todos →</div>
       </div>
-      <div class="resumo-card vermelho" onclick="abrirFiltrado('urgentes')" style="cursor:pointer">
-        <div class="resumo-numero" id="num-urgentes">0</div>
+      <div class="resumo-card vermelho" onclick="abrirFiltrado('urgentes')">
+        <span class="resumo-card-icone">🔔</span>
         <div class="resumo-label">Retomar hoje</div>
-        <div style="font-size:10px;color:var(--vermelho);margin-top:6px;opacity:.7">Ver lista →</div>
+        <div class="resumo-numero" id="num-urgentes">0</div>
+        <div class="resumo-link">Ver lista →</div>
       </div>
-      <div class="resumo-card amarelo" onclick="abrirFiltrado('semana')" style="cursor:pointer">
-        <div class="resumo-numero" id="num-essa-semana">0</div>
+      <div class="resumo-card amarelo" onclick="abrirFiltrado('semana')">
+        <span class="resumo-card-icone">📅</span>
         <div class="resumo-label">Essa semana</div>
-        <div style="font-size:10px;color:var(--amarelo);margin-top:6px;opacity:.7">Ver lista →</div>
+        <div class="resumo-numero" id="num-essa-semana">0</div>
+        <div class="resumo-link">Ver lista →</div>
       </div>
-      <div class="resumo-card roxo" onclick="irPara('esquecidos')" style="cursor:pointer">
-        <div class="resumo-numero" id="num-esquecidos">0</div>
+      <div class="resumo-card roxo" onclick="irPara('esquecidos')">
+        <span class="resumo-card-icone">👻</span>
         <div class="resumo-label">Esquecidos</div>
-        <div style="font-size:10px;color:var(--roxo);margin-top:6px;opacity:.7">Ver lista →</div>
+        <div class="resumo-numero" id="num-esquecidos">0</div>
+        <div class="resumo-link">Ver lista →</div>
       </div>
     </div>
 

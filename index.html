@@ -1349,6 +1349,30 @@
     </div>
 
     <div class="config-secao">
+      <div class="config-secao-titulo">📥 Importar base de clientes</div>
+      <div class="config-secao-sub">Traga sua carteira completa de uma vez — clientes, marcas e histórico de pedidos. Opcional.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 8px;">
+        <span style="font-size:13px;color:var(--texto);">Ativar importação de clientes</span>
+        <button id="import-toggle" onclick="toggleImportacao()" style="width:48px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;background:#333;">
+          <span id="import-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#888;transition:left .2s,background .2s;"></span>
+        </button>
+      </div>
+      <div id="import-opcoes" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;">
+          <button onclick="abrirGuiaImportacao()" style="background:var(--bg3);border:1.5px solid rgba(0,214,143,.35);border-radius:12px;padding:13px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <span style="font-size:22px;">📋</span>
+            <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--verde);">Passo a passo</span>
+          </button>
+          <label for="import-file-input" style="background:var(--bg3);border:1.5px solid rgba(0,214,143,.35);border-radius:12px;padding:13px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <span style="font-size:22px;">📂</span>
+            <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--verde);">Importar arquivo</span>
+          </label>
+        </div>
+        <input type="file" id="import-file-input" accept=".csv,.xlsx,.xls" style="display:none;" onchange="processarArquivoImportacao(this)">
+      </div>
+    </div>
+
+    <div class="config-secao">
       <div class="config-secao-titulo">🤖 OCR de notas fiscais</div>
       <div class="config-secao-sub">Cole aqui sua chave do Google Gemini para que o app leia automaticamente o valor das suas notas. É gratuita e leva 3 minutos para obter. <span onclick="abrirGuiaApi()" style="color:var(--verde);cursor:pointer;font-weight:600;">Ver passo a passo →</span></div>
       <input type="text" class="campo-input" id="cfg-gemini-key" placeholder="AIza..." style="margin-top:4px;font-family:monospace;font-size:13px;letter-spacing:.5px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -1900,6 +1924,111 @@
     </div>
 
     <button id="estrada-add-btn" onclick="abrirCadEstrada()" style="display:none;width:100%;margin-top:12px;background:rgba(56,189,248,.1);border:1.5px dashed rgba(56,189,248,.5);border-radius:12px;padding:13px;color:#7DD3FC;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">+ Adicionar posto</button>
+  </div>
+</div>
+
+<!-- MODAL GUIA IMPORTAÇÃO -->
+<div class="modal-overlay" id="modal-guia-importacao">
+  <div class="modal-box" style="max-height:90vh;overflow-y:auto;padding-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="modal-titulo" style="margin-bottom:0;">📥 Como importar sua base</div>
+      <button onclick="fecharModal('modal-guia-importacao')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+
+    <div style="background:rgba(0,214,143,.07);border:1px solid rgba(0,214,143,.2);border-radius:12px;padding:12px 14px;margin-bottom:22px;">
+      <div style="font-size:13px;color:var(--verde);font-weight:700;">✅ Funciona com Excel, Google Sheets ou qualquer planilha</div>
+      <div style="font-size:12px;color:var(--texto2);margin-top:3px;">Você pode trazer clientes, marcas e até o histórico de pedidos de uma vez só.</div>
+    </div>
+
+    <div class="guia-step">
+      <div class="guia-step-num">1</div>
+      <div class="guia-step-text">
+        <strong style="color:var(--texto);">Baixe o modelo pronto</strong><br>
+        Toque no botão abaixo. Vai baixar um arquivo com as colunas certas e dois clientes de exemplo para você ver como preencher.
+      </div>
+    </div>
+    <button onclick="baixarModeloCSV()" style="width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.45);border-radius:12px;padding:13px;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--verde);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:22px;">
+      ⬇️ Baixar modelo (.csv)
+    </button>
+
+    <div class="guia-step">
+      <div class="guia-step-num">2</div>
+      <div class="guia-step-text">
+        <strong style="color:var(--texto);">Abra no Excel ou Google Sheets</strong><br>
+        Apague os exemplos e preencha com seus clientes. Uma linha por pedido — se o cliente comprou 3 vezes, coloque 3 linhas com o mesmo nome.
+      </div>
+    </div>
+
+    <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px 14px;margin-bottom:22px;overflow-x:auto;">
+      <div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:8px;">Colunas disponíveis</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div style="font-size:12px;"><span style="color:var(--vermelho);font-weight:700;">*</span> <span style="color:var(--texto);">nome</span> <span style="color:var(--texto3);">— nome do cliente</span></div>
+        <div style="font-size:12px;"><span style="color:var(--vermelho);font-weight:700;">*</span> <span style="color:var(--texto);">loja</span> <span style="color:var(--texto3);">— nome da loja</span></div>
+        <div style="font-size:12px;"><span style="color:var(--vermelho);font-weight:700;">*</span> <span style="color:var(--texto);">cidade</span> <span style="color:var(--texto3);">— cidade</span></div>
+        <div style="font-size:12px;"><span style="color:var(--vermelho);font-weight:700;">*</span> <span style="color:var(--texto);">uf</span> <span style="color:var(--texto3);">— estado (MG, SP…)</span></div>
+        <div style="font-size:12px;color:var(--texto2);">cnpj</div>
+        <div style="font-size:12px;color:var(--texto2);">telefone</div>
+        <div style="font-size:12px;color:var(--texto2);">marcas <span style="color:var(--texto3);">(ex: Lupo, Meet)</span></div>
+        <div style="font-size:12px;color:var(--texto2);">segmento <span style="color:var(--texto3);">(moda, farmacia…)</span></div>
+        <div style="font-size:12px;color:var(--texto2);">endereco</div>
+        <div style="font-size:12px;color:var(--texto2);">ciclo_dias <span style="color:var(--texto3);">(ex: 30)</span></div>
+        <div style="font-size:12px;color:var(--texto2);">pedido_data <span style="color:var(--texto3);">(AAAA-MM-DD)</span></div>
+        <div style="font-size:12px;color:var(--texto2);">pedido_marca</div>
+        <div style="font-size:12px;color:var(--texto2);">pedido_valor <span style="color:var(--texto3);">(ex: 8500)</span></div>
+        <div style="font-size:12px;color:var(--texto2);">lembrete</div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--texto3);"><span style="color:var(--vermelho);">*</span> obrigatório</div>
+    </div>
+
+    <div class="guia-step">
+      <div class="guia-step-num">3</div>
+      <div class="guia-step-text">
+        <strong style="color:var(--texto);">Salve como CSV</strong><br>
+        No Excel: <em>Arquivo → Salvar como → CSV UTF-8 (delimitado por vírgula)</em><br>
+        No Google Sheets: <em>Arquivo → Fazer download → Valores separados por vírgula (.csv)</em>
+      </div>
+    </div>
+
+    <div class="guia-step">
+      <div class="guia-step-num">4</div>
+      <div class="guia-step-text">
+        <strong style="color:var(--texto);">Importe no app</strong><br>
+        Toque em "Importar arquivo", selecione o arquivo salvo. O app mostra uma prévia antes de confirmar — você vê quantos são novos e quantos serão atualizados.
+      </div>
+    </div>
+
+    <div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:12px 14px;margin-bottom:20px;">
+      <div style="font-size:12px;color:#FBB52C;line-height:1.6;">
+        💡 <strong>Dica:</strong> Se o cliente já existir no app (mesmo CNPJ ou mesmo nome+cidade), o app <strong>atualiza</strong> sem duplicar. Pode importar de novo sem medo.
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button onclick="baixarModeloCSV()" style="background:var(--bg3);border:1.5px solid rgba(0,214,143,.35);border-radius:12px;padding:13px;color:var(--verde);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⬇️ Baixar modelo</button>
+      <label for="import-file-input-guia" style="background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:12px;padding:13px;color:#04231A;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-align:center;display:block;">📂 Importar arquivo</label>
+    </div>
+    <input type="file" id="import-file-input-guia" accept=".csv,.xlsx,.xls" style="display:none;" onchange="processarArquivoImportacao(this);fecharModal('modal-guia-importacao')">
+  </div>
+</div>
+
+<!-- MODAL IMPORTAÇÃO DE CLIENTES -->
+<div class="modal-overlay" id="modal-importacao">
+  <div class="modal-box" style="max-height:90vh;overflow-y:auto;padding-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="modal-titulo" style="margin-bottom:0;">📥 Importar clientes</div>
+      <button onclick="fecharModal('modal-importacao')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+
+    <div id="import-resumo"></div>
+
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:16px;">
+      <input type="checkbox" id="import-atualizar" checked style="width:16px;height:16px;accent-color:var(--verde);">
+      <span style="font-size:13px;color:var(--texto2);">Atualizar clientes já existentes (por CNPJ ou nome+cidade)</span>
+    </label>
+
+    <div id="import-preview"></div>
+
+    <button class="btn-primario" onclick="confirmarImportacao()" id="import-btn-confirmar" style="margin-top:8px;">✅ Importar</button>
   </div>
 </div>
 
@@ -7829,6 +7958,332 @@ const MOTIVOS_DEFAULT_ORDER = ['fechou_pedido','estoque_alto','outra_marca','mer
 function getMotivosOrdem() {
   const key = 'cv_motivos_ordem_' + (usuarioAtual?.email || '');
   return getData(key) || MOTIVOS_DEFAULT_ORDER;
+}
+
+// ===== IMPORTAÇÃO DE CLIENTES =====
+let _importDados = [];
+
+function toggleImportacao() {
+  const opcoes = document.getElementById('import-opcoes');
+  const toggle = document.getElementById('import-toggle');
+  const knob   = document.getElementById('import-knob');
+  const ativo  = opcoes.style.display === 'none';
+  opcoes.style.display  = ativo ? 'block' : 'none';
+  toggle.style.background = ativo ? 'var(--verde)' : '#333';
+  knob.style.left       = ativo ? '25px' : '3px';
+  knob.style.background = ativo ? '#fff' : '#888';
+}
+
+function abrirGuiaImportacao() {
+  document.getElementById('modal-guia-importacao').classList.add('aberto');
+}
+
+function baixarModeloCSV() {
+  const linhas = [
+    'nome,loja,cnpj,telefone,segmento,marcas,endereco,cidade,uf,ciclo_dias,lembrete,pedido_data,pedido_marca,pedido_valor',
+    // JOANA — 3 pedidos (repete as colunas de cliente na 1ª linha, deixa em branco nas seguintes)
+    '"JOANA FERREIRA","BY SEA","12.345.678/0001-90","(31) 99999-0000","moda","Lupo, Meet","Rua das Flores 123","BELO HORIZONTE","MG","21","Prefere manhã","2026-03-15","Lupo","8000"',
+    '"JOANA FERREIRA","","","","","","","","","","","2026-04-18","Lupo","9500"',
+    '"JOANA FERREIRA","","","","","","","","","","","2026-05-10","Meet","5000"',
+    // LEO — 1 pedido
+    '"LEO SOUZA","CUECAS BH","","(31) 98888-1111","moda","Meet","Av Brasil 456","BELO HORIZONTE","MG","30","","2026-05-21","Meet","5000"'
+  ].join('\n');
+  const blob = new Blob(['﻿' + linhas], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'modelo_carteira_viva.csv'; a.click();
+  URL.revokeObjectURL(url);
+  toast('Modelo baixado! Abra no Excel e preencha.');
+}
+
+async function _carregarSheetJS() {
+  if (window.XLSX) return;
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.mini.min.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Sem conexão para carregar leitor de Excel'));
+    document.head.appendChild(s);
+  });
+}
+
+function _parsearCSV(text) {
+  const linhas = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+  return linhas.map(linha => {
+    const cols = []; let campo = ''; let dentroAspas = false;
+    for (let i = 0; i < linha.length; i++) {
+      const c = linha[i];
+      if (c === '"') {
+        if (dentroAspas && linha[i+1] === '"') { campo += '"'; i++; }
+        else { dentroAspas = !dentroAspas; }
+      } else if (c === ',' && !dentroAspas) { cols.push(campo.trim()); campo = ''; }
+      else { campo += c; }
+    }
+    cols.push(campo.trim());
+    return cols;
+  });
+}
+
+const _IMPORT_ALIAS = {
+  nome:        ['nome','name','cliente'],
+  loja:        ['loja','empresa','store','razao_social','razao social'],
+  cnpj:        ['cnpj','document','documento','cpf_cnpj'],
+  telefone:    ['telefone','phone','celular','tel','whatsapp'],
+  segmento:    ['segmento','segment','ramo','categoria'],
+  marcas:      ['marcas','brands','marca','representacoes'],
+  endereco:    ['endereco','endereco','address','logradouro','rua'],
+  cidade:      ['cidade','city','municipio','municipio'],
+  uf:          ['uf','estado','state'],
+  ciclo_dias:  ['ciclo_dias','ciclo','prazo','retorno_dias'],
+  lembrete:    ['lembrete','obs','observacao','observacao','nota'],
+  pedido_data: ['pedido_data','ultimo_pedido_data','ultima_compra','data_pedido','data_ultimo_pedido'],
+  pedido_marca:['pedido_marca','ultimo_pedido_marca','marca_pedido'],
+  pedido_valor:['pedido_valor','ultimo_pedido_valor','valor_pedido','valor_ultimo_pedido']
+};
+
+function _resolverColunas(header) {
+  const idx = {};
+  header.forEach((h, i) => {
+    const norm = (h||'').toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_');
+    Object.entries(_IMPORT_ALIAS).forEach(([campo, aliases]) => {
+      if (aliases.includes(norm)) idx[campo] = i;
+    });
+  });
+  return idx;
+}
+
+function _linhasParaClientes(rows) {
+  const header = rows[0].map(h => (h||'').toString().toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_'));
+  const col = _resolverColunas(header);
+  if (col.nome === undefined) { toast('❌ Coluna "nome" não encontrada. Baixe o modelo e tente novamente.'); return []; }
+
+  // 1. Converte cada linha em objeto cru
+  const rawRows = rows.slice(1).map(r => {
+    const g = f => (col[f] !== undefined ? (r[col[f]]||'') : '').toString().trim();
+    const nome = g('nome').toUpperCase();
+    if (!nome) return null;
+    return {
+      nome,
+      loja:        g('loja').toUpperCase(),
+      cnpj:        g('cnpj').replace(/\D/g,''),
+      telefone:    g('telefone'),
+      segmento:    g('segmento') || 'geral',
+      marcasStr:   g('marcas'),
+      endereco:    g('endereco'),
+      cidade:      g('cidade').toUpperCase(),
+      uf:          g('uf').toUpperCase(),
+      ciclo_dias:  parseInt(g('ciclo_dias')) || 30,
+      lembrete:    g('lembrete'),
+      pedido_data:  g('pedido_data'),
+      pedido_marca: g('pedido_marca'),
+      pedido_valor: parseFloat((g('pedido_valor')||'').replace(/[^\d,.]/g,'').replace(',','.')) || 0
+    };
+  }).filter(Boolean);
+
+  // 2. Agrupa por CNPJ (se tiver) ou nome+cidade
+  const grupos = new Map();
+  rawRows.forEach(r => {
+    const chave = r.cnpj.length >= 11 ? 'cnpj:' + r.cnpj : 'nc:' + r.nome + '|' + r.cidade;
+    if (!grupos.has(chave)) grupos.set(chave, []);
+    grupos.get(chave).push(r);
+  });
+
+  // 3. Constrói um cliente por grupo
+  const clientes = [];
+  grupos.forEach((linhas, _chave) => {
+    // Campos do cadastro: usa o primeiro valor não vazio encontrado nas linhas do grupo
+    const pick = campo => { for (const l of linhas) { if (l[campo]) return l[campo]; } return ''; };
+
+    const nome     = pick('nome');
+    const cidade   = pick('cidade');
+    const uf       = pick('uf');
+    const endereco = pick('endereco');
+    const marcas   = (pick('marcasStr')||'').split(/[,;]/).map(m=>m.trim()).filter(Boolean);
+
+    const c = {
+      id:         'c_imp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      nome,
+      loja:       pick('loja') || nome,
+      cnpj:       pick('cnpj'),
+      telefone:   pick('telefone'),
+      segmento:   pick('segmento') || 'geral',
+      marcas,
+      endereco,
+      cidade,
+      uf,
+      cicloIdeal: pick('ciclo_dias') || 30,
+      lembrete:   pick('lembrete'),
+      historico:  [],
+      criadoEm:   new Date().toISOString()
+    };
+
+    if (endereco && cidade) {
+      c.enderecoPendente = `${endereco}, ${cidade}${uf ? ', '+uf : ''}, Brasil`;
+    }
+
+    // 4. Coleta TODOS os pedidos de todas as linhas do grupo
+    linhas.forEach(l => {
+      if (!l.pedido_data || l.pedido_valor <= 0) return;
+      const pedidos = l.pedido_marca
+        ? [{ marca: l.pedido_marca, valor: l.pedido_valor, qtd: 0, unidade: 'reais' }]
+        : [];
+      c.historico.push({
+        tipo: 'visita', motivo: 'fechou_pedido',
+        data: new Date(l.pedido_data + 'T12:00:00').toISOString(),
+        pedidos, pedidoValor: l.pedido_valor, obs: 'Importado'
+      });
+    });
+
+    // Mais recente primeiro
+    c.historico.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+    clientes.push(c);
+  });
+
+  return clientes;
+}
+
+function _acharDuplicata(novo, existentes) {
+  const cnpjLimpo = (novo.cnpj||'').replace(/\D/g,'');
+  if (cnpjLimpo.length >= 11) {
+    const dup = existentes.find(e => e.cnpj && e.cnpj.replace(/\D/g,'') === cnpjLimpo);
+    if (dup) return dup;
+  }
+  const nL = (novo.nome||'').toLowerCase().trim();
+  const cL = (novo.cidade||'').toLowerCase().trim();
+  if (nL && cL) return existentes.find(e =>
+    (e.nome||'').toLowerCase().trim() === nL &&
+    (e.cidade||'').toLowerCase().trim() === cL
+  ) || null;
+  return null;
+}
+
+async function processarArquivoImportacao(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  const isXlsx = /\.(xlsx|xls)$/i.test(file.name);
+
+  try {
+    let rows;
+    if (isXlsx) {
+      toast('⏳ Carregando leitor de Excel...');
+      await _carregarSheetJS();
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, { type:'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+    } else {
+      const text = await file.text();
+      rows = _parsearCSV(text);
+    }
+
+    if (!rows || rows.length < 2) { toast('Arquivo sem dados'); return; }
+    const clientes = _linhasParaClientes(rows);
+    if (!clientes.length) return;
+
+    _importDados = clientes;
+    _renderPreviewImportacao(clientes);
+    document.getElementById('modal-importacao').classList.add('aberto');
+  } catch(err) {
+    toast('Erro ao ler arquivo: ' + (err.message || err));
+  }
+}
+
+function _renderPreviewImportacao(clientes) {
+  const existentes = getClientes();
+  let novos = 0, atualizados = 0, semEnd = 0;
+  clientes.forEach(c => {
+    _acharDuplicata(c, existentes) ? atualizados++ : novos++;
+    if (!c.endereco) semEnd++;
+  });
+
+  document.getElementById('import-resumo').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div style="background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.2);border-radius:12px;padding:12px;text-align:center;">
+        <div style="font-size:24px;font-weight:800;color:var(--verde);font-family:'DM Sans',sans-serif;letter-spacing:-1px;">${novos}</div>
+        <div style="font-size:11px;color:var(--texto2);">Novos</div>
+      </div>
+      <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:12px;text-align:center;">
+        <div style="font-size:24px;font-weight:800;color:#FBB52C;font-family:'DM Sans',sans-serif;letter-spacing:-1px;">${atualizados}</div>
+        <div style="font-size:11px;color:var(--texto2);">Atualizar</div>
+      </div>
+      <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:12px;text-align:center;">
+        <div style="font-size:24px;font-weight:800;color:#EF4444;font-family:'DM Sans',sans-serif;letter-spacing:-1px;">${semEnd}</div>
+        <div style="font-size:11px;color:var(--texto2);">Sem endereço</div>
+      </div>
+    </div>
+    ${semEnd > 0 ? `<div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#FBB52C;line-height:1.5;">⚠️ ${semEnd} cliente${semEnd>1?'s':''} sem endereço não aparecerão no mapa. Você pode adicionar depois abrindo cada cliente.</div>` : ''}`;
+
+  const prev = clientes.slice(0, 6);
+  const resto = clientes.length - prev.length;
+  document.getElementById('import-preview').innerHTML =
+    `<div style="font-size:11px;color:var(--texto3);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:8px;">Prévia — ${clientes.length} cliente${clientes.length!==1?'s':''}</div>` +
+    prev.map(c => {
+      const dup = _acharDuplicata(c, existentes);
+      const tag = dup
+        ? `<span style="font-size:10px;background:rgba(251,191,36,.15);color:#FBB52C;border-radius:5px;padding:1px 6px;flex-shrink:0;">↻ atualizar</span>`
+        : `<span style="font-size:10px;background:rgba(0,214,143,.12);color:var(--verde);border-radius:5px;padding:1px 6px;flex-shrink:0;">+ novo</span>`;
+      return `<div style="background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:10px 12px;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">${tag}<span style="font-size:13px;font-weight:700;color:var(--texto);">${c.nome}</span></div>
+        <div style="font-size:11px;color:var(--texto2);">${c.loja}${c.cidade?' · '+c.cidade:''}${c.marcas.length?' · '+c.marcas.join(', '):''}</div>
+        ${c.historico.length?`<div style="font-size:11px;color:var(--texto3);margin-top:2px;">📦 Último pedido: R$ ${(c.historico[0].pedidoValor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>`:''}
+      </div>`;
+    }).join('') +
+    (resto > 0 ? `<div style="text-align:center;font-size:12px;color:var(--texto3);padding:6px 0;">+ ${resto} mais...</div>` : '');
+
+  document.getElementById('import-btn-confirmar').textContent = `✅ Importar ${clientes.length} cliente${clientes.length!==1?'s':''}`;
+}
+
+function confirmarImportacao() {
+  if (!_importDados.length) return;
+  const atualizar = document.getElementById('import-atualizar')?.checked !== false;
+  const clientes  = getClientes();
+  let novos = 0, atualizados = 0;
+
+  _importDados.forEach(c => {
+    const dup = _acharDuplicata(c, clientes);
+    if (dup && atualizar) {
+      const idx = clientes.findIndex(e => e.id === dup.id);
+      if (idx === -1) return;
+      const ant = clientes[idx];
+      clientes[idx] = {
+        ...ant,
+        nome:      c.nome      || ant.nome,
+        loja:      c.loja      || ant.loja,
+        cnpj:      c.cnpj      || ant.cnpj,
+        telefone:  c.telefone  || ant.telefone,
+        segmento:  c.segmento !== 'geral' ? c.segmento : ant.segmento,
+        marcas:    c.marcas.length ? c.marcas : ant.marcas,
+        cidade:    c.cidade    || ant.cidade,
+        uf:        c.uf        || ant.uf,
+        lembrete:  c.lembrete  || ant.lembrete,
+        endereco:  ant.lat ? ant.endereco : (c.endereco || ant.endereco),
+        lat:       ant.lat  || null,
+        lng:       ant.lng  || null,
+        historico: c.historico.length ? [...c.historico, ...(ant.historico||[])] : (ant.historico||[])
+      };
+      if (!clientes[idx].lat && c.enderecoPendente) clientes[idx].enderecoPendente = c.enderecoPendente;
+      atualizados++;
+    } else if (!dup) {
+      clientes.unshift(c);
+      novos++;
+    }
+  });
+
+  salvarClientes(clientes);
+  _importDados = [];
+  fecharModal('modal-importacao');
+
+  let msg = `✅ ${novos} cliente${novos!==1?'s':''} importado${novos!==1?'s':''}`;
+  if (atualizados) msg += ` · ${atualizados} atualizado${atualizados!==1?'s':''}`;
+  toast(msg);
+
+  setTimeout(() => {
+    renderizarClientes();
+    atualizarDashboard();
+    verificarEnderecosPendentes();
+  }, 500);
 }
 
 // ===== DESPESAS DA ROTA =====

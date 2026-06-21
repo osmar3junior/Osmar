@@ -390,6 +390,11 @@
     50%      { opacity:.45; transform:scale(.96); }
   }
   .meta-hoje-pisca { animation:piscaMeta 1.1s ease-in-out infinite; }
+  @keyframes pulsaRota {
+    0%,100% { border-color:rgba(0,214,143,.3); box-shadow:none; }
+    50%      { border-color:rgba(0,214,143,.9); box-shadow:0 0 18px rgba(0,214,143,.4); }
+  }
+  .btn-rota-pulsa { animation:pulsaRota 1.4s ease-in-out 5; }
   @keyframes piscaPernoite {
     0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(99,211,149,0); }
     50%     { opacity:.7; box-shadow:0 0 0 6px rgba(99,211,149,.35); }
@@ -634,7 +639,7 @@
     </div>
 
     <!-- BOTÃO ROTA DE HOJE -->
-    <button onclick="abrirRotaDeHoje()" style="width:100%;background:linear-gradient(135deg,#0D1F18,#1a3328);border:1.5px solid rgba(0,214,143,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
+    <button id="btn-rota-hoje" onclick="abrirRotaDeHoje()" style="width:100%;background:linear-gradient(135deg,#0D1F18,#1a3328);border:1.5px solid rgba(0,214,143,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:12px;">
         <div style="width:40px;height:40px;background:rgba(0,214,143,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🗺️</div>
         <div style="text-align:left;">
@@ -1246,7 +1251,7 @@
       <div class="config-secao-sub">Adiciona um percentual extra à meta diária necessária. Se você precisa vender 100 peças/dia e configura 20%, o app mostra <strong>120 peças/dia</strong> — assim, mesmo nos dias mais fracos, você chega ao fim do mês dentro da meta.<br><br>💡 <em>Representantes experientes costumam usar entre 20% e 30% para ter uma folga real sem depender de um sprint no final do mês.</em></div>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
         <label style="font-size:13px;color:var(--texto2);align-self:center;">Meta exibida com:</label>
-        <select class="campo-input" id="cfg-buffer-meta" style="width:auto;min-width:120px;">
+        <select class="campo-input" id="cfg-buffer-meta" style="width:auto;min-width:120px;" onchange="salvarBufferMeta(this.value)">
           <option value="0">Sem margem (0%)</option>
           <option value="10">+10%</option>
           <option value="20" selected>+20% (recomendado)</option>
@@ -1265,6 +1270,26 @@
     </div>
 
     <button class="btn-primario" onclick="salvarConfig()">Salvar configurações</button>
+
+    <div class="config-secao" style="margin-top:8px;background:linear-gradient(135deg,rgba(0,214,143,.05),rgba(56,189,248,.05));border:1px solid rgba(0,214,143,.2);border-radius:16px;padding:18px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="width:36px;height:36px;background:rgba(0,214,143,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">💬</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--texto);">Ajude a evoluir o app</div>
+          <div style="font-size:11px;color:var(--texto3);">Sua opinião molda as próximas versões</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--texto2);line-height:1.7;margin:0 0 14px;font-style:italic;border-left:2px solid rgba(0,214,143,.4);padding-left:12px;">
+        "Construí o <strong style="color:var(--texto);font-style:normal;">Carteira Viva</strong> com base em 17 anos de estrada — vendendo e gerenciando representantes. Não é um sistema de pedidos com integrações complexas. É a ferramenta que eu gostaria de ter tido: simples, rápida e focada nas dores reais de quem vive na rota.<br><br>
+        Se você sentiu falta de algo, teve uma ideia ou quer contar como usa o app no dia a dia — escreva aqui. Cada sugestão é lida pessoalmente e pode virar a próxima melhoria."
+      </p>
+      <div style="text-align:right;font-size:12px;color:var(--texto3);margin-bottom:14px;">Obrigado! Equipe Carteira Viva 💚</div>
+      <textarea id="cfg-feedback-txt" placeholder="Escreva sua sugestão, crítica ou ideia aqui..." style="width:100%;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:12px 14px;color:var(--texto);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;resize:none;height:100px;line-height:1.6;transition:border-color .2s;box-sizing:border-box;" onfocus="this.style.borderColor='var(--verde)'" onblur="this.style.borderColor='var(--borda)'"></textarea>
+      <button onclick="enviarFeedbackApp()" style="width:100%;margin-top:10px;background:linear-gradient(135deg,rgba(0,214,143,.15),rgba(0,214,143,.08));border:1.5px solid rgba(0,214,143,.5);border-radius:12px;padding:13px;color:var(--verde);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s;">
+        📨 Enviar sugestão
+      </button>
+    </div>
+
   </div>
   <div class="nav-bottom">
     <button class="nav-item" onclick="irPara('dashboard')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Início</span></button>
@@ -3476,6 +3501,14 @@ function atualizarDashboard() {
   });
 
   document.getElementById('num-urgentes').textContent = urgentes.length;
+  const btnRota = document.getElementById('btn-rota-hoje');
+  if (btnRota) {
+    btnRota.classList.remove('btn-rota-pulsa');
+    if (urgentes.length > 0) {
+      void btnRota.offsetWidth; // força reflow para reiniciar animação
+      btnRota.classList.add('btn-rota-pulsa');
+    }
+  }
   document.getElementById('num-essa-semana').textContent = semana.length;
   document.getElementById('num-esquecidos').textContent = esquecidos.length;
   const _elF = document.getElementById('num-fechados'); if (_elF) _elF.textContent = getClientesArquivados('fechado').length;
@@ -5803,7 +5836,8 @@ function salvarConfig() {
   cfg.skusCustom = [0, 1, 2].map(i => (document.getElementById('sku-custom-' + i)?.value || '').trim());
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
-  cfg.bufferMeta = parseInt(document.getElementById('cfg-buffer-meta')?.value) || 0;
+  const _bufEl = document.getElementById('cfg-buffer-meta');
+  cfg.bufferMeta = _bufEl ? Number(_bufEl.value) : 20;
   salvarConfigData(cfg);
   atualizarSemaforoDash();
   toast('Configurações salvas!');
@@ -6166,7 +6200,7 @@ function renderizarRelatorios() {
     // Média diária necessária (com margem de segurança configurada)
     const diasRestantes = Math.max(0, Math.round((fim - agora) / 86400000));
     const falta         = meta.valor - real;
-    const _buffer       = 1 + ((cfg.bufferMeta || 0) / 100);
+    const _buffer       = 1 + ((cfg.bufferMeta ?? 20) / 100);
     const mediaDiaria   = (diasRestantes > 0 && falta > 0) ? (falta / diasRestantes) * _buffer : null;
     const _bufferLabel  = cfg.bufferMeta > 0 ? ` <span style="font-size:10px;color:var(--verde);opacity:.7;">(+${cfg.bufferMeta}% margem)</span>` : '';
     const dataFimFmt    = fim.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
@@ -6323,6 +6357,27 @@ function editarMetaField(id, campo, valor) {
   meta[campo] = valor;
   salvarConfigData(cfg);
   atualizarSemaforoDash();
+}
+
+function enviarFeedbackApp() {
+  const txt = (document.getElementById('cfg-feedback-txt')?.value || '').trim();
+  if (!txt) { toast('Escreva sua sugestão antes de enviar 😊'); return; }
+  const rep = usuarioAtual ? usuarioAtual.nome + ' <' + usuarioAtual.email + '>' : 'Representante';
+  const assunto = encodeURIComponent('💬 Sugestão Carteira Viva — ' + (usuarioAtual?.nome || 'Rep'));
+  const corpo = encodeURIComponent('De: ' + rep + '\n\n' + txt + '\n\n---\nEnviado pelo app Carteira Viva');
+  window.location.href = 'mailto:osmar3junior@gmail.com?subject=' + assunto + '&body=' + corpo;
+  document.getElementById('cfg-feedback-txt').value = '';
+  toast('📨 Abrindo seu e-mail para enviar a sugestão...');
+}
+
+function salvarBufferMeta(valor) {
+  const cfg = getConfig();
+  cfg.bufferMeta = Number(valor);
+  salvarConfigData(cfg);
+  atualizarSemaforoDash();
+  if (document.getElementById('modal-relatorios')?.classList.contains('aberto')) renderizarRelatorios();
+  const preview = document.getElementById('cfg-buffer-preview');
+  if (preview) preview.textContent = Number(valor) === 0 ? '' : `→ ex: 100 pçs/dia vira ${Math.round(100 * (1 + Number(valor)/100))} pçs/dia`;
 }
 
 function alternarExibirEmMeta(id, tipo) {
@@ -6535,7 +6590,7 @@ function calcularMetaDiariaHoje() {
     const diasRestantes = Math.max(1, Math.round((fim - agora) / 86400000));
     const real = calcularRealMarca(meta);
     const falta = Math.max(0, meta.valor - real);
-    const buffer = 1 + ((cfg.bufferMeta || 0) / 100);
+    const buffer = 1 + ((cfg.bufferMeta ?? 20) / 100);
     const mediaDiaria = (falta / diasRestantes) * buffer;
     if (mediaDiaria <= 0) return;
 

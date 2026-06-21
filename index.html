@@ -734,9 +734,9 @@
 <div class="tela" id="tela-clientes">
   <div class="header">
     <div class="header-logo" onclick="irPara('dashboard')" style="cursor:pointer;"><div class="header-logo-icon"><svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="5" y="22" width="5" height="9" rx="1.5" fill="white" opacity=".8"/><rect x="13" y="16" width="5" height="15" rx="1.5" fill="white" opacity=".9"/><rect x="21" y="10" width="5" height="21" rx="1.5" fill="white"/><path d="M28 5L31 5L31 8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 11L31 5" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg></div></div>
-    <button onclick="enviarRotaWhatsApp()" title="Enviar rota de hoje para meu WhatsApp" style="display:flex;align-items:center;gap:7px;background:#25D366;border:none;border-radius:11px;padding:8px 14px;cursor:pointer;transition:opacity .15s;" onmouseenter="this.style.opacity='.85'" onmouseleave="this.style.opacity='1'">
+    <button onclick="document.getElementById('modal-rota-wpp').classList.add('aberto')" title="Enviar rota para meu WhatsApp" style="display:flex;align-items:center;gap:7px;background:#25D366;border:none;border-radius:11px;padding:8px 14px;cursor:pointer;transition:opacity .15s;" onmouseenter="this.style.opacity='.85'" onmouseleave="this.style.opacity='1'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
-      <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:#fff;">Rota de hoje no seu WhatsApp</span>
+      <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:#fff;">Enviar Rota ▾</span>
     </button>
   </div>
   <!-- Toggle lista / por cidade -->
@@ -1666,6 +1666,41 @@
 </div>
 
 <!-- MODAL RELATÓRIOS META -->
+<!-- MODAL SELETOR ROTA WHATSAPP -->
+<div class="modal-overlay" id="modal-rota-wpp">
+  <div class="modal-box" style="padding-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div class="modal-titulo" style="margin-bottom:2px;">💬 Enviar Rota para o WhatsApp</div>
+        <div style="font-size:12px;color:var(--texto3);">Escolha qual rota enviar para o seu WhatsApp</div>
+      </div>
+      <button onclick="fecharModal('modal-rota-wpp')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button onclick="fecharModal('modal-rota-wpp');setTimeout(()=>_wppRota('hoje'),200)" style="display:flex;align-items:center;gap:12px;background:rgba(255,100,50,.08);border:1.5px solid rgba(255,100,50,.35);border-radius:12px;padding:14px;cursor:pointer;text-align:left;">
+        <span style="font-size:22px;">🌅</span>
+        <div><div style="font-size:14px;font-weight:700;color:var(--texto);">Hoje</div><div style="font-size:11px;color:var(--texto3);">Clientes para visitar agora com meta, histórico e potencial</div></div>
+      </button>
+      <button onclick="fecharModal('modal-rota-wpp');setTimeout(()=>_wppRota('semana'),200)" style="display:flex;align-items:center;gap:12px;background:rgba(56,189,248,.07);border:1.5px solid rgba(56,189,248,.3);border-radius:12px;padding:14px;cursor:pointer;text-align:left;">
+        <span style="font-size:22px;">📅</span>
+        <div><div style="font-size:14px;font-weight:700;color:var(--texto);">Da Semana</div><div style="font-size:11px;color:var(--texto3);">Clientes desta semana agrupados por cidade</div></div>
+      </button>
+      <button onclick="fecharModal('modal-rota-wpp');setTimeout(()=>_wppRota('proximos'),200)" style="display:flex;align-items:center;gap:12px;background:rgba(0,214,143,.07);border:1.5px solid rgba(0,214,143,.3);border-radius:12px;padding:14px;cursor:pointer;text-align:left;">
+        <span style="font-size:22px;">📍</span>
+        <div><div style="font-size:14px;font-weight:700;color:var(--texto);">Próximos</div><div style="font-size:11px;color:var(--texto3);">Próximos clientes por ordem de urgência</div></div>
+      </button>
+      <button onclick="fecharModal('modal-rota-wpp');setTimeout(()=>_wppRota('top20'),200)" style="display:flex;align-items:center;gap:12px;background:rgba(245,158,11,.07);border:1.5px solid rgba(245,158,11,.3);border-radius:12px;padding:14px;cursor:pointer;text-align:left;">
+        <span style="font-size:22px;">🏆</span>
+        <div><div style="font-size:14px;font-weight:700;color:var(--texto);">Top 20</div><div style="font-size:11px;color:var(--texto3);">Maiores compradores — destaca quem está na rota da semana</div></div>
+      </button>
+      <button onclick="fecharModal('modal-rota-wpp');setTimeout(()=>_wppRota('propicio'),200)" style="display:flex;align-items:center;gap:12px;background:rgba(167,139,250,.07);border:1.5px solid rgba(167,139,250,.3);border-radius:12px;padding:14px;cursor:pointer;text-align:left;">
+        <span style="font-size:22px;">🎯</span>
+        <div><div style="font-size:14px;font-weight:700;color:var(--texto);">Mais Propícios</div><div style="font-size:11px;color:var(--texto3);">Clientes com maior probabilidade de comprar agora</div></div>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-relatorios">
   <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:24px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
@@ -6416,6 +6451,185 @@ function enviarFeedbackApp() {
   window.location.href = 'mailto:osmar3junior@gmail.com?subject=' + assunto + '&body=' + corpo;
   document.getElementById('cfg-feedback-txt').value = '';
   toast('📨 Abrindo seu e-mail para enviar a sugestão...');
+}
+
+function _wppAbrir(msg) {
+  const cfg = getConfig();
+  const wpp = cfg.wppRep;
+  if (!wpp) { toast('Cadastre seu WhatsApp em Configurações primeiro 📲'); return; }
+  window.open(`https://wa.me/55${wpp}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function _wppRota(tipo) {
+  const cfg = getConfig();
+  if (!cfg.wppRep) { toast('Cadastre seu WhatsApp em Configurações primeiro 📲'); return; }
+  const clientes = getClientesAtivos();
+  const fmtD = iso => new Date(iso).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  const fmtDL = iso => new Date(iso).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const hoje = new Date();
+  const dataTxt = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
+  const fmtN = v => fmtK(v);
+
+  function _blocoCliente(c, extra) {
+    const pot = calcularPotencialCliente(c);
+    const mHoje = calcularMetaDiariaHoje();
+    const mC = mHoje[c.id] || {};
+    const marcas = (c.marcas && c.marcas.length) ? c.marcas : [];
+    let txt = `\n━━━━━━━━━━━━━━━━━━━\n🏪 *${c.nome.toUpperCase()}*`;
+    if (c.loja) txt += ` — ${c.loja}`;
+    if (c.cidade) txt += ` · ${c.cidade}`;
+    if (extra) txt += `\n${extra}`;
+    txt += `\n━━━━━━━━━━━━━━━━━━━\n`;
+    marcas.forEach(marca => {
+      const d = pot[marca] || {};
+      const mM = mC[marca];
+      const cfgM = (cfg.metas || []).find(m => m.marca === marca);
+      const exEm = cfgM?.exibirEm || 'reais';
+      const skuA = cfgM ? _skuAbrev(cfgM.sku) : '';
+      const avg = exEm === 'sku' ? (d.avgQtd||0) : (d.avg||0);
+      const max = exEm === 'sku' ? (d.maxQtd||0) : (d.max||0);
+      txt += `\n🏷️ *${marca}*\n`;
+      if (mM) txt += `🎯 Meta hoje: *${fmtN(mM.meta)} ${skuA}*${mM.peso ? ` _(${mM.peso}%)_` : ''}\n`;
+      if (avg > 0) txt += `📊 Média: ${fmtN(avg)}${skuA ? ' '+skuA : ''}${max > 0 ? ` | Máx: ${fmtN(max)}${skuA ? ' '+skuA : ''}` : ''}\n`;
+      const ped3 = [];
+      let maxPed = {val:0,data:''};
+      (c.historico||[]).forEach(h => {
+        if (h.motivo !== 'fechou_pedido') return;
+        const pm = h.pedidos ? h.pedidos.find(p => p.marca === marca) : null;
+        const v = pm ? (exEm==='sku'?(pm.qtd||0):(pm.valor||0)) : (!h.pedidos?(h.pedidoValor||0):0);
+        if (v > 0) {
+          if (ped3.length < 3) ped3.push({v, data: h.data});
+          if (v > maxPed.val) maxPed = {val:v, data:h.data};
+        }
+      });
+      if (ped3.length) {
+        txt += `📦 Últimos pedidos:\n`;
+        ped3.forEach(p => { txt += `   • ${fmtN(p.v)}${skuA?' '+skuA:''} — ${fmtD(p.data)}\n`; });
+        if (maxPed.val > 0) txt += `🏆 Maior: ${fmtN(maxPed.val)}${skuA?' '+skuA:''} em ${fmtD(maxPed.data)}\n`;
+      } else {
+        txt += `_(sem pedidos para ${marca})_\n`;
+      }
+    });
+    return txt;
+  }
+
+  let msg = '';
+
+  if (tipo === 'hoje') {
+    const lista = clientes.filter(c => getDiffDiasCliente(c) === 0);
+    if (!lista.length) { toast('Nenhum cliente para hoje 👍'); return; }
+    msg = `🌅 *ROTA DE HOJE — ${dataTxt.toUpperCase()}*\n_Gerado pelo Carteira Viva_\n`;
+    lista.forEach(c => { msg += _blocoCliente(c, null); });
+    msg += `\n_${lista.length} cliente${lista.length>1?'s':''} na rota · Carteira Viva_`;
+
+  } else if (tipo === 'semana') {
+    const lista = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d >= 0 && d <= 7; })
+      .sort((a,b) => getDiffDiasCliente(a) - getDiffDiasCliente(b));
+    if (!lista.length) { toast('Nenhum cliente na rota desta semana'); return; }
+    const porCidade = {};
+    lista.forEach(c => {
+      const cid = c.cidade || 'Sem cidade';
+      if (!porCidade[cid]) porCidade[cid] = [];
+      porCidade[cid].push(c);
+    });
+    const fim = new Date(hoje); fim.setDate(hoje.getDate() + 7);
+    msg = `📅 *ROTA DA SEMANA*\n_${fmtDL(hoje.toISOString())} até ${fmtDL(fim.toISOString())}_\n_Gerado pelo Carteira Viva_\n`;
+    Object.entries(porCidade).forEach(([cidade, cs]) => {
+      msg += `\n🏙️ *${cidade.toUpperCase()}* (${cs.length} cliente${cs.length>1?'s':''})\n`;
+      cs.forEach(c => {
+        const d = getDiffDiasCliente(c);
+        const quando = d === 0 ? '🔴 hoje' : `em ${d} dia${d>1?'s':''}`;
+        msg += _blocoCliente(c, `⏰ ${quando}`);
+      });
+    });
+    msg += `\n_${lista.length} clientes esta semana · Carteira Viva_`;
+
+  } else if (tipo === 'proximos') {
+    const lista = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d >= 0; })
+      .sort((a,b) => getDiffDiasCliente(a) - getDiffDiasCliente(b)).slice(0, 20);
+    if (!lista.length) { toast('Nenhum cliente agendado'); return; }
+    msg = `📍 *PRÓXIMOS CLIENTES*\n_Gerado pelo Carteira Viva_\n`;
+    lista.forEach((c, i) => {
+      const d = getDiffDiasCliente(c);
+      const quando = d === 0 ? 'hoje 🔴' : `em ${d} dia${d>1?'s':''}`;
+      msg += _blocoCliente(c, `#${i+1} · ${quando}${c.cidade?' · '+c.cidade:''}`);
+    });
+    msg += `\n_Carteira Viva_`;
+
+  } else if (tipo === 'top20') {
+    const ranking = clientes
+      .map(c => ({ c, total: getPedidosCliente(c).reduce((s, h) => s + (h.pedidoValor||0), 0) }))
+      .filter(x => x.total > 0).sort((a,b) => b.total - a.total).slice(0, 20);
+    if (!ranking.length) { toast('Sem pedidos registrados ainda'); return; }
+    const semana = new Set(clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d >= 0 && d <= 7; }).map(c => c.id));
+    msg = `🏆 *TOP 20 — MAIORES COMPRADORES*\n_Gerado pelo Carteira Viva_\n`;
+    let temNaSemana = false, foraDaSemana = [];
+    ranking.forEach(({c, total}, i) => {
+      const d = getDiffDiasCliente(c);
+      const naSemana = semana.has(c.id);
+      if (naSemana) temNaSemana = true;
+      const status = naSemana
+        ? (d === 0 ? '✅ na rota HOJE' : `✅ na rota em ${d}d`)
+        : '⏳ fora da rota esta semana';
+      if (!naSemana) {
+        const prox = d !== null && d >= 0 ? `visita prevista em ${d}d (${fmtDL(new Date(hoje.getTime()+d*86400000).toISOString())})` : 'sem data agendada';
+        foraDaSemana.push({c, i, total, prox});
+      }
+      msg += _blocoCliente(c, `#${i+1} · Total: R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})} · ${status}`);
+    });
+    if (!temNaSemana) msg += `\n⚠️ _Nenhum Top 20 está na rota desta semana._\n`;
+    if (foraDaSemana.length) {
+      msg += `\n📋 *TOP 20 FORA DA ROTA DA SEMANA:*\n`;
+      foraDaSemana.forEach(({c, i, total, prox}) => {
+        msg += `#${i+1} ${c.nome} — R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})} · ${prox}\n`;
+      });
+    }
+    msg += `\n_Carteira Viva_`;
+
+  } else if (tipo === 'propicio') {
+    const candidatos = clientes.map(c => {
+      const datas = getPedidosCliente(c).map(h => new Date(h.data)).sort((a,b)=>a-b);
+      if (datas.length < 2) return null;
+      let intervalos = [];
+      for (let i = 1; i < datas.length; i++) intervalos.push((datas[i]-datas[i-1])/86400000);
+      const media = intervalos.reduce((a,b)=>a+b,0)/intervalos.length;
+      if (media <= 0) return null;
+      const diasDesde = (hoje - datas[datas.length-1])/86400000;
+      const score = diasDesde/media;
+      return { c, score, mediaDias: Math.round(media), diasDesde: Math.round(diasDesde) };
+    }).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0, 20);
+    if (!candidatos.length) { toast('Histórico insuficiente para calcular propícios'); return; }
+    const semana = new Set(clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d >= 0 && d <= 7; }).map(c => c.id));
+    msg = `🎯 *MAIS PROPÍCIOS A COMPRAR AGORA*\n_Baseado no intervalo histórico de compras_\n_Gerado pelo Carteira Viva_\n`;
+    let temNaSemana = false;
+    const foraRota = [];
+    candidatos.forEach(({c, score, mediaDias, diasDesde}, i) => {
+      const pct = Math.min(100, Math.round(score*100));
+      const naSemana = semana.has(c.id);
+      if (naSemana) temNaSemana = true;
+      const d = getDiffDiasCliente(c);
+      const status = naSemana
+        ? (d===0 ? '✅ na rota HOJE' : `✅ na rota em ${d}d`)
+        : null;
+      if (!status) {
+        const prox = d !== null && d >= 0
+          ? `visita prevista em ${d}d — mas você pode antecipar! 💡`
+          : 'sem data agendada — considere incluir na rota 💡';
+        foraRota.push({c, i, pct, mediaDias, diasDesde, prox});
+      }
+      msg += _blocoCliente(c, `#${i+1} · 🎯 ${pct}% propício · compra a cada ~${mediaDias}d, última há ${diasDesde}d${status?' · '+status:''}`);
+    });
+    if (!temNaSemana) msg += `\n⚠️ _Nenhum dos mais propícios está na rota desta semana._\n`;
+    if (foraRota.length) {
+      msg += `\n📋 *PROPÍCIOS FORA DA ROTA DA SEMANA:*\n`;
+      foraRota.forEach(({c, i, pct, mediaDias, diasDesde, prox}) => {
+        msg += `#${i+1} ${c.nome} — ${pct}% propício (a cada ~${mediaDias}d, última há ${diasDesde}d)\n   ↳ ${prox}\n`;
+      });
+    }
+    msg += `\n_Carteira Viva_`;
+  }
+
+  if (msg) _wppAbrir(msg);
 }
 
 function enviarRotaWhatsApp() {

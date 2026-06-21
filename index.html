@@ -7758,13 +7758,42 @@ function fmtValorDesp(v) {
 }
 
 function calcularComissaoMes() {
+  // Sempre calcula sobre o valor em R$ do mês visível no modal de despesas
   const cfg = getConfig();
+  const [y, m] = _despMesAtual.split('-').map(Number);
+  const inicio   = new Date(y, m - 1, 1);
+  const fim      = new Date(y, m, 0, 23, 59, 59);
+  const clientes = getClientes();
   let total = 0;
+
   (cfg.metas || []).forEach(meta => {
     const pct = Number(meta.comissao) || 0;
     if (pct <= 0) return;
-    total += calcularRealMarca(meta) * (pct / 100);
+    const marcaMeta = (meta.marca || '').trim().toLowerCase();
+    let vendasReais = 0;
+
+    clientes.forEach(c => {
+      (c.historico || []).forEach(h => {
+        if (h.motivo !== 'fechou_pedido') return;
+        const d = new Date(h.data);
+        if (d < inicio || d > fim) return;
+
+        if (h.pedidos && h.pedidos.length) {
+          h.pedidos.forEach(p => {
+            if ((p.marca || '').trim().toLowerCase() !== marcaMeta) return;
+            vendasReais += Number(p.valor) || 0;
+          });
+        } else {
+          const clienteMarcas = (c.marcas || []).map(x => (x || '').trim().toLowerCase());
+          if (!clienteMarcas.includes(marcaMeta)) return;
+          vendasReais += Number(h.pedidoValor) || 0;
+        }
+      });
+    });
+
+    total += vendasReais * (pct / 100);
   });
+
   return total;
 }
 
@@ -7815,7 +7844,7 @@ function renderizarDespesas() {
     </div>
     <div style="margin-top:12px;background:${liquido>=0?'rgba(0,214,143,.07)':'rgba(255,77,106,.07)'};border:1px solid ${liquido>=0?'rgba(0,214,143,.25)':'rgba(255,77,106,.25)'};border-radius:12px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;">
       <span style="font-size:13px;font-weight:700;color:var(--texto);">Resultado líquido</span>
-      <span style="font-size:19px;font-weight:800;font-family:'Syne',sans-serif;color:${liquido>=0?'var(--verde)':'var(--vermelho)'};">R$ ${fmtValorDesp(liquido)}</span>
+      <span style="font-size:30px;font-weight:800;font-family:'DM Sans',sans-serif;letter-spacing:-1px;line-height:1;color:${liquido>=0?'var(--verde)':'var(--vermelho)'};">R$ ${fmtValorDesp(liquido)}</span>
     </div>` : '';
 
   document.getElementById('desp-resumo-financeiro').innerHTML = totalGeral === 0 && comissao === 0
@@ -7824,7 +7853,7 @@ function renderizarDespesas() {
        ${linhasCat}
        <div class="desp-resumo-row" style="border-top:1px solid var(--borda);margin-top:6px;padding-top:12px;">
          <span style="font-size:13px;font-weight:700;color:var(--texto);">Total despesas</span>
-         <span style="font-size:16px;font-weight:800;color:var(--vermelho);font-family:'Syne',sans-serif;">− R$ ${fmtValorDesp(totalGeral)}</span>
+         <span style="font-size:24px;font-weight:800;color:var(--vermelho);font-family:'DM Sans',sans-serif;letter-spacing:-0.5px;line-height:1;">− R$ ${fmtValorDesp(totalGeral)}</span>
        </div>
        ${comissaoHTML}`;
 

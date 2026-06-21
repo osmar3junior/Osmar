@@ -1283,6 +1283,27 @@
     </div>
 
     <div class="config-secao">
+      <div class="config-secao-titulo">🏃 Gatilho de antecipação</div>
+      <div class="config-secao-sub">Avisa você com antecedência para contatar o cliente antes da visita. Um simples <em>"estarei na sua região na semana do dia X"</em> aumenta muito a chance de fechar pedido — o cliente já vai esperando você e pensando no que precisa. Opcional, mas muito recomendado.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 8px;">
+        <span style="font-size:13px;color:var(--texto);">Ativar lembretes de antecipação</span>
+        <button id="cfg-gatilho-toggle" onclick="toggleGatilhoAntic()" style="width:48px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;background:#333;">
+          <span id="cfg-gatilho-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#888;transition:left .2s,background .2s;"></span>
+        </button>
+      </div>
+      <div id="cfg-gatilho-opcoes" style="display:none;">
+        <div style="font-size:12px;color:var(--texto2);margin-bottom:8px;">Lembrar-me com quantos dias de antecedência? <span style="color:var(--texto3);">(pode marcar mais de um)</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <button class="cfg-gatilho-dia" data-dias="30" onclick="toggleGatilhoDia(this)" style="padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);">30 dias antes</button>
+          <button class="cfg-gatilho-dia" data-dias="20" onclick="toggleGatilhoDia(this)" style="padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);">20 dias antes</button>
+          <button class="cfg-gatilho-dia" data-dias="15" onclick="toggleGatilhoDia(this)" style="padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);">15 dias antes</button>
+          <button class="cfg-gatilho-dia" data-dias="10" onclick="toggleGatilhoDia(this)" style="padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);">10 dias antes</button>
+          <button class="cfg-gatilho-dia" data-dias="5" onclick="toggleGatilhoDia(this)" style="padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);">5 dias antes</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-secao">
       <div class="config-secao-titulo">📧 E-mail para relatórios</div>
       <div class="config-secao-sub">Seu e-mail é preenchido automaticamente ao gerar o relatório do dia. Você ainda pode adicionar um C/C na hora de enviar.</div>
       <input type="email" class="campo-input" id="cfg-email-rep" placeholder="seu@email.com" style="margin-top:4px;">
@@ -2788,6 +2809,29 @@ function abrirNotificacoes() {
     );
   }
 
+  const gatilhos = calcularGatilhosAntecipacao();
+  if (gatilhos.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#7DD3FC;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🏃 Gatilho de antecipação</div>`;
+    gatilhos.forEach(({ c, diff, marcasAlerta, semana, urgencia }) => {
+      const subtxt = urgencia === 'ultima'
+        ? `Essa semana! Confirme presença com ${c.nome.split(' ')[0]}`
+        : `Visita em ${diff} dias · semana do dia ${semana}`;
+      const marcasBadges = marcasAlerta.length
+        ? ' · ' + marcasAlerta.map(a => `🏷️ ${a.marca} ${a.status==='vencida'?'vencida':'vencendo'}`).join(', ')
+        : '';
+      const cor = urgencia === 'ultima' ? 'rgba(239,68,68,.4)' : 'rgba(56,189,248,.4)';
+      const bg  = urgencia === 'ultima' ? 'rgba(239,68,68,.07)' : 'rgba(56,189,248,.07)';
+      html += `<div onclick="fecharModal('modal-notificacoes');setTimeout(()=>_abrirGatilhoCliente('${c.id}'),200)" style="display:flex;align-items:flex-start;gap:10px;background:${bg};border:1px solid ${cor};border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='1'">
+        <span style="font-size:20px;flex-shrink:0;">🏃</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);">${c.nome}${c.loja?' — '+c.loja:''}</div>
+          <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${subtxt}${marcasBadges}</div>
+        </div>
+        <span style="color:var(--texto3);font-size:16px;align-self:center;">›</span>
+      </div>`;
+    });
+  }
+
   if (!html) {
     html = `<div style="text-align:center;padding:32px 16px;">
       <div style="font-size:32px;margin-bottom:12px;">✅</div>
@@ -2800,10 +2844,35 @@ function abrirNotificacoes() {
   document.getElementById('modal-notificacoes').classList.add('aberto');
 }
 
+function _abrirGatilhoCliente(clienteId) {
+  const clientes = getClientesAtivos();
+  const c = clientes.find(x => x.id === clienteId);
+  if (!c) return;
+  const diff = getDiffDiasCliente(c);
+  const dataVisita = new Date(); dataVisita.setDate(dataVisita.getDate() + diff);
+  const semana = dataVisita.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  const marcasAlerta = calcularAlertasMarcas().filter(a => a.clienteId === clienteId);
+  const urgTxt = diff <= 5
+    ? `Essa semana estarei em ${c.cidade||'sua região'} e quero passar para te ver!`
+    : `Estarei em ${c.cidade||'sua região'} na semana do dia ${semana} e quero passar para te ver!`;
+  const marcasTxt = marcasAlerta.length
+    ? ` Aproveito para já te falar que tenho novidades da ${marcasAlerta.map(a=>a.marca).join(' e ')} que você vai adorar.`
+    : '';
+  const nome = c.nome.split(' ')[0];
+  const msg = `Olá, ${nome}! Tudo bem? 😊 ${urgTxt}${marcasTxt} Fica à vontade para já ir pensando no que precisa. 🙌`;
+  const tel = c.telefone ? c.telefone.replace(/\D/g,'') : '';
+  if (!tel) { toast('Cliente sem WhatsApp cadastrado'); abrirDetalhe(clienteId,'clientes'); return; }
+  if (confirm(`Enviar mensagem de antecipação para ${c.nome}?\n\n"${msg}"`)) {
+    window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+  abrirDetalhe(clienteId, 'clientes');
+}
+
 function _atualizarBadgeNotif() {
   const alertas = calcularAlertasMarcas();
   const urgentes = getClientesAtivos().filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; });
-  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length;
+  const gatilhos = calcularGatilhosAntecipacao().filter(g => g.urgencia === 'ultima');
+  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length;
   const badge = document.getElementById('notif-badge');
   const btn = badge?.parentElement;
   if (!badge) return;
@@ -2818,6 +2887,101 @@ function _atualizarBadgeNotif() {
   } else {
     badge.style.display = 'none';
     if (btn) btn.classList.remove('sininho-alerta');
+  }
+}
+
+function _renderGatilhoConfig(cfg) {
+  const ativo = cfg.gatilhoAnticAtivo || false;
+  const dias  = cfg.gatilhoDias || [];
+  const btn   = document.getElementById('cfg-gatilho-toggle');
+  const knob  = document.getElementById('cfg-gatilho-knob');
+  const opc   = document.getElementById('cfg-gatilho-opcoes');
+  if (!btn) return;
+  btn.dataset.ativo = ativo;
+  btn.style.background = ativo ? '#00D68F' : '#333';
+  knob.style.left = ativo ? '25px' : '3px';
+  knob.style.background = ativo ? '#fff' : '#888';
+  if (opc) opc.style.display = ativo ? 'block' : 'none';
+  document.querySelectorAll('.cfg-gatilho-dia').forEach(b => {
+    const sel = dias.includes(Number(b.dataset.dias));
+    b.classList.toggle('ativo', sel);
+    b.style.background = sel ? 'rgba(56,189,248,.12)' : 'var(--bg3)';
+    b.style.borderColor = sel ? 'rgba(56,189,248,.5)' : 'var(--borda)';
+    b.style.color = sel ? '#7DD3FC' : 'var(--texto2)';
+  });
+}
+
+function toggleGatilhoAntic() {
+  const cfg = getConfig();
+  cfg.gatilhoAnticAtivo = !cfg.gatilhoAnticAtivo;
+  if (!cfg.gatilhoDias || !cfg.gatilhoDias.length) cfg.gatilhoDias = [10, 5];
+  salvarConfigData(cfg);
+  _renderGatilhoConfig(cfg);
+  _atualizarBadgeNotif();
+}
+
+function toggleGatilhoDia(btn) {
+  const cfg = getConfig();
+  const dias = cfg.gatilhoDias || [];
+  const d = Number(btn.dataset.dias);
+  const idx = dias.indexOf(d);
+  if (idx >= 0) dias.splice(idx, 1); else dias.push(d);
+  cfg.gatilhoDias = dias;
+  salvarConfigData(cfg);
+  _renderGatilhoConfig(cfg);
+  _atualizarBadgeNotif();
+}
+
+function calcularGatilhosAntecipacao() {
+  const cfg = getConfig();
+  if (!cfg.gatilhoAnticAtivo) return [];
+  const diasConfig = cfg.gatilhoDias || [];
+  if (!diasConfig.length) return [];
+  const clientes = getClientesAtivos();
+  const alertasMarca = calcularAlertasMarcas();
+  const gatilhos = [];
+  clientes.forEach(c => {
+    const diff = getDiffDiasCliente(c);
+    if (diff === null || diff <= 0) return;
+    const gatilhoDia = diasConfig.find(d => diff <= d && diff > (d - 3));
+    if (!gatilhoDia) return;
+    const marcasAlerta = alertasMarca.filter(a => a.clienteId === c.id);
+    const dataVisita = new Date();
+    dataVisita.setDate(dataVisita.getDate() + diff);
+    const semana = dataVisita.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+    let urgencia = diff <= 5 ? 'ultima' : diff <= 10 ? 'alta' : 'media';
+    gatilhos.push({ c, diff, gatilhoDia, marcasAlerta, semana, urgencia });
+  });
+  return gatilhos.sort((a, b) => a.diff - b.diff);
+}
+
+function enviarGatilhoWhatsApp(clienteId) {
+  const cfg = getConfig();
+  const wpp = cfg.wppRep;
+  const clientes = getClientesAtivos();
+  const c = clientes.find(x => x.id === clienteId);
+  if (!c) return;
+  const diff = getDiffDiasCliente(c);
+  const dataVisita = new Date(); dataVisita.setDate(dataVisita.getDate() + diff);
+  const semana = dataVisita.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  const marcasAlerta = calcularAlertasMarcas().filter(a => a.clienteId === clienteId);
+  const marcasTxt = marcasAlerta.length
+    ? ' Aproveito para já te falar que tenho novidades da ' + marcasAlerta.map(a => a.marca).join(' e ') + ' que você vai adorar.'
+    : '';
+  const urgTxt = diff <= 5
+    ? 'Essa semana estarei na sua região e gostaria muito de passar para te ver!'
+    : `Passando para avisar que estarei em ${c.cidade || 'sua região'} na semana do dia ${semana} e gostaria de passar aí para te ver!`;
+  const nome = c.nome.split(' ')[0];
+  const msg = `Olá, ${nome}! Tudo bem? 😊 ${urgTxt}${marcasTxt} Fica à vontade para já ir pensando no que precisa. 🙌`;
+  if (wpp) {
+    const tel = c.telefone ? c.telefone.replace(/\D/g,'') : '';
+    if (tel) {
+      window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+    } else {
+      toast('Cliente sem WhatsApp cadastrado');
+    }
+  } else {
+    toast('Cadastre seu WhatsApp em Configurações');
   }
 }
 
@@ -5008,7 +5172,7 @@ function abrirFiltrado(tipo) {
         const exEm = cfgM?.exibirEm || 'reais';
         const skuA = cfgM ? _skuAbrev(cfgM.sku) : '';
         const pv = exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
-        const metaSpan = ehHoje && mM
+        const metaSpan = (ehHoje && mM)
           ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:2px 6px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(mM.meta)}${skuA?' '+skuA:''}</span>`
           : '';
         const potSpan = pv.n > 0
@@ -5136,7 +5300,7 @@ function renderizarClientes(filtro = '') {
               const skuSigla = _mCliente && _mCliente.sku !== 'reais' ? _skuAbrev(_mCliente.sku) : '';
               const metaCompact = ehHoje && _mCliente
                 ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:2px 6px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(_mCliente.meta)}${skuSigla ? ' '+skuSigla : ''}</span>`
-                : d.avg > 0 ? `<span style="background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:4px;padding:2px 6px;white-space:nowrap;">~${fmtK(d.avg)}</span>` : '';
+                : '';
               const _cm = (getConfig().metas || []).find(m => m.marca === marca);
               const _exEm = _cm?.exibirEm || 'reais';
               const _pv = _exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
@@ -6138,6 +6302,7 @@ function carregarConfig() {
   });
   document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 60;
   document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
+  _renderGatilhoConfig(cfg);
   document.getElementById('cfg-wpp-rep').value = cfg.wppRep ? cfg.wppRep.replace(/^55/, '') : '';
   const bufferEl = document.getElementById('cfg-buffer-meta');
   if (bufferEl) bufferEl.value = cfg.bufferMeta !== undefined ? cfg.bufferMeta : 20;
@@ -6179,6 +6344,8 @@ function salvarConfig() {
   cfg.skusCustom = [0, 1, 2].map(i => (document.getElementById('sku-custom-' + i)?.value || '').trim());
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
+  cfg.gatilhoAnticAtivo = document.getElementById('cfg-gatilho-toggle')?.dataset.ativo === 'true';
+  cfg.gatilhoDias = [...document.querySelectorAll('.cfg-gatilho-dia.ativo')].map(b => Number(b.dataset.dias));
   cfg.wppRep = (document.getElementById('cfg-wpp-rep')?.value || '').replace(/\D/g,'');
   const _bufEl = document.getElementById('cfg-buffer-meta');
   cfg.bufferMeta = _bufEl ? Number(_bufEl.value) : 20;

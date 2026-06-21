@@ -2309,7 +2309,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ===== ESTADO =====
-const APP_VERSION = 'v1.6 · 13/06';
+const APP_VERSION = 'v2.0 MVP';
 
 // ===== SUPABASE =====
 const _SB_URL = 'https://brqljqenucopwktkdwme.supabase.co';
@@ -3189,14 +3189,28 @@ async function _sbRecuperarLogin(email, senha) {
     toast('Erro ao recuperar. Verifique sua conexão.');
   }
 }
-function fazerCadastro() {
-  const nome = document.getElementById('cad-nome').value.trim();
-  const email = document.getElementById('cad-email').value.trim();
+async function fazerCadastro() {
+  const nome  = document.getElementById('cad-nome').value.trim();
+  const email = document.getElementById('cad-email').value.trim().toLowerCase();
   const senha = document.getElementById('cad-senha').value;
   const usuarios = getUsuarios();
   if (!nome || !email || !senha) { toast('Preencha todos os campos'); return; }
   if (senha.length < 6) { toast('Senha precisa ter 6+ caracteres'); return; }
   if (usuarios[email]) { toast('Email já cadastrado'); return; }
+
+  // Verifica whitelist no Supabase
+  toast('🔄 Verificando acesso...');
+  try {
+    const { data, error } = await _sb.from('whitelist').select('email').eq('email', email).maybeSingle();
+    if (error || !data) {
+      toast('❌ Acesso não autorizado. Fale com o administrador.');
+      return;
+    }
+  } catch(e) {
+    toast('❌ Sem conexão para verificar acesso. Tente novamente.');
+    return;
+  }
+
   usuarios[email] = { nome, senha };
   setData('cv_usuarios', usuarios);
   usuarioAtual = { email, nome };

@@ -5981,7 +5981,7 @@ function _skuLabel(sku) {
 function _skuAbrev(sku) {
   const map = {
     'peças':'pçs', 'caixas':'cxs', 'unidades':'unid',
-    'litros':'Lts', 'metros':'Mts', 'pares':'Prs', 'paletes':'Plts', 'pacotes':'Pcts',
+    'litros':'Lts', 'metros':'Mts', 'pares':'Prs', 'paletes':'Plts', 'pacotes':'Pcts', 'faturamento':'Fat',
     'reais':'R$'
   };
   return map[sku] || _skuLabel(sku).slice(0,3);
@@ -6411,7 +6411,7 @@ const SKU_OPCOES = [
   { value:'peças', label:'Peças' }, { value:'caixas', label:'Caixas' }, { value:'unidades', label:'Unidades' },
   { value:'kg', label:'Kg' }, { value:'litros', label:'Litros' }, { value:'metros', label:'Metros' },
   { value:'frascos', label:'Frascos' }, { value:'pares', label:'Pares' }, { value:'kits', label:'Kits' },
-  { value:'paletes', label:'Paletes' }, { value:'pacotes', label:'Pacotes' }, { value:'reais', label:'R$ Reais' }
+  { value:'paletes', label:'Paletes' }, { value:'pacotes', label:'Pacotes' }, { value:'faturamento', label:'Faturamento' }, { value:'reais', label:'R$ Reais' }
 ];
 function renderizarSkuGrid(cfg) {
   const grid = document.getElementById('sku-grid');

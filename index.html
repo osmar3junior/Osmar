@@ -2877,7 +2877,7 @@ function _atualizarBadgeNotif() {
   const btn = badge?.parentElement;
   if (!badge) return;
   if (total > 0) {
-    badge.style.display = 'block';
+    badge.style.display = 'inline-flex';
     badge.textContent = total > 9 ? '9+' : total;
     if (btn) {
       btn.classList.remove('sininho-alerta');

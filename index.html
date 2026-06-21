@@ -4851,12 +4851,12 @@ function abrirFiltrado(tipo) {
         const skuA = cfgM ? _skuAbrev(cfgM.sku) : '';
         const pv = exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
         const metaSpan = ehHoje && mM
-          ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:1px 5px;white-space:nowrap;font-weight:700;font-size:9px;">🎯 ${fmtK(mM.meta)}${skuA?' '+skuA:''}</span>`
+          ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:2px 6px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(mM.meta)}${skuA?' '+skuA:''}</span>`
           : '';
         const potSpan = pv.n > 0
-          ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.75);"> ${fmtK(pv.avg)}${skuA?' '+skuA:''}</strong><span style="color:rgba(255,255,255,.2);margin:0 2px;">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;"> ${fmtK(pv.max)}${skuA?' '+skuA:''}</strong>`
+          ? `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.8);">${fmtK(pv.avg)}${skuA?' '+skuA:''}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(pv.max)}${skuA?' '+skuA:''}</strong></span>`
           : '';
-        return `<div style="font-size:${ehHoje?12:11}px;display:flex;align-items:center;gap:4px;margin-bottom:3px;"><span style="color:rgba(255,255,255,.65);font-weight:700;min-width:${ehHoje?36:30}px;">${marca}</span>${metaSpan}${potSpan?`<span style="color:rgba(255,255,255,.2);">|</span>${potSpan}`:''}</div>`;
+        return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;margin-bottom:3px;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;">${marca}</span>${metaSpan}${potSpan?`<span style="color:rgba(255,255,255,.15);">|</span>${potSpan}`:''}</div>`;
       }).join('');
 
       return `
@@ -4977,16 +4977,16 @@ function renderizarClientes(filtro = '') {
                 const _mCliente = _metaHojeCache[c.id] && _metaHojeCache[c.id][marca];
               const skuSigla = _mCliente && _mCliente.sku !== 'reais' ? _skuAbrev(_mCliente.sku) : '';
               const metaCompact = ehHoje && _mCliente
-                ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:1px 5px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(_mCliente.meta)}${skuSigla ? ' '+skuSigla : ''}</span>`
-                : d.avg > 0 ? `<span style="background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:4px;padding:0 4px;white-space:nowrap;">~${fmtK(d.avg)}</span>` : '';
+                ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:2px 6px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(_mCliente.meta)}${skuSigla ? ' '+skuSigla : ''}</span>`
+                : d.avg > 0 ? `<span style="background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:4px;padding:2px 6px;white-space:nowrap;">~${fmtK(d.avg)}</span>` : '';
               const _cm = (getConfig().metas || []).find(m => m.marca === marca);
               const _exEm = _cm?.exibirEm || 'reais';
               const _pv = _exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
               const _un = _exEm === 'sku' ? _skuAbrev(_cm.sku) : '';
               const potCompact = _pv.n > 0
-                ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.7);"> ${fmtK(_pv.avg)}${_un ? ' '+_un : ''}</strong><span style="color:rgba(255,255,255,.2);margin:0 2px;">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;"> ${fmtK(_pv.max)}${_un ? ' '+_un : ''}</strong>`
+                ? `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.8);">${fmtK(_pv.avg)}${_un ? ' '+_un : ''}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(_pv.max)}${_un ? ' '+_un : ''}</strong></span>`
                 : '';
-              return `<div style="font-size:${ehHoje ? 12 : 11}px;display:flex;align-items:center;gap:4px;margin-bottom:1px;"><span style="color:rgba(255,255,255,.65);font-weight:700;min-width:${ehHoje ? 36 : 30}px;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.2);">|</span>${potCompact}` : ''}</div>`;
+              return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;margin-bottom:2px;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.15);">|</span>${potCompact}` : ''}</div>`;
               });
               return `<div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">${itens.join('')}</div>`;
             })()}
@@ -5034,9 +5034,9 @@ function renderizarEsquecidos() {
       const skuA = cfgM ? _skuAbrev(cfgM.sku) : '';
       const pv = exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
       const potSpan = pv.n > 0
-        ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.75);"> ${fmtK(pv.avg)}${skuA?' '+skuA:''}</strong><span style="color:rgba(255,255,255,.2);margin:0 2px;">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;"> ${fmtK(pv.max)}${skuA?' '+skuA:''}</strong>`
+        ? `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.8);">${fmtK(pv.avg)}${skuA?' '+skuA:''}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(pv.max)}${skuA?' '+skuA:''}</strong></span>`
         : '';
-      return `<div style="font-size:9px;display:flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.5);font-weight:700;min-width:26px;">${marca}</span>${potSpan?`<span style="color:rgba(255,255,255,.2);">|</span>${potSpan}`:''}</div>`;
+      return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;margin-bottom:2px;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;">${marca}</span>${potSpan?`<span style="color:rgba(255,255,255,.15);">|</span>${potSpan}`:''}</div>`;
     }).join('');
     return `
     <div class="esquecido-item" onclick="abrirDetalhe('${cliente.id}','esquecidos')">

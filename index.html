@@ -2922,8 +2922,16 @@ function navegarParaCliente() {
 function verClienteMapa() {
   if (!clienteMapaAtual) return;
   const id = clienteMapaAtual.id;
+  if (!id) return;
   fecharBottomSheet();
-  setTimeout(() => abrirDetalhe(id, 'mapa'), 150);
+  setTimeout(() => {
+    try { abrirDetalhe(id, 'mapa'); }
+    catch(e) {
+      // fallback: navega para clientes e abre o detalhe de lá
+      irPara('clientes');
+      setTimeout(() => abrirDetalhe(id, 'clientes'), 300);
+    }
+  }, 200);
 }
 
 function renderizarMapa() {
@@ -3027,11 +3035,17 @@ function irPara(tela) {
   if (!el) return;
   el.style.display = 'flex';
   el.classList.add('ativa');
-  el.scrollTop = 0;
-  const scrollable = el.querySelector('.dash-content, .detalhe-content, .modal-box');
-  if (scrollable) scrollable.scrollTop = 0;
-  if (tela === 'dashboard') { atualizarDashboard(); setTimeout(() => renderizarClientes(), 100); }
-  if (tela === 'clientes') { renderizarChipsMarca(); renderizarClientes(); }
+  const _resetScroll = () => {
+    el.scrollTop = 0;
+    const s = el.querySelector('.dash-content, .detalhe-content, .cliente-lista');
+    if (s) s.scrollTop = 0;
+  };
+  _resetScroll();
+  if (tela === 'dashboard') {
+    atualizarDashboard();
+    setTimeout(() => { renderizarClientes(); _resetScroll(); }, 120);
+  }
+  if (tela === 'clientes') { renderizarChipsMarca(); renderizarClientes(); setTimeout(_resetScroll, 50); }
   if (tela === 'esquecidos') renderizarEsquecidos();
   if (tela === 'config') carregarConfig();
   if (tela === 'mapa') setTimeout(() => renderizarMapa(), 150);
@@ -4842,7 +4856,7 @@ function abrirFiltrado(tipo) {
         const potSpan = pv.n > 0
           ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.75);"> ${fmtK(pv.avg)}${skuA?' '+skuA:''}</strong><span style="color:rgba(255,255,255,.2);margin:0 2px;">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;"> ${fmtK(pv.max)}${skuA?' '+skuA:''}</strong>`
           : '';
-        return `<div style="font-size:${ehHoje?10:9}px;display:flex;align-items:center;gap:3px;margin-bottom:2px;"><span style="color:rgba(255,255,255,.55);font-weight:700;min-width:${ehHoje?32:26}px;">${marca}</span>${metaSpan}${potSpan?`<span style="color:rgba(255,255,255,.2);">|</span>${potSpan}`:''}</div>`;
+        return `<div style="font-size:${ehHoje?12:11}px;display:flex;align-items:center;gap:4px;margin-bottom:3px;"><span style="color:rgba(255,255,255,.65);font-weight:700;min-width:${ehHoje?36:30}px;">${marca}</span>${metaSpan}${potSpan?`<span style="color:rgba(255,255,255,.2);">|</span>${potSpan}`:''}</div>`;
       }).join('');
 
       return `
@@ -4972,7 +4986,7 @@ function renderizarClientes(filtro = '') {
               const potCompact = _pv.n > 0
                 ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.7);"> ${fmtK(_pv.avg)}${_un ? ' '+_un : ''}</strong><span style="color:rgba(255,255,255,.2);margin:0 2px;">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;"> ${fmtK(_pv.max)}${_un ? ' '+_un : ''}</strong>`
                 : '';
-              return `<div style="font-size:${ehHoje ? 10 : 9}px;display:flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.5);font-weight:700;min-width:${ehHoje ? 32 : 26}px;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.2);">|</span>${potCompact}` : ''}</div>`;
+              return `<div style="font-size:${ehHoje ? 12 : 11}px;display:flex;align-items:center;gap:4px;margin-bottom:1px;"><span style="color:rgba(255,255,255,.65);font-weight:700;min-width:${ehHoje ? 36 : 30}px;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.2);">|</span>${potCompact}` : ''}</div>`;
               });
               return `<div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">${itens.join('')}</div>`;
             })()}

@@ -5676,53 +5676,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
   }
 
   // Potencial do cliente
-  const potBox = document.getElementById('det-potencial-box');
-  if (potBox) {
-    const pot = calcularPotencialCliente(cliente);
-    const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [];
-    const linhas = marcas.map(marca => {
-      const d = pot[marca] || { avg: 0, max: 0, count: 0 };
-      const diff = getDiffDiasCliente(cliente);
-      const ehHoje = diff === 0;
-      let metaHtml = '';
-      if (ehHoje) {
-        const mHoje = calcularMetaDiariaHoje();
-        const mCliente = mHoje[cliente.id] && mHoje[cliente.id][marca];
-        if (mCliente) {
-          const skuL = mCliente.sku === 'reais' ? '' : ' ' + _skuLabel(mCliente.sku);
-          const pesoTxt = mCliente.peso ? ` <span style="opacity:.5;font-size:10px;">(${mCliente.peso}%)</span>` : '';
-          metaHtml = `<span class="meta-hoje-pisca" style="font-size:11px;background:rgba(249,115,22,.18);color:#F97316;border-radius:6px;padding:2px 7px;margin-left:6px;font-weight:700;">🎯 ${fmtK(mCliente.meta)}${skuL}${pesoTxt}</span>`;
-        }
-      } else if (d.avg > 0) {
-        metaHtml = `<span style="font-size:11px;background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:6px;padding:2px 7px;margin-left:6px;">🎯 ~${fmtK(d.avg)} média</span>`;
-      }
-      const _cfgMeta = (getConfig().metas || []).find(m => m.marca === marca);
-      const _exibirEm = _cfgMeta?.exibirEm || 'reais';
-      const _skuNome = _cfgMeta ? _skuLabel(_cfgMeta.sku) : '';
-      const _potVal  = _exibirEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
-      const _unidade = _exibirEm === 'sku' ? ` ${_skuNome}` : '';
-      const potHtml = _potVal.n > 0
-        ? `<span style="font-size:11px;color:var(--texto2);">méd <strong style="color:var(--texto);">${fmtK(_potVal.avg)}${_unidade}</strong></span><span style="font-size:11px;color:var(--texto3);margin:0 4px;">·</span><span style="font-size:11px;color:var(--texto2);">máx <strong style="color:var(--verde);">${fmtK(_potVal.max)}${_unidade}</strong></span>`
-        : `<span style="font-size:11px;color:var(--texto3);font-style:italic;">sem histórico</span>`;
-      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;${marcas.length > 1 ? 'border-bottom:1px solid var(--borda);' : ''}">
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <span style="font-size:12px;font-weight:700;color:var(--texto);">🏷️ ${marca}</span>
-          ${metaHtml}
-        </div>
-        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">${potHtml}</div>
-      </div>`;
-    }).filter(Boolean);
-    if (linhas.length) {
-      potBox.style.display = 'block';
-      const _ehHojeHeader = getDiffDiasCliente(cliente) === 0;
-      const _metaLabelHtml = _ehHojeHeader
-        ? `<span class="meta-hoje-pisca" style="font-size:10px;font-weight:700;color:#F97316;text-transform:uppercase;letter-spacing:.5px;">🎯 Meta de venda hoje</span>`
-        : `<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">🎯 Meta de venda hoje</span>`;
-      potBox.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">${_metaLabelHtml}<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Histórico/Potencial</span></div>${linhas.join('')}`;
-    } else {
-      potBox.style.display = 'none';
-    }
-  }
+  _atualizarPotBoxDetalhe(cliente);
 
   // Lembrete rápido
   const lembreteEl = document.getElementById('det-lembrete');
@@ -5875,6 +5829,61 @@ function abrirDetalhe(clienteId, telaOrigem) {
   });
 }
 
+function _atualizarPotBoxDetalhe(cliente) {
+  const potBox = document.getElementById('det-potencial-box');
+  if (!potBox) return;
+  const pot    = calcularPotencialCliente(cliente);
+  const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [];
+  const diff   = getDiffDiasCliente(cliente);
+  const ehHojeOuAtrasado = diff !== null && diff <= 0;
+  const atrasado = diff !== null && diff < 0;
+  const mHoje = ehHojeOuAtrasado ? calcularMetaDiariaHoje() : {};
+
+  const linhas = marcas.map(marca => {
+    const d = pot[marca] || { avg:0, max:0, count:0, avgQtd:0, maxQtd:0, countQtd:0 };
+    let metaHtml = '';
+
+    if (ehHojeOuAtrasado) {
+      const mCliente = mHoje[cliente.id] && mHoje[cliente.id][marca];
+      if (mCliente) {
+        const skuL    = mCliente.sku === 'reais' ? '' : ' ' + _skuLabel(mCliente.sku);
+        const pesoTxt = mCliente.peso ? ` <span style="opacity:.5;font-size:10px;">(${mCliente.peso}%)</span>` : '';
+        const atrasadoTag = atrasado
+          ? ` <span style="font-size:10px;color:#F59E0B;opacity:.8;">⚠️ ${Math.abs(diff)}d atraso</span>`
+          : '';
+        metaHtml = `<span class="meta-hoje-pisca" style="font-size:11px;background:rgba(249,115,22,.18);color:#F97316;border-radius:6px;padding:2px 7px;margin-left:6px;font-weight:700;">🎯 ${fmtK(mCliente.meta)}${skuL}${pesoTxt}</span>${atrasadoTag}`;
+      }
+    }
+    // Se não é hoje/atrasado → sem badge, apenas méd/máx
+
+    const _cfgMeta = (getConfig().metas || []).find(m => m.marca === marca);
+    const _exibirEm = _cfgMeta?.exibirEm || 'reais';
+    const _skuNome  = _cfgMeta ? _skuLabel(_cfgMeta.sku) : '';
+    const _potVal   = _exibirEm === 'sku' ? { avg:d.avgQtd, max:d.maxQtd, n:d.countQtd } : { avg:d.avg, max:d.max, n:d.count };
+    const _unidade  = _exibirEm === 'sku' ? ` ${_skuNome}` : '';
+    const potHtml   = _potVal.n > 0
+      ? `<span style="font-size:11px;color:var(--texto2);">méd <strong style="color:var(--texto);">${fmtK(_potVal.avg)}${_unidade}</strong></span><span style="font-size:11px;color:var(--texto3);margin:0 4px;">·</span><span style="font-size:11px;color:var(--texto2);">máx <strong style="color:var(--verde);">${fmtK(_potVal.max)}${_unidade}</strong></span>`
+      : `<span style="font-size:11px;color:var(--texto3);font-style:italic;">sem histórico</span>`;
+
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;${marcas.length > 1 ? 'border-bottom:1px solid var(--borda);' : ''}">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:12px;font-weight:700;color:var(--texto);">🏷️ ${marca}</span>
+        ${metaHtml}
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">${potHtml}</div>
+    </div>`;
+  }).filter(Boolean);
+
+  if (!linhas.length) { potBox.style.display = 'none'; return; }
+
+  const headerLabel = ehHojeOuAtrasado
+    ? `<span class="meta-hoje-pisca" style="font-size:10px;font-weight:700;color:${atrasado ? '#F59E0B' : '#F97316'};text-transform:uppercase;letter-spacing:.5px;">${atrasado ? '⚠️ Visita atrasada' : '🎯 Meta de venda hoje'}</span>`
+    : `<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Histórico/Potencial</span>`;
+
+  potBox.style.display = 'block';
+  potBox.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">${headerLabel}<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Histórico/Potencial</span></div>${linhas.join('')}`;
+}
+
 function excluirHistorico(idx) {
   const clientes = getClientes();
   const i = clientes.findIndex(c => c.id === clienteAtualId);
@@ -5995,6 +6004,7 @@ function salvarDataRetorno(valor) {
   _setChipDataPreenchido(valor);
 
   atualizarDashboard();
+  _atualizarPotBoxDetalhe(clientes[idx]);
   toast('📅 Data de retorno salva!');
 }
 
@@ -6007,7 +6017,6 @@ function limparDataRetorno() {
   document.getElementById('input-data-retorno').value = '';
   document.getElementById('det-data-personalizada').style.display = 'none';
   _setChipDataPreenchido(null);
-  // Recalcula a data sugerida pelo motivo
   const cliente = clientes[idx];
   if (cliente.historico && cliente.historico.length > 0) {
     const proxima = calcularProximaAcao(cliente.historico[0]);
@@ -6016,6 +6025,7 @@ function limparDataRetorno() {
     document.getElementById('det-proxima-data').textContent = '-';
   }
   atualizarDashboard();
+  _atualizarPotBoxDetalhe(clientes[idx]);
   toast('Data removida');
 }
 
@@ -6834,7 +6844,7 @@ function _detalheVendasMarca(meta) {
     const local  = [l.loja, l.cidade].filter(Boolean).join(' · ');
     const qtdTxt = meta.sku === 'reais' ? `R$ ${fmtV(l.val)}` : `${l.qtd} ${_skuLabel(l.unidade)}`;
     const valTxt = meta.sku === 'reais' ? '' : `R$ ${fmtV(l.val)}`;
-    return `<div onclick="abrirDetalheDoRelatorio('${l.id}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--borda);border-radius:10px;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent;" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background='transparent'">
+    return `<div onclick="abrirPedidoExistente(this.dataset.cid,this.dataset.hdata)" data-cid="${l.id}" data-hdata="${l.data}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--borda);border-radius:10px;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent;" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background='transparent'">
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:600;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.nome}</div>
         <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${local || '—'} <span style="color:var(--texto3);">· ${fmtD(l.data)}</span></div>
@@ -6865,9 +6875,86 @@ function _detalheVendasMarca(meta) {
 }
 
 function abrirDetalheDoRelatorio(clienteId) {
-  // Fecha todos os modais abertos
   document.querySelectorAll('.modal-overlay.aberto').forEach(m => m.classList.remove('aberto'));
   abrirDetalhe(clienteId, 'dashboard');
+}
+
+let _histEditandoClienteId = null;
+let _histEditandoData      = null;
+
+function abrirPedidoExistente(clienteId, dataStr) {
+  const clientes = getClientes();
+  const cliente  = clientes.find(c => c.id === clienteId);
+  if (!cliente) return;
+
+  const h = (cliente.historico || []).find(x => x.data === dataStr && x.motivo === 'fechou_pedido');
+  if (!h) { toast('Pedido não encontrado'); return; }
+
+  _histEditandoClienteId = clienteId;
+  _histEditandoData      = dataStr;
+
+  // Monta os campos com as marcas do cliente
+  const cfg = getConfig();
+  const unidadePadrao = (cfg.skus && cfg.skus[0]) || 'peças';
+  renderizarCamposPedido(cliente, unidadePadrao);
+
+  // Pré-preenche com os valores já salvos
+  const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
+  marcas.forEach((marca, i) => {
+    const pedMarca = h.pedidos ? h.pedidos.find(p => (p.marca || '') === (marca || '')) : null;
+    const valorEl  = document.getElementById('pedido-valor-'    + i);
+    const qtdEl    = document.getElementById('pedido-quantidade-' + i);
+    const unidEl   = document.getElementById('pedido-unidade-'  + i);
+
+    const val = pedMarca ? (pedMarca.valor || 0) : (h.pedidoValor || 0);
+    const qtd = pedMarca ? (pedMarca.qtd   || 0) : (h.pedidoQtd  || 0);
+    const uni = pedMarca ? (pedMarca.unidade || unidadePadrao) : (h.pedidoUnidade || unidadePadrao);
+
+    if (valorEl) { valorEl.value = val > 0 ? val.toFixed(2).replace('.', ',') : ''; mascaraMoeda(valorEl); }
+    if (qtdEl)   { qtdEl.value   = qtd > 0 ? qtd : ''; }
+    if (unidEl)  { unidEl.value  = uni; }
+  });
+
+  // Muda título e botão para modo edição
+  const titulo = document.querySelector('#modal-pedido .modal-titulo');
+  const btnSalvar = document.querySelector('#modal-pedido .btn-primario');
+  if (titulo)   titulo.textContent   = '✏️ Editar pedido';
+  if (btnSalvar) btnSalvar.textContent = '💾 Salvar alterações';
+
+  document.getElementById('modal-pedido').classList.add('aberto');
+}
+
+function salvarEdicaoPedido() {
+  const clientes = getClientes();
+  const ci = clientes.findIndex(c => c.id === _histEditandoClienteId);
+  if (ci === -1) return;
+  const hi = clientes[ci].historico.findIndex(x => x.data === _histEditandoData && x.motivo === 'fechou_pedido');
+  if (hi === -1) return;
+
+  const cliente = clientes[ci];
+  const marcas  = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
+  const pedidos = [];
+  let valorTotal = 0;
+
+  marcas.forEach((marca, i) => {
+    const valorEl = document.getElementById('pedido-valor-'     + i);
+    const qtdEl   = document.getElementById('pedido-quantidade-' + i);
+    const unidEl  = document.getElementById('pedido-unidade-'   + i);
+    const valor   = valorParaFloat(valorEl ? valorEl.value : '');
+    const qtd     = parseInt(qtdEl ? qtdEl.value : '') || 0;
+    const unidade = unidEl ? unidEl.value : '';
+    if (valor > 0 || qtd > 0) { pedidos.push({ marca: marca || '', valor, qtd, unidade }); valorTotal += valor; }
+  });
+
+  if (!pedidos.length) { toast('Informe pelo menos um valor'); return; }
+
+  clientes[ci].historico[hi].pedidos    = pedidos;
+  clientes[ci].historico[hi].pedidoValor = valorTotal;
+  salvarClientes(clientes);
+
+  fecharModalPedido();
+  toast('✅ Pedido atualizado!');
+  if (document.getElementById('modal-relatorios')?.classList.contains('aberto')) renderizarRelatorios();
 }
 
 function toggleRelCard(id) {
@@ -7647,7 +7734,7 @@ function calcularMetaDiariaHoje() {
   const taxa = calcularTaxaConversao(); // melhoria #3: taxa de conversão global
 
   const marcasHoje = [...new Set(
-    clientes.filter(c => getDiffDiasCliente(c) === 0).flatMap(c => c.marcas || [])
+    clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; }).flatMap(c => c.marcas || [])
   )];
 
   marcasHoje.forEach(marca => {
@@ -7673,9 +7760,10 @@ function calcularMetaDiariaHoje() {
     const mediaDiaria = (falta / diasUteis) * buffer;
     if (mediaDiaria <= 0) return;
 
-    const clientesHoje = clientes.filter(c =>
-      getDiffDiasCliente(c) === 0 && (c.marcas || []).includes(marca)
-    );
+    const clientesHoje = clientes.filter(c => {
+      const d = getDiffDiasCliente(c);
+      return d !== null && d <= 0 && (c.marcas || []).includes(marca);
+    });
     if (!clientesHoje.length) return;
 
     // Melhoria #2: peso = avg histórico × ciclo de compra (quem está "na hora" de comprar pesa mais)
@@ -8184,13 +8272,22 @@ function abrirModalPedido() {
   document.getElementById('modal-pedido').classList.add('aberto');
 }
 function salvarPedidoDireto() {
-  // Garante o motivo e salva tudo de uma vez, direto da tela de valores
+  if (_histEditandoClienteId) { salvarEdicaoPedido(); return; }
   motivoSelecionado = 'fechou_pedido';
   fecharModalPedido();
   salvarContato();
 }
 function fecharModalPedido() {
   document.getElementById('modal-pedido').classList.remove('aberto');
+  // Restaura título e botão se estava em modo edição
+  if (_histEditandoClienteId) {
+    const titulo    = document.querySelector('#modal-pedido .modal-titulo');
+    const btnSalvar = document.querySelector('#modal-pedido .btn-primario');
+    if (titulo)    titulo.textContent    = '✅ Dados do pedido';
+    if (btnSalvar) btnSalvar.textContent = '💾 Salvar venda';
+    _histEditandoClienteId = null;
+    _histEditandoData      = null;
+  }
   atualizarResumoPedido();
 }
 function atualizarResumoPedido() {

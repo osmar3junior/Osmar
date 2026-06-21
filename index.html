@@ -1415,8 +1415,8 @@
       <input type="hidden" id="nc-lng">
     </div>
 
-    <div class="campo-grupo"><label class="campo-label">Nome do contato *</label><input type="text" class="campo-input" id="nc-nome" placeholder="Nome do comprador ou dono"></div>
-    <div class="campo-grupo"><label class="campo-label">Nome da loja *</label><input type="text" class="campo-input" id="nc-loja" placeholder="Razão social ou nome fantasia"></div>
+    <div class="campo-grupo"><label class="campo-label">Nome do contato *</label><input type="text" class="campo-input" id="nc-nome" placeholder="NOME DO COMPRADOR OU DONO" style="text-transform:uppercase;"></div>
+    <div class="campo-grupo"><label class="campo-label">Nome da loja *</label><input type="text" class="campo-input" id="nc-loja" placeholder="RAZÃO SOCIAL OU NOME FANTASIA" style="text-transform:uppercase;"></div>
     <div class="campo-grupo"><label class="campo-label">Segmento</label>
       <select class="campo-input" id="nc-segmento">
         <option value="geral">🏪 Geral</option>
@@ -1432,7 +1432,7 @@
         <option value="outro">📦 Outro segmento</option>
       </select>
     </div>
-    <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="nc-cidade" placeholder="Cidade"></div>
+    <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="nc-cidade" placeholder="CIDADE" style="text-transform:uppercase;"></div>
     <div class="campo-grupo"><label class="campo-label">WhatsApp</label><input type="tel" class="campo-input" id="nc-telefone" placeholder="(00) 00000-0000"></div>
     <div class="campo-grupo"><label class="campo-label">E-mail do cliente</label><input type="email" class="campo-input" id="nc-email" placeholder="cliente@email.com"></div>
     <div class="campo-grupo"><label class="campo-label">Marcas representadas <span style="color:var(--texto3);font-weight:400;">(até 5)</span></label><div class="sku-grid" id="nc-marcas-grid"></div></div>
@@ -1453,8 +1453,8 @@
     </div>
     <div class="modal-sub">Edite os dados e salve.</div>
     <input type="hidden" id="ec-id">
-    <div class="campo-grupo"><label class="campo-label">Nome do contato *</label><input type="text" class="campo-input" id="ec-nome" placeholder="Nome do comprador ou dono"></div>
-    <div class="campo-grupo"><label class="campo-label">Nome da loja *</label><input type="text" class="campo-input" id="ec-loja" placeholder="Razão social ou nome fantasia"></div>
+    <div class="campo-grupo"><label class="campo-label">Nome do contato *</label><input type="text" class="campo-input" id="ec-nome" placeholder="NOME DO COMPRADOR OU DONO" style="text-transform:uppercase;"></div>
+    <div class="campo-grupo"><label class="campo-label">Nome da loja *</label><input type="text" class="campo-input" id="ec-loja" placeholder="RAZÃO SOCIAL OU NOME FANTASIA" style="text-transform:uppercase;"></div>
     <div class="campo-grupo"><label class="campo-label">Segmento</label>
       <select class="campo-input" id="ec-segmento">
         <option value="geral">🏪 Geral</option>
@@ -1470,7 +1470,7 @@
         <option value="outro">📦 Outro segmento</option>
       </select>
     </div>
-    <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="ec-cidade" placeholder="Cidade"></div>
+    <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="ec-cidade" placeholder="CIDADE" style="text-transform:uppercase;"></div>
     <div class="campo-grupo"><label class="campo-label">WhatsApp</label><input type="tel" class="campo-input" id="ec-telefone" placeholder="(00) 00000-0000"></div>
     <div class="campo-grupo"><label class="campo-label">E-mail do cliente</label><input type="email" class="campo-input" id="ec-email" placeholder="cliente@email.com"></div>
     <div class="campo-grupo"><label class="campo-label">Marcas representadas <span style="color:var(--texto3);font-weight:400;">(até 5)</span></label><div class="sku-grid" id="ec-marcas-grid"></div></div>
@@ -4804,6 +4804,8 @@ function abrirFiltrado(tipo) {
 
   const cores = ['verde','amarelo','vermelho','azul'];
   const container = document.getElementById('lista-filtrada');
+  const _metaCache = calcularMetaDiariaHoje();
+  const _cfg = getConfig();
 
   if (lista.length === 0) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-titulo">Tudo em dia!</div><div class="empty-desc">Nenhum cliente nessa categoria agora.</div></div>`;
@@ -4814,43 +4816,50 @@ function abrirFiltrado(tipo) {
       const urgLabel = getUrgenciaLabel(diff);
       const urg = getUrgenciaCor(diff);
       const iconeCustom = c.dataRetornoCustom ? ' 📌' : '';
+      const ehHoje = diff === 0;
 
-      // Texto de prazo
       let prazoTexto = '';
-      if (diff < 0) {
-        const diasVencido = Math.abs(diff);
-        prazoTexto = `Vencido há ${diasVencido} dia${diasVencido > 1 ? 's' : ''}`;
-      } else if (diff === 0) {
-        prazoTexto = 'Vence hoje';
-      } else {
-        prazoTexto = `Vence em ${diff} dia${diff > 1 ? 's' : ''}`;
-      }
+      if (diff < 0) { const dv = Math.abs(diff); prazoTexto = `Vencido há ${dv} dia${dv>1?'s':''}`; }
+      else if (diff === 0) prazoTexto = 'Vence hoje';
+      else prazoTexto = `Vence em ${diff} dia${diff>1?'s':''}`;
 
-      // Motivo do último contato
-      const motivoLabel = c.historico && c.historico.length > 0
-        ? getMotivoLabel(c.historico[0].motivo)
-        : '';
+      const motivoLabel = c.historico && c.historico.length > 0 ? getMotivoLabel(c.historico[0].motivo) : '';
+
+      // Bloco de marcas igual ao card da lista
+      const pot = calcularPotencialCliente(c);
+      const mC = _metaCache[c.id] || {};
+      const marcas = (c.marcas && c.marcas.length) ? c.marcas : [];
+      const marcasHtml = marcas.map(marca => {
+        const d = pot[marca] || { avg:0, max:0, count:0, avgQtd:0, maxQtd:0, countQtd:0 };
+        const mM = mC[marca];
+        const cfgM = (_cfg.metas||[]).find(m => m.marca === marca);
+        const exEm = cfgM?.exibirEm || 'reais';
+        const skuA = cfgM ? _skuAbrev(cfgM.sku) : '';
+        const pv = exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
+        const metaSpan = ehHoje && mM
+          ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:1px 5px;white-space:nowrap;font-weight:700;font-size:9px;">🎯 ${fmtK(mM.meta)}${skuA?' '+skuA:''}</span>`
+          : '';
+        const potSpan = pv.n > 0
+          ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.75);"> ${fmtK(pv.avg)}${skuA?' '+skuA:''}</strong><span style="color:rgba(255,255,255,.2);margin:0 2px;">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;"> ${fmtK(pv.max)}${skuA?' '+skuA:''}</strong>`
+          : '';
+        return `<div style="font-size:${ehHoje?10:9}px;display:flex;align-items:center;gap:3px;margin-bottom:2px;"><span style="color:rgba(255,255,255,.55);font-weight:700;min-width:${ehHoje?32:26}px;">${marca}</span>${metaSpan}${potSpan?`<span style="color:rgba(255,255,255,.2);">|</span>${potSpan}`:''}</div>`;
+      }).join('');
 
       return `
-        <div style="background:${urg.bg};border:1.5px solid ${urg.borda};border-radius:14px;padding:16px;margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;cursor:pointer;" onclick="abrirDetalhe('${c.id}','filtrada')">
-            <div class="cliente-avatar" style="background:rgba(0,0,0,.25);color:${urg.textColor};width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;">${c.nome.charAt(0).toUpperCase()}</div>
+        <div style="background:${urg.bg};border:1.5px solid ${urg.borda};border-radius:14px;padding:14px;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer;" onclick="abrirDetalhe('${c.id}','filtrada')">
             <div style="flex:1;min-width:0;">
-              <div style="font-size:15px;font-weight:600;margin-bottom:2px;color:${urg.textColor};">${c.nome}</div>
-              <div style="font-size:12px;color:${urg.textColor};opacity:.7;margin-bottom:6px;">${c.loja}${c.cidade ? ' · '+c.cidade : ''}</div>
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <div style="font-size:15px;font-weight:700;margin-bottom:2px;color:${urg.textColor};">${c.nome}</div>
+              <div style="font-size:12px;color:${urg.textColor};opacity:.7;margin-bottom:5px;">${c.loja}${c.cidade?' · '+c.cidade:''}</div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:${marcasHtml?'6px':'0'};">
                 <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(0,0,0,.25);color:${urg.hex};font-weight:600;border:1px solid rgba(255,255,255,.1);">${urg.dot} ${urgLabel}${iconeCustom}</span>
+                ${motivoLabel?`<span style="font-size:11px;color:${urg.textColor};opacity:.55;">${motivoLabel}</span>`:''}
               </div>
+              ${marcasHtml?`<div style="display:flex;flex-direction:column;gap:1px;">${marcasHtml}</div>`:''}
             </div>
-            <div style="color:${urg.textColor};font-size:16px;opacity:.5;">›</div>
-          </div>
-          <!-- Info extra: prazo e motivo -->
-          <div style="background:rgba(0,0,0,.2);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-            <div style="font-size:12px;color:${urg.hex};font-weight:700;">${diff < 0 ? '⚠️' : '⏰'} ${prazoTexto}</div>
-            ${motivoLabel ? `<div style="font-size:11px;color:${urg.textColor};opacity:.6;">${motivoLabel}</div>` : ''}
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn-copiar" style="flex:1;justify-content:center;background:rgba(0,0,0,.2);border-color:rgba(255,255,255,.1);color:${urg.textColor};" onclick="abrirDetalhe('${c.id}','filtrada')">✏️ Ver cliente</button>
+            <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">
+              <button onclick="event.stopPropagation();abrirDetalhe('${c.id}','filtrada')" style="width:36px;height:32px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:${urg.textColor};font-size:13px;cursor:pointer;">›</button>
+            </div>
           </div>
         </div>`;
     }).join('');
@@ -4999,18 +5008,36 @@ function renderizarEsquecidos() {
     lista.innerHTML = `<div class="empty-state"><div class="empty-icon">👻</div><div class="empty-titulo">Nenhum esquecido</div><div class="empty-desc">Todos os clientes tiveram contato recente.</div></div>`;
     return;
   }
-  lista.innerHTML = esquecidos.map(({ cliente, dias }) => `
+  const _metaCacheEsq = calcularMetaDiariaHoje();
+  lista.innerHTML = esquecidos.map(({ cliente, dias }) => {
+    const pot = calcularPotencialCliente(cliente);
+    const mC = _metaCacheEsq[cliente.id] || {};
+    const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [];
+    const marcasHtml = marcas.map(marca => {
+      const d = pot[marca] || { avg:0, max:0, count:0, avgQtd:0, maxQtd:0, countQtd:0 };
+      const cfgM = (cfg.metas||[]).find(m => m.marca === marca);
+      const exEm = cfgM?.exibirEm || 'reais';
+      const skuA = cfgM ? _skuAbrev(cfgM.sku) : '';
+      const pv = exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
+      const potSpan = pv.n > 0
+        ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.75);"> ${fmtK(pv.avg)}${skuA?' '+skuA:''}</strong><span style="color:rgba(255,255,255,.2);margin:0 2px;">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;"> ${fmtK(pv.max)}${skuA?' '+skuA:''}</strong>`
+        : '';
+      return `<div style="font-size:9px;display:flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.5);font-weight:700;min-width:26px;">${marca}</span>${potSpan?`<span style="color:rgba(255,255,255,.2);">|</span>${potSpan}`:''}</div>`;
+    }).join('');
+    return `
     <div class="esquecido-item" onclick="abrirDetalhe('${cliente.id}','esquecidos')">
       <div>
         <div class="esquecido-dias">${dias}</div>
         <div class="esquecido-dias-label">dias</div>
       </div>
-      <div class="esquecido-info">
+      <div class="esquecido-info" style="flex:1;">
         <div class="esquecido-nome">${cliente.nome}</div>
         <div class="esquecido-loja">${cliente.loja}${cliente.cidade ? ' · ' + cliente.cidade : ''}</div>
+        ${marcasHtml ? `<div style="display:flex;flex-direction:column;gap:2px;margin-top:5px;">${marcasHtml}</div>` : ''}
       </div>
       <div class="alerta-seta">›</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ===== DETALHE =====
@@ -5736,10 +5763,10 @@ function salvarEdicaoCliente() {
   const clientes = getClientes();
   const idx = clientes.findIndex(c => c.id === clienteAtualId);
   if (idx === -1) return;
-  clientes[idx].nome = nome;
-  clientes[idx].loja = loja;
+  clientes[idx].nome = nome.toUpperCase();
+  clientes[idx].loja = loja.toUpperCase();
   clientes[idx].segmento = document.getElementById('ec-segmento').value || 'geral';
-  clientes[idx].cidade = document.getElementById('ec-cidade').value.trim();
+  clientes[idx].cidade = document.getElementById('ec-cidade').value.trim().toUpperCase();
   clientes[idx].telefone = document.getElementById('ec-telefone').value.trim();
   clientes[idx].emailCliente = document.getElementById('ec-email').value.trim();
   clientes[idx].marcas = getMarcasSelecionadas('ec-marcas-grid');
@@ -5838,9 +5865,9 @@ function salvarNovoCliente() {
   if (!nome || !loja) { toast('Nome e loja são obrigatórios'); return; }
 
   const novoCliente = {
-    id: 'c_' + Date.now(), nome, loja,
+    id: 'c_' + Date.now(), nome: nome.toUpperCase(), loja: loja.toUpperCase(),
     segmento: document.getElementById('nc-segmento').value || 'geral',
-    cidade: document.getElementById('nc-cidade').value.trim(),
+    cidade: document.getElementById('nc-cidade').value.trim().toUpperCase(),
     telefone: document.getElementById('nc-telefone').value.trim(),
     emailCliente: document.getElementById('nc-email').value.trim(),
     marcas: getMarcasSelecionadas('nc-marcas-grid'),
@@ -6867,7 +6894,6 @@ function formatarData(iso) { return new Date(iso).toLocaleDateString('pt-BR', { 
 function fmtK(v) {
   if (!v || isNaN(v)) return '0';
   if (v >= 1000000) return (v/1000000).toFixed(1).replace(/\.0$/,'').replace('.',',') + 'M';
-  if (v >= 1000)    return (v/1000).toFixed(1).replace(/\.0$/,'').replace('.',',') + 'k';
   return Math.round(v).toLocaleString('pt-BR');
 }
 

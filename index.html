@@ -4831,8 +4831,7 @@ function renderizarClientes(filtro = '') {
 
     return `
       <div class="cliente-item" style="background:${cardBg};border-color:${cardBorda};position:relative;border-width:1.5px;">
-        <div style="display:flex;align-items:center;gap:${getDiffDiasCliente(c) === 0 ? 8 : 14}px;flex:1;min-width:0;" onclick="abrirDetalhe('${c.id}','clientes')">
-          ${getDiffDiasCliente(c) !== 0 ? `<div class="cliente-avatar avatar-${cor}" style="background:rgba(0,0,0,.25);">${c.nome.charAt(0).toUpperCase()}</div>` : ''}
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;" onclick="abrirDetalhe('${c.id}','clientes')">`
           <div class="cliente-info">
             <div class="cliente-nome" style="color:${cardTextColor};">${c.nome}</div>
             <div class="cliente-loja" style="color:${cardTextColor};opacity:.75;">${c.loja}${c.cidade ? ' · ' + c.cidade : ''}</div>
@@ -4856,14 +4855,14 @@ function renderizarClientes(filtro = '') {
                   ? `<span style="color:rgba(255,255,255,.5);">méd</span> <strong style="color:rgba(255,255,255,.8);">${fmtK(d.avg)}</strong> <span style="color:rgba(255,255,255,.3);">·</span> <span style="color:rgba(255,255,255,.5);">máx</span> <strong style="color:#00D68F;">${fmtK(d.max)}</strong>`
                   : `<span style="color:rgba(255,255,255,.3);font-style:italic;">sem pedidos</span>`;
                 const _mCliente = _metaHojeCache[c.id] && _metaHojeCache[c.id][marca];
-              const skuSigla = _mCliente && _mCliente.sku !== 'reais' ? _skuLabel(_mCliente.sku).slice(0,2) : '';
+              const skuSigla = _mCliente && _mCliente.sku !== 'reais' ? _skuAbrev(_mCliente.sku) : '';
               const metaCompact = ehHoje && _mCliente
                 ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:1px 5px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(_mCliente.meta)}${skuSigla}</span>`
                 : d.avg > 0 ? `<span style="background:rgba(56,189,248,.1);color:#7DD3FC;border-radius:4px;padding:0 4px;white-space:nowrap;">~${fmtK(d.avg)}</span>` : '';
               const _cm = (getConfig().metas || []).find(m => m.marca === marca);
               const _exEm = _cm?.exibirEm || 'reais';
               const _pv = _exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
-              const _un = _exEm === 'sku' ? _skuLabel(_cm.sku).slice(0,2) : '';
+              const _un = _exEm === 'sku' ? _skuAbrev(_cm.sku) : '';
               const potCompact = _pv.n > 0
                 ? `<span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.7);">${fmtK(_pv.avg)}${_un}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(_pv.max)}${_un}</strong>`
                 : '';
@@ -5945,6 +5944,14 @@ function _skuLabel(sku) {
   const found = todos.find(o => o.value === sku);
   return found ? found.label : sku;
 }
+function _skuAbrev(sku) {
+  const map = {
+    'peças':'pçs', 'caixas':'cxs', 'unidades':'unid',
+    'litros':'Lts', 'metros':'Mts', 'pares':'Prs', 'paletes':'Plts', 'pacotes':'Pcts',
+    'reais':'R$'
+  };
+  return map[sku] || _skuLabel(sku).slice(0,3);
+}
 
 function _periodoMeta(meta) {
   if (meta.tipoPeriodo === 'colecao' && meta.dataInicio && meta.dataFim) {
@@ -6349,7 +6356,7 @@ const SKU_OPCOES = [
   { value:'peças', label:'Peças' }, { value:'caixas', label:'Caixas' }, { value:'unidades', label:'Unidades' },
   { value:'kg', label:'Kg' }, { value:'litros', label:'Litros' }, { value:'metros', label:'Metros' },
   { value:'frascos', label:'Frascos' }, { value:'pares', label:'Pares' }, { value:'kits', label:'Kits' },
-  { value:'paletes', label:'Paletes' }, { value:'reais', label:'R$ Reais' }
+  { value:'paletes', label:'Paletes' }, { value:'pacotes', label:'Pacotes' }, { value:'reais', label:'R$ Reais' }
 ];
 function renderizarSkuGrid(cfg) {
   const grid = document.getElementById('sku-grid');

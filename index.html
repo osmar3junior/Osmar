@@ -385,6 +385,20 @@
   .campo-destaque { animation:destacaCampo .85s ease-in-out 3; }
 
   /* Notificação piscante de pernoite no card do hotel */
+  @keyframes piscaSininho {
+    0%,100% { transform:rotate(0deg); }
+    15%     { transform:rotate(12deg); }
+    30%     { transform:rotate(-10deg); }
+    45%     { transform:rotate(8deg); }
+    60%     { transform:rotate(-6deg); }
+    75%     { transform:rotate(3deg); }
+  }
+  .sininho-alerta { animation:piscaSininho .8s ease-in-out 3; }
+  @keyframes piscaBadge {
+    0%,100% { transform:scale(1); }
+    50%     { transform:scale(1.3); }
+  }
+  #notif-badge { animation:piscaBadge 1s ease-in-out 5; }
   @keyframes piscaMeta {
     0%,100% { opacity:1; transform:scale(1); }
     50%      { opacity:.45; transform:scale(.96); }
@@ -598,6 +612,10 @@
   <div class="header">
     <div class="header-logo" onclick="irPara('dashboard')" style="cursor:pointer;"><div class="header-logo-icon"><svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="5" y="22" width="5" height="9" rx="1.5" fill="white" opacity=".8"/><rect x="13" y="16" width="5" height="15" rx="1.5" fill="white" opacity=".9"/><rect x="21" y="10" width="5" height="21" rx="1.5" fill="white"/><path d="M28 5L31 5L31 8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 11L31 5" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg></div>Carteira<span>Viva</span></div>
     <div style="display:flex;gap:6px;align-items:center;">
+      <button onclick="abrirNotificacoes()" title="Notificações" style="position:relative;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:8px 10px;color:var(--texto2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .2s,color .2s;" onmouseenter="this.style.borderColor='#F59E0B';this.style.color='#F59E0B'" onmouseleave="this.style.borderColor='var(--borda)';this.style.color='var(--texto2)'">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#EF4444;color:#fff;font-size:10px;font-weight:800;border-radius:50%;width:18px;height:18px;line-height:18px;text-align:center;font-family:'Syne',sans-serif;"></span>
+      </button>
       <button onclick="limparCacheApp()" title="Atualizar app" style="background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:8px 10px;color:var(--texto2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .2s,color .2s;" onmouseenter="this.style.borderColor='#7DD3FC';this.style.color='#7DD3FC'" onmouseleave="this.style.borderColor='var(--borda)';this.style.color='var(--texto2)'">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       </button>
@@ -1672,6 +1690,19 @@
 </div>
 
 <!-- MODAL RELATÓRIOS META -->
+<!-- MODAL NOTIFICAÇÕES -->
+<div class="modal-overlay" id="modal-notificacoes">
+  <div class="modal-box" style="max-height:85vh;overflow-y:auto;padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="modal-titulo" style="margin-bottom:0;">🔔 Notificações</div>
+      <button onclick="fecharModal('modal-notificacoes')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div id="notif-lista">
+      <div style="text-align:center;padding:24px;color:var(--texto3);font-size:13px;">Calculando notificações...</div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL SELETOR ROTA WHATSAPP -->
 <div class="modal-overlay" id="modal-rota-wpp">
   <div class="modal-box" style="padding-bottom:20px;">
@@ -2663,6 +2694,136 @@ function fazerCadastro() {
 }
 function sair() { usuarioAtual = null; localStorage.removeItem('cv_session'); irPara('login'); }
 
+function abrirNotificacoes() {
+  const alertasMarca = calcularAlertasMarcas();
+  const clientes = getClientesAtivos();
+  const urgentes = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; });
+  const semana   = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d > 0 && d <= 7; });
+  const esq      = clientes.filter(c => {
+    const cfg = getConfig();
+    const ref = c.historico && c.historico.length > 0 ? new Date(c.historico[0].data) : new Date(c.criadoEm);
+    return Math.floor((new Date() - ref) / 86400000) >= cfg.dias_esquecidos;
+  });
+  const cfg = getConfig();
+  const metas = (cfg.metas || []);
+  const metasRisco = metas.filter(m => {
+    const real = calcularRealMarca(m);
+    const pct  = calcularTendencia(m, real);
+    return pct !== null && pct < 80;
+  });
+
+  const fmtD = iso => new Date(iso).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  const linhaAlerta = (icone, cor, bg, titulo, sub, onclick) =>
+    `<div onclick="${onclick}" style="display:flex;align-items:flex-start;gap:10px;background:${bg};border:1px solid ${cor};border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;transition:opacity .15s;" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='1'">
+      <span style="font-size:20px;flex-shrink:0;">${icone}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--texto);">${titulo}</div>
+        <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${sub}</div>
+      </div>
+      <span style="color:var(--texto3);font-size:16px;align-self:center;">›</span>
+    </div>`;
+
+  let html = '';
+
+  // Marcas vencidas
+  const vencidas = alertasMarca.filter(a => a.status === 'vencida');
+  const vencendo = alertasMarca.filter(a => a.status === 'vencendo');
+
+  if (vencidas.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#EF4444;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">🔴 Marcas vencidas</div>`;
+    vencidas.forEach(a => {
+      html += linhaAlerta('🏷️','rgba(239,68,68,.4)','rgba(239,68,68,.08)',
+        `${a.marca} — ${a.clienteNome}`,
+        `${a.clienteLoja}${a.clienteCidade?' · '+a.clienteCidade:''} · vencida há ${Math.abs(a.diasRestantes)} dia${Math.abs(a.diasRestantes)>1?'s':''}`,
+        `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${a.clienteId}','clientes'),200)`
+      );
+    });
+  }
+
+  if (vencendo.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#F59E0B;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🟡 Vencendo em breve</div>`;
+    vencendo.forEach(a => {
+      html += linhaAlerta('🏷️','rgba(245,158,11,.4)','rgba(245,158,11,.07)',
+        `${a.marca} — ${a.clienteNome}`,
+        `${a.clienteLoja}${a.clienteCidade?' · '+a.clienteCidade:''} · vence em ${a.diasRestantes} dia${a.diasRestantes>1?'s':''}`,
+        `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${a.clienteId}','clientes'),200)`
+      );
+    });
+  }
+
+  if (urgentes.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#FF4D6A;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🔴 Retomar hoje</div>`;
+    html += linhaAlerta('👤','rgba(255,77,106,.4)','rgba(255,77,106,.07)',
+      `${urgentes.length} cliente${urgentes.length>1?'s':''} esperando contato`,
+      'Toque para ver a lista',
+      `fecharModal('modal-notificacoes');setTimeout(()=>abrirFiltrado('urgentes'),200)`
+    );
+  }
+
+  if (semana.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#F59E0B;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🟡 Esta semana</div>`;
+    html += linhaAlerta('📅','rgba(245,158,11,.4)','rgba(245,158,11,.07)',
+      `${semana.length} cliente${semana.length>1?'s':''} nos próximos 7 dias`,
+      'Toque para ver a lista',
+      `fecharModal('modal-notificacoes');setTimeout(()=>abrirFiltrado('semana'),200)`
+    );
+  }
+
+  if (metasRisco.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#7DD3FC;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">📊 Meta em risco</div>`;
+    metasRisco.forEach(m => {
+      const real = calcularRealMarca(m);
+      const pct  = calcularTendencia(m, real);
+      html += linhaAlerta('📉','rgba(56,189,248,.4)','rgba(56,189,248,.07)',
+        `${m.marca} — tendência ${pct}%`,
+        'Abaixo de 80% do ritmo necessário',
+        `fecharModal('modal-notificacoes');setTimeout(()=>abrirRelatorios(),200)`
+      );
+    });
+  }
+
+  if (esq.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#A78BFA;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">👻 Esquecidos</div>`;
+    html += linhaAlerta('👻','rgba(167,139,250,.4)','rgba(167,139,250,.07)',
+      `${esq.length} cliente${esq.length>1?'s':''} sem contato há muito tempo`,
+      'Toque para ver a lista',
+      `fecharModal('modal-notificacoes');setTimeout(()=>irPara('esquecidos'),200)`
+    );
+  }
+
+  if (!html) {
+    html = `<div style="text-align:center;padding:32px 16px;">
+      <div style="font-size:32px;margin-bottom:12px;">✅</div>
+      <div style="font-size:15px;font-weight:700;color:var(--texto);margin-bottom:6px;">Tudo em dia!</div>
+      <div style="font-size:13px;color:var(--texto3);">Nenhuma notificação pendente.</div>
+    </div>`;
+  }
+
+  document.getElementById('notif-lista').innerHTML = html;
+  document.getElementById('modal-notificacoes').classList.add('aberto');
+}
+
+function _atualizarBadgeNotif() {
+  const alertas = calcularAlertasMarcas();
+  const urgentes = getClientesAtivos().filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; });
+  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length;
+  const badge = document.getElementById('notif-badge');
+  const btn = badge?.parentElement;
+  if (!badge) return;
+  if (total > 0) {
+    badge.style.display = 'block';
+    badge.textContent = total > 9 ? '9+' : total;
+    if (btn) {
+      btn.classList.remove('sininho-alerta');
+      void btn.offsetWidth;
+      btn.classList.add('sininho-alerta');
+    }
+  } else {
+    badge.style.display = 'none';
+    if (btn) btn.classList.remove('sininho-alerta');
+  }
+}
+
 function limparCacheApp() {
   toast('🔄 Atualizando app...');
   setTimeout(() => {
@@ -3043,7 +3204,7 @@ function irPara(tela) {
   _resetScroll();
   if (tela === 'dashboard') {
     atualizarDashboard();
-    setTimeout(() => { renderizarClientes(); _resetScroll(); }, 120);
+    setTimeout(() => { renderizarClientes(); _resetScroll(); _atualizarBadgeNotif(); }, 120);
   }
   if (tela === 'clientes') { renderizarChipsMarca(); renderizarClientes(); setTimeout(_resetScroll, 50); }
   if (tela === 'esquecidos') renderizarEsquecidos();
@@ -5118,6 +5279,31 @@ function abrirDetalhe(clienteId, telaOrigem) {
   }
   segEl.textContent = getSegLabel(cliente.segmento);
 
+  // Alertas de marca vencida
+  let alertaMarcaEl = document.getElementById('det-alerta-marca');
+  if (!alertaMarcaEl) {
+    alertaMarcaEl = document.createElement('div');
+    alertaMarcaEl.id = 'det-alerta-marca';
+    document.getElementById('det-loja').after(alertaMarcaEl);
+  }
+  const alertasMarcaCliente = calcularAlertasMarcas().filter(a => a.clienteId === clienteId);
+  if (alertasMarcaCliente.length) {
+    alertaMarcaEl.style.display = 'block';
+    alertaMarcaEl.innerHTML = alertasMarcaCliente.map(a => {
+      const cor   = a.status === 'vencida' ? '#EF4444' : '#F59E0B';
+      const bg    = a.status === 'vencida' ? 'rgba(239,68,68,.1)' : 'rgba(245,158,11,.1)';
+      const borda = a.status === 'vencida' ? 'rgba(239,68,68,.4)' : 'rgba(245,158,11,.4)';
+      const txt   = a.status === 'vencida'
+        ? `Vencida há ${Math.abs(a.diasRestantes)} dia${Math.abs(a.diasRestantes)>1?'s':''}`
+        : `Vence em ${a.diasRestantes} dia${a.diasRestantes>1?'s':''}`;
+      const proxFmt = a.proximaCompra.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+      return `<div class="${a.status==='vencida'?'meta-hoje-pisca':''}" style="display:inline-flex;align-items:center;gap:6px;background:${bg};border:1px solid ${borda};border-radius:8px;padding:4px 10px;margin:2px 4px 2px 0;"><span style="font-size:11px;font-weight:700;color:${cor};">🏷️ ${a.marca} — ${txt} · retorno ~${proxFmt}</span></div>`;
+    }).join('');
+  } else {
+    alertaMarcaEl.style.display = 'none';
+    alertaMarcaEl.innerHTML = '';
+  }
+
   // E-mail do cliente
   let emailDetEl = document.getElementById('det-email-cliente');
   if (!emailDetEl) {
@@ -5682,11 +5868,42 @@ function salvarContato() {
     editandoContatoIdx = -1;
     toast(motivoSelecionado === 'fechou_pedido' ? '✅ Pedido atualizado!' : 'Contato atualizado!');
   } else {
-    // Novo registro — a visita "zera o relógio": o motivo passa a ditar a próxima
-    // data de retorno. Removemos qualquer data manual antiga que ainda sobrescreveria.
     delete clientes[idx].dataRetornoCustom;
     clientes[idx].historico.unshift(contato);
-    toast(motivoSelecionado === 'fechou_pedido' ? '🎉 Pedido registrado!' : 'Contato registrado!');
+
+    // Retorno inteligente por marca: se fechou pedido de só algumas marcas,
+    // sugere data de retorno pela marca não vendida com menor ciclo
+    if (motivoSelecionado === 'fechou_pedido') {
+      const cfg = getConfig();
+      const todasMarcas = clientes[idx].marcas || [];
+      const marcasVendidas = new Set((contato.pedidos || []).map(p => p.marca).filter(Boolean));
+      const hoje = new Date();
+      let menorRetorno = null;
+      todasMarcas.forEach(marca => {
+        if (marcasVendidas.has(marca)) return; // vendeu esta — sem alerta
+        const metaCfg = (cfg.metas || []).find(m => m.marca === marca);
+        if (!metaCfg?.cicloIdeal) return;
+        // Busca última compra desta marca
+        let ultimaCompra = null;
+        clientes[idx].historico.slice(1).forEach(h => {
+          if (h.motivo !== 'fechou_pedido') return;
+          const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : false;
+          if (tem && (!ultimaCompra || new Date(h.data) > ultimaCompra)) ultimaCompra = new Date(h.data);
+        });
+        const base = ultimaCompra || hoje;
+        const retorno = new Date(base.getTime() + metaCfg.cicloIdeal * 86400000);
+        if (!menorRetorno || retorno < menorRetorno.data) menorRetorno = { data: retorno, marca };
+      });
+      if (menorRetorno) {
+        const iso = menorRetorno.data.toISOString().slice(0,10);
+        clientes[idx].dataRetornoCustom = iso;
+        toast(`🎉 Pedido registrado! · 🏷️ ${menorRetorno.marca} — retorno sugerido ${menorRetorno.data.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}`);
+      } else {
+        toast('🎉 Pedido registrado!');
+      }
+    } else {
+      toast('Contato registrado!');
+    }
   }
 
   // Auto-arquiva: status atual virou Fechado/Inadimplente → sai da base ativa
@@ -6416,7 +6633,7 @@ function adicionarMetaConfig() {
   const metas = cfg.metas || [];
   const marcas = (cfg.marcas || []).filter(Boolean);
   if (!marcas.length) { toast('Cadastre suas marcas em "Suas representações" antes de adicionar metas.'); return; }
-  metas.push({ id: 'm_' + Date.now(), marca: marcas[0], sku: (cfg.skus && cfg.skus[0]) || 'peças', tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor: 0, comissao: 0 });
+  metas.push({ id: 'm_' + Date.now(), marca: marcas[0], sku: (cfg.skus && cfg.skus[0]) || 'peças', tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor: 0, comissao: 0, cicloIdeal: 30 });
   cfg.metas = metas;
   salvarConfigData(cfg);
   renderizarMetasConfig(cfg);
@@ -6477,6 +6694,11 @@ function renderizarMetasConfig(cfg) {
         <span style="font-size:11px;color:var(--texto2);white-space:nowrap;">Potencial exibir em:</span>
         <button onclick="alternarExibirEmMeta('${meta.id}','reais')" style="flex:1;padding:5px 8px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid ${(meta.exibirEm || 'reais') === 'reais' ? 'var(--verde)' : 'var(--borda)'};background:${(meta.exibirEm || 'reais') === 'reais' ? 'rgba(0,214,143,.12)' : 'var(--bg3)'};color:${(meta.exibirEm || 'reais') === 'reais' ? 'var(--verde)' : 'var(--texto2)'};">R$</button>
         <button onclick="alternarExibirEmMeta('${meta.id}','sku')" style="flex:1;padding:5px 8px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid ${meta.exibirEm === 'sku' ? 'var(--verde)' : 'var(--borda)'};background:${meta.exibirEm === 'sku' ? 'rgba(0,214,143,.12)' : 'var(--bg3)'};color:${meta.exibirEm === 'sku' ? 'var(--verde)' : 'var(--texto2)'};">${_skuLabel(meta.sku)}</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.25);border-radius:9px;padding:8px 10px;">
+        <span style="font-size:12px;color:#A78BFA;white-space:nowrap;">🔄 Giro ideal</span>
+        <input type="number" min="1" max="365" class="campo-input" style="flex:1;padding:5px 8px;font-size:13px;" placeholder="dias" value="${meta.cicloIdeal || ''}" onchange="editarMetaField('${meta.id}','cicloIdeal',Number(this.value))">
+        <span style="font-size:12px;color:var(--texto2);white-space:nowrap;">dias entre compras</span>
       </div>
     </div>`;
   }).join('');
@@ -6958,6 +7180,62 @@ function calcularPotencialCliente(cliente) {
     r.avgQtd = r.countQtd > 0 ? r.somaQtd / r.countQtd : 0;
   });
   return resultado;
+}
+
+function calcularAlertasMarcas() {
+  // Retorna alertas de marcas vencidas ou prestes a vencer por cliente
+  const cfg = getConfig();
+  const metas = cfg.metas || [];
+  const clientes = getClientesAtivos();
+  const agora = new Date();
+  const alertas = [];
+
+  clientes.forEach(c => {
+    const marcasCliente = (c.marcas || []);
+    marcasCliente.forEach(marca => {
+      const metaCfg = metas.find(m => m.marca === marca);
+      const ciclo = metaCfg?.cicloIdeal;
+      if (!ciclo || ciclo <= 0) return;
+
+      // Última compra desta marca específica para este cliente
+      let ultimaCompra = null;
+      (c.historico || []).forEach(h => {
+        if (h.motivo !== 'fechou_pedido') return;
+        const temMarca = h.pedidos
+          ? h.pedidos.some(p => p.marca === marca)
+          : (marcasCliente.length === 1); // legado sem pedidos por marca
+        if (temMarca && (!ultimaCompra || new Date(h.data) > ultimaCompra)) {
+          ultimaCompra = new Date(h.data);
+        }
+      });
+
+      if (!ultimaCompra) return; // nunca comprou esta marca — não gera alerta ainda
+
+      const diasDesde = Math.round((agora - ultimaCompra) / 86400000);
+      const diasRestantes = ciclo - diasDesde;
+      const proximaCompra = new Date(ultimaCompra.getTime() + ciclo * 86400000);
+
+      let status;
+      if (diasRestantes < 0)      status = 'vencida';
+      else if (diasRestantes <= 3) status = 'vencendo';
+      else return; // ok, sem alerta
+
+      alertas.push({
+        clienteId: c.id,
+        clienteNome: c.nome,
+        clienteLoja: c.loja,
+        clienteCidade: c.cidade,
+        marca,
+        status,
+        diasDesde,
+        diasRestantes,
+        proximaCompra,
+        urgencia: status === 'vencida' ? Math.abs(diasRestantes) * 2 : 1
+      });
+    });
+  });
+
+  return alertas.sort((a, b) => b.urgencia - a.urgencia);
 }
 
 function _diasUteisRestantes(from, to) {

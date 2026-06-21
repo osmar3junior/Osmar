@@ -391,10 +391,10 @@
   }
   .meta-hoje-pisca { animation:piscaMeta 1.1s ease-in-out infinite; }
   @keyframes pulsaRota {
-    0%,100% { border-color:rgba(0,214,143,.3); box-shadow:none; }
-    50%      { border-color:rgba(0,214,143,.9); box-shadow:0 0 18px rgba(0,214,143,.4); }
+    0%,100% { border-color:rgba(0,214,143,.25); box-shadow:none; }
+    50%      { border-color:#00D68F; box-shadow:0 0 28px rgba(0,214,143,.8), 0 0 60px rgba(0,214,143,.4), inset 0 0 8px rgba(0,214,143,.2); }
   }
-  .btn-rota-pulsa { animation:pulsaRota 1.4s ease-in-out 5; }
+  .btn-rota-pulsa { animation:pulsaRota 1.4s ease-in-out 7; }
   @keyframes piscaPernoite {
     0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(99,211,149,0); }
     50%     { opacity:.7; box-shadow:0 0 0 6px rgba(99,211,149,.35); }
@@ -1554,7 +1554,7 @@
         <button onclick="fecharModal('modal-rota-hoje')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
       </div>
     </div>
-    <div class="modal-sub" id="rota-hoje-sub">Calculando rota otimizada...</div>
+    <div id="rota-hoje-sub" style="font-size:13px;color:var(--texto);opacity:.72;margin-bottom:12px;line-height:1.5;letter-spacing:.1px;">Calculando rota otimizada...</div>
 
     <!-- Seletor de período -->
     <div class="rota-periodo-seletor">

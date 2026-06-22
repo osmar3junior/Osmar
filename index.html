@@ -3503,6 +3503,7 @@ async function fazerCadastro() {
   _sbAuth(email, senha);
 }
 function sair() {
+  if (!confirm('Deseja mesmo sair?\n\nSeus dados continuam salvos, mas você vai precisar entrar com email e senha de novo.')) return;
   usuarioAtual = null;
   _sbUserId = null;
   localStorage.removeItem('cv_session');

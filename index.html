@@ -1153,17 +1153,6 @@ if ('serviceWorker' in navigator) {
 
       <div class="config-item">
         <div class="config-item-header">
-          <span class="config-item-label">🔄 Produto não girou</span>
-        </div>
-        <div class="config-dias-wrap">
-          <span class="config-dias-label">Voltar em</span>
-          <input type="number" class="config-dias-input" id="cfg-produto_nao_girou" min="1" max="180" value="7">
-          <span class="config-dias-unidade">dias</span>
-        </div>
-      </div>
-
-      <div class="config-item">
-        <div class="config-item-header">
           <span class="config-item-label">⏳ Aguardando giro</span>
         </div>
         <div class="config-dias-wrap">
@@ -1186,7 +1175,18 @@ if ('serviceWorker' in navigator) {
 
       <div class="config-item">
         <div class="config-item-header">
-          <span class="config-item-label">🗓️ Aguarda coleção</span>
+          <span class="config-item-label">📝 Aguardando proposta</span>
+        </div>
+        <div class="config-dias-wrap">
+          <span class="config-dias-label">Voltar em</span>
+          <input type="number" class="config-dias-input" id="cfg-aguardando_proposta" min="1" max="180" value="7">
+          <span class="config-dias-unidade">dias</span>
+        </div>
+      </div>
+
+      <div class="config-item">
+        <div class="config-item-header">
+          <span class="config-item-label">🗓️ Aguardando coleção</span>
         </div>
         <div class="config-dias-wrap">
           <span class="config-dias-label">Voltar em</span>
@@ -3542,7 +3542,7 @@ function salvarClientes(c) {
 function getConfig() {
   const email = usuarioAtual?.email || '';
   if (_cacheConfig && _cacheConfigEmail === email) return _cacheConfig;
-  const def = { estoque_alto:21, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguarda_colecao:60, fechou_pedido:45, comprou_concorrente:30, inadimplente:15, fechado:60, nao_vai_comprar:90, dias_esquecidos:60, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''] };
+  const def = { estoque_alto:21, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguardando_proposta:7, aguarda_colecao:60, fechou_pedido:45, comprou_concorrente:30, inadimplente:15, fechado:60, nao_vai_comprar:90, dias_esquecidos:60, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''] };
   _cacheConfig = Object.assign(def, getData('cv_config_' + email) || {});
   _cacheConfigEmail = email;
   return _cacheConfig;
@@ -4640,8 +4640,36 @@ const MOTIVOS_BASE = {
       ]
     ]
   },
+  aguardando_proposta: {
+    label: '📝 Aguardando proposta',
+    cadenciaRelativa: [0.3, 0.7, 1.0],
+    gatilhos: GATILHOS_LABELS,
+    msgs: [
+      [
+        n=>`${n}, te enviei aquela proposta e queria saber se chegou direitinho. Posso esclarecer qualquer ponto que ficou em dúvida?`,
+        n=>`${n}, conseguiu dar uma olhada na proposta que mandei? Se quiser, ajusto qualquer detalhe para ficar do jeito que faz sentido para você.`,
+        n=>`${n}, sobre a proposta que te enviei — estou à disposição para tirar qualquer dúvida. O que você achou até agora?`,
+        n=>`${n}, montei aquela proposta pensando no perfil da sua loja. Teve chance de avaliar? Posso explicar como cheguei nos números.`,
+        n=>`${n}, só passando para confirmar se a proposta chegou e ficou clara. Qualquer ajuste, é só me falar que eu resolvo.`
+      ],
+      [
+        n=>`${n}, as condições daquela proposta valem por mais alguns dias. Quer que eu reserve os itens enquanto você decide?`,
+        n=>`${n}, quem fecha essa semana ainda garante o prazo e o preço que coloquei na proposta. Vale a conversa antes que mude?`,
+        n=>`${n}, separei um tempo essa semana para passar aí e fechar a proposta pessoalmente. Terça ou quarta fica melhor para você?`,
+        n=>`${n}, sei que decisão de compra precisa de cuidado. Posso ajudar a justificar o investimento? Levo os números de giro de lojas parecidas.`,
+        n=>`${n}, a proposta continua de pé e quero garantir que você aproveite as condições. Falta algo da minha parte para você decidir?`
+      ],
+      [
+        n=>`${n}, a proposta que te enviei vence em breve. Consigo segurar as condições se você confirmar até amanhã. Topa?`,
+        n=>`${n}, último aviso amigável: as condições da proposta encerram essa semana. Quer que eu feche para garantir o seu?`,
+        n=>`${n}, não quero que você perca as condições que montei. Posso fechar a proposta hoje e já deixar tudo encaminhado?`,
+        n=>`${n}, se a proposta fizer sentido, esse é o melhor momento para fechar antes que os valores mudem. Posso contar com você?`,
+        n=>`${n}, nossa parceria é importante para mim. Se faltou algo na proposta para você fechar, me fala que eu dou um jeito agora.`
+      ]
+    ]
+  },
   aguarda_colecao: {
-    label: '🗓️ Aguarda coleção',
+    label: '🗓️ Aguardando coleção',
     cadenciaRelativa: [0.75, 0.92, 1.0],
     gatilhos: GATILHOS_LABELS,
     msgs: [
@@ -8904,14 +8932,18 @@ document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('cli
 
 // ===== MOTIVOS PERSONALIZADOS + DRAG AND DROP =====
 
-const MOTIVOS_DEFAULT_ORDER = ['fechou_pedido','estoque_alto','mercado_parado','produto_nao_girou','aguardando_giro','prazo_pagamento','aguarda_colecao','comprou_concorrente','inadimplente','fechado','nao_vai_comprar'];
+const MOTIVOS_DEFAULT_ORDER = ['fechou_pedido','estoque_alto','comprou_concorrente','mercado_parado','prazo_pagamento','aguardando_proposta','aguardando_giro','aguarda_colecao','nao_vai_comprar','inadimplente','fechado'];
 
 function getMotivosOrdem() {
   const key = 'cv_motivos_ordem_' + (usuarioAtual?.email || '');
-  // Remove 'outra_marca' (aposentado — redundante com 'comprou_concorrente'),
-  // inclusive de ordens já salvas. A definição segue em MOTIVOS_BASE para o
-  // histórico antigo continuar calculando normalmente.
-  return (getData(key) || MOTIVOS_DEFAULT_ORDER).filter(m => m !== 'outra_marca');
+  // Aposentados (somem dos botões/config). A definição segue em MOTIVOS_BASE
+  // para o histórico antigo continuar calculando normalmente.
+  const RETIRADOS = ['outra_marca', 'produto_nao_girou'];
+  const salva = getData(key) || MOTIVOS_DEFAULT_ORDER;
+  const ordem = salva.filter(m => !RETIRADOS.includes(m));
+  // Garante que motivos novos (ex.: aguardando_proposta) apareçam mesmo para quem já tinha ordem salva.
+  MOTIVOS_DEFAULT_ORDER.forEach(m => { if (!ordem.includes(m)) ordem.push(m); });
+  return ordem;
 }
 
 // ===== IMPORTAÇÃO DE CLIENTES =====

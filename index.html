@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
+<!-- O cache é gerenciado pelo service worker (sw.js): HTML sempre busca a versão
+     nova quando online e usa o cache só como reserva quando está sem internet. -->
 <title>Carteira Viva</title>
 
 <!-- PWA meta tags -->
@@ -111,6 +110,29 @@
     document.head.appendChild(mlink);
   });
 })();
+</script>
+
+<script>
+// ===== SERVICE WORKER (offline na estrada) =====
+// Registra o sw.js, que cacheia o app + libs para abrir mesmo sem internet.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js')
+      .then(function(reg) {
+        // Quando uma versão nova for detectada, ativa assim que estiver pronta.
+        reg.addEventListener('updatefound', function() {
+          var sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', function() {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+              reg.waiting && reg.waiting.postMessage('skipWaiting');
+            }
+          });
+        });
+      })
+      .catch(function(e) { console.log('[SW] registro falhou:', e); });
+  });
+}
 </script>
 <style>
   :root {
@@ -2450,35 +2472,99 @@ async function _sbPull() {
   } catch(e) {}
 }
 
-async function _sbPushClientes() {
-  if (!_sbUserId || !navigator.onLine || !usuarioAtual) return;
-  try {
+// ===== SYNC ROBUSTO (debounce + status visível + reenvio de pendentes) =====
+// Em vez de subir a cada gravação e engolir erros em silêncio, agrupamos as
+// gravações (debounce) e mostramos um status real. O que não conseguir subir
+// fica marcado como "pendente" e é reenviado sozinho quando a internet voltar.
+const _SB_DIRTY_KEY = 'cv_sb_dirty';
+const _sbTimers = {};
+let _sbStatusTimer = null;
+let _sbEmErro = false;
+
+function _sbDirty() { return getData(_SB_DIRTY_KEY) || {}; }
+function _sbMarcarDirty(tabela, sujo) {
+  const d = _sbDirty();
+  if (sujo) d[tabela] = true; else delete d[tabela];
+  setData(_SB_DIRTY_KEY, d);
+}
+
+// Indicador visível de sincronização (reaproveita o #sb-status do header).
+function _sbStatusSync(estado) {
+  const el = document.getElementById('sb-status');
+  if (!el) return;
+  clearTimeout(_sbStatusTimer);
+  const mapa = {
+    salvando: { txt: '☁️ Salvando…', cor: 'var(--texto2)', fixo: true },
+    ok:       { txt: '✅ Tudo salvo na nuvem', cor: 'var(--verde)', fixo: false },
+    erro:     { txt: '⚠️ Salvo no aparelho — sincroniza quando a internet voltar', cor: 'var(--amarelo)', fixo: true },
+    offline:  { txt: '📴 Sem internet — salvo no aparelho', cor: 'var(--amarelo)', fixo: true }
+  }[estado];
+  if (!mapa) return;
+  el.textContent = mapa.txt;
+  el.style.color = mapa.cor;
+  el.style.display = 'block';
+  if (!mapa.fixo) _sbStatusTimer = setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+// Sobe de fato uma tabela para o Supabase (lança erro se falhar).
+const _SB_PUSHERS = {
+  clientes: async () => {
     const dados = getData('cv_clientes_' + usuarioAtual.email) || [];
-    const ts = new Date().toISOString();
-    await _sb.from('clientes').upsert({ user_id: _sbUserId, dados, atualizado_em: ts });
+    const { error } = await _sb.from('clientes').upsert({ user_id: _sbUserId, dados, atualizado_em: new Date().toISOString() });
+    if (error) throw error;
     setData('cv_clientes_' + usuarioAtual.email + '_ts', Date.now());
-  } catch(e) {}
-}
-
-async function _sbPushConfig() {
-  if (!_sbUserId || !navigator.onLine || !usuarioAtual) return;
-  try {
+  },
+  config: async () => {
     const dados = { ...(getData('cv_config_' + usuarioAtual.email) || {}), _nomeRep: usuarioAtual.nome };
-    const ts = new Date().toISOString();
-    await _sb.from('config').upsert({ user_id: _sbUserId, dados, atualizado_em: ts });
+    const { error } = await _sb.from('config').upsert({ user_id: _sbUserId, dados, atualizado_em: new Date().toISOString() });
+    if (error) throw error;
     setData('cv_config_' + usuarioAtual.email + '_ts', Date.now());
-  } catch(e) {}
+  },
+  despesas: async () => {
+    const dados = getData('cv_despesas_' + usuarioAtual.email) || [];
+    const { error } = await _sb.from('despesas').upsert({ user_id: _sbUserId, dados, atualizado_em: new Date().toISOString() });
+    if (error) throw error;
+    setData('cv_despesas_' + usuarioAtual.email + '_ts', Date.now());
+  }
+};
+
+async function _sbExecutarPush(tabela) {
+  if (!usuarioAtual || !_SB_PUSHERS[tabela]) return;
+  _sbMarcarDirty(tabela, true); // registra como pendente até confirmar a subida
+  if (!_sbUserId || !navigator.onLine) { _sbStatusSync(navigator.onLine ? 'erro' : 'offline'); return; }
+  _sbStatusSync('salvando');
+  try {
+    await _SB_PUSHERS[tabela]();
+    _sbMarcarDirty(tabela, false);
+    _sbEmErro = false;
+    if (Object.keys(_sbDirty()).length === 0) _sbStatusSync('ok');
+  } catch (e) {
+    console.log('[SB] push falhou (' + tabela + '):', e?.message || e);
+    _sbStatusSync('erro');
+    if (!_sbEmErro) { _sbEmErro = true; toast('⚠️ Sem conexão com a nuvem — seus dados estão salvos no aparelho.'); }
+    // Reenvia automaticamente em 20s
+    clearTimeout(_sbTimers['retry_' + tabela]);
+    _sbTimers['retry_' + tabela] = setTimeout(() => _sbExecutarPush(tabela), 20000);
+  }
 }
 
-async function _sbPushDespesas() {
-  if (!_sbUserId || !navigator.onLine || !usuarioAtual) return;
-  try {
-    const dados = getData('cv_despesas_' + usuarioAtual.email) || [];
-    const ts = new Date().toISOString();
-    await _sb.from('despesas').upsert({ user_id: _sbUserId, dados, atualizado_em: ts });
-    setData('cv_despesas_' + usuarioAtual.email + '_ts', Date.now());
-  } catch(e) {}
+// Agenda a subida com debounce: várias edições seguidas viram uma única chamada.
+function _sbAgendarPush(tabela) {
+  _sbMarcarDirty(tabela, true);
+  clearTimeout(_sbTimers[tabela]);
+  _sbTimers[tabela] = setTimeout(() => _sbExecutarPush(tabela), 1500);
 }
+
+// Reenvia tudo que ficou pendente (ao voltar a internet e no carregamento).
+function _sbReenviarPendentes() {
+  if (!_sbUserId || !navigator.onLine) return;
+  Object.keys(_sbDirty()).forEach(tabela => _sbExecutarPush(tabela));
+}
+
+// Wrappers mantidos para compatibilidade com o resto do código.
+function _sbPushClientes() { _sbAgendarPush('clientes'); }
+function _sbPushConfig()   { _sbAgendarPush('config'); }
+function _sbPushDespesas() { _sbAgendarPush('despesas'); }
 
 async function _sbSincronizarInicial() {
   if (!_sbUserId || !navigator.onLine || !usuarioAtual) return;
@@ -2489,8 +2575,7 @@ async function _sbSincronizarInicial() {
     if (!cRow) {
       // Supabase está vazio — sobe tudo do localStorage
       console.log('[SB] Supabase vazio, subindo dados locais...');
-      await Promise.all([_sbPushClientes(), _sbPushConfig(), _sbPushDespesas()]);
-      _sbSetStatus('☁️ Dados enviados para nuvem!');
+      await Promise.all([_sbExecutarPush('clientes'), _sbExecutarPush('config'), _sbExecutarPush('despesas')]);
       console.log('[SB] Sincronização inicial concluída');
     } else {
       // Já tem dados — faz pull normal (pega o mais recente)
@@ -3197,14 +3282,50 @@ function getConfig() {
 function salvarConfigData(cfg) { setData('cv_config_' + usuarioAtual.email, cfg); _sbPushConfig(); }
 
 // ===== AUTH =====
-function fazerLogin() {
+// Segurança: a senha NUNCA é guardada em texto puro. Guardamos só um hash
+// derivado (PBKDF2 + salt) para validar o login offline. Com internet, o
+// Supabase é a autoridade real da senha.
+function _gerarSalt() {
+  const a = new Uint8Array(16);
+  crypto.getRandomValues(a);
+  return Array.from(a).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function _hashSenha(senha, saltHex) {
+  const enc = new TextEncoder();
+  const salt = Uint8Array.from(saltHex.match(/.{2}/g).map(h => parseInt(h, 16)));
+  const key = await crypto.subtle.importKey('raw', enc.encode(senha), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, key, 256);
+  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+// Salva o usuário local já com a senha protegida (apaga qualquer texto puro).
+async function _salvarUsuarioSeguro(email, nome, senha) {
+  const usuarios = getUsuarios();
+  const salt = _gerarSalt();
+  const senhaHash = await _hashSenha(senha, salt);
+  usuarios[email] = { nome, salt, senhaHash };
+  setData('cv_usuarios', usuarios);
+}
+async function _verificarSenhaLocal(senha, usuario) {
+  if (!usuario) return false;
+  // Compatibilidade: usuário antigo ainda com senha em texto puro → valida e migra depois.
+  if (usuario.senha && !usuario.senhaHash) return usuario.senha === senha;
+  if (!usuario.salt || !usuario.senhaHash) return false;
+  const h = await _hashSenha(senha, usuario.salt);
+  return h === usuario.senhaHash;
+}
+
+async function fazerLogin() {
   const email = document.getElementById('login-email').value.trim();
   const senha = document.getElementById('login-senha').value;
   if (!email || !senha) { toast('Preencha email e senha'); return; }
   const usuarios = getUsuarios();
   if (usuarios[email]) {
-    if (usuarios[email].senha !== senha) { toast('Senha incorreta'); return; }
-    usuarioAtual = { email, nome: usuarios[email].nome };
+    const ok = await _verificarSenhaLocal(senha, usuarios[email]);
+    if (!ok) { toast('Senha incorreta'); return; }
+    const nome = usuarios[email].nome;
+    // Migra/atualiza para o formato seguro (remove qualquer senha em texto puro).
+    await _salvarUsuarioSeguro(email, nome, senha);
+    usuarioAtual = { email, nome };
     setData('cv_session', usuarioAtual);
     irPara('dashboard');
     _sbAuth(email, senha);
@@ -3226,10 +3347,8 @@ async function _sbRecuperarLogin(email, senha) {
     const { data: cfgRow } = await _sb.from('config').select('dados').eq('user_id', _sbUserId).maybeSingle();
     const nome = cfgRow?.dados?._nomeRep || email.split('@')[0];
 
-    // Reconstrói o usuário local
-    const usuarios = getUsuarios();
-    usuarios[email] = { nome, senha };
-    setData('cv_usuarios', usuarios);
+    // Reconstrói o usuário local (senha protegida, sem texto puro)
+    await _salvarUsuarioSeguro(email, nome, senha);
     usuarioAtual = { email, nome };
     setData('cv_session', usuarioAtual);
 
@@ -3268,8 +3387,7 @@ async function fazerCadastro() {
     return;
   }
 
-  usuarios[email] = { nome, senha };
-  setData('cv_usuarios', usuarios);
+  await _salvarUsuarioSeguro(email, nome, senha);
   usuarioAtual = { email, nome };
   setData('cv_session', usuarioAtual);
   irPara('dashboard');
@@ -3596,13 +3714,9 @@ async function aplicarNovaSenha() {
     const { error } = await _sb.auth.updateUser({ password: nova });
     if (error) { toast('Erro ao salvar senha: ' + error.message); return; }
 
-    // Atualiza também no localStorage local
-    if (usuarioAtual) {
-      const usuarios = getUsuarios();
-      if (usuarios[usuarioAtual.email]) {
-        usuarios[usuarioAtual.email].senha = nova;
-        setData('cv_usuarios', usuarios);
-      }
+    // Atualiza o hash local (sem guardar a senha em texto puro)
+    if (usuarioAtual && getUsuarios()[usuarioAtual.email]) {
+      await _salvarUsuarioSeguro(usuarioAtual.email, usuarioAtual.nome, nova);
     }
 
     fecharModal('modal-nova-senha');
@@ -9343,9 +9457,12 @@ function ajustarAlturaListaMotivos() {
       if (sbSession?.user) {
         _sbUserId = sbSession.user.id;
         setTimeout(_sbPull, 1200);
+        setTimeout(_sbReenviarPendentes, 2500); // reenvia o que ficou pendente da sessão anterior
       } else {
-        const u = getUsuarios()[session.email];
-        if (u) _sbAuth(session.email, u.senha);
+        // Sessão da nuvem expirou. Por segurança não guardamos a senha para
+        // reautenticar sozinho — o rep segue trabalhando local/offline e a
+        // nuvem reativa no próximo login manual.
+        _sbSetStatus('⚠️ Entre novamente para reativar a nuvem');
       }
     }).catch(() => {});
   } else {
@@ -9357,7 +9474,7 @@ function ajustarAlturaListaMotivos() {
   window.addEventListener('online', () => {
     toast('🌐 Conexão restaurada!');
     setTimeout(verificarEnderecosPendentes, 1500);
-    if (_sbUserId) setTimeout(_sbPull, 2000);
+    if (_sbUserId) { setTimeout(_sbPull, 2000); setTimeout(_sbReenviarPendentes, 2500); }
   });
 })();
 </script>

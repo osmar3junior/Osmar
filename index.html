@@ -2445,13 +2445,19 @@ async function _sbPull() {
       _sb.from('despesas').select('dados,atualizado_em').eq('user_id', _sbUserId).maybeSingle()
     ]);
     let atualizou = false;
-    if (rc.data) {
-      const sbTs = new Date(rc.data.atualizado_em).getTime();
-      if (sbTs > (getData('cv_clientes_' + email + '_ts') || 0)) {
-        setData('cv_clientes_' + email, rc.data.dados);
-        setData('cv_clientes_' + email + '_ts', sbTs);
+    {
+      // Merge cliente a cliente (não sobrescreve): junta local + nuvem por _mod.
+      const remoto = (rc.data && rc.data.dados) || [];
+      const local = getData('cv_clientes_' + email) || [];
+      const merged = _mergeClientes(local, remoto);
+      if (JSON.stringify(merged) !== JSON.stringify(local)) {
+        setData('cv_clientes_' + email, merged);
+        _rebuildSnapshotClientes(merged);
         _invalidarCacheClientes();
         atualizou = true;
+      }
+      if (JSON.stringify(merged) !== JSON.stringify(remoto)) {
+        _sbAgendarPush('clientes'); // a nuvem estava desatualizada → sobe o merge
       }
     }
     if (rf.data) {
@@ -2511,10 +2517,19 @@ function _sbStatusSync(estado) {
 // Sobe de fato uma tabela para o Supabase (lança erro se falhar).
 const _SB_PUSHERS = {
   clientes: async () => {
-    const dados = getData('cv_clientes_' + usuarioAtual.email) || [];
-    const { error } = await _sb.from('clientes').upsert({ user_id: _sbUserId, dados, atualizado_em: new Date().toISOString() });
-    if (error) throw error;
-    setData('cv_clientes_' + usuarioAtual.email + '_ts', Date.now());
+    const email = usuarioAtual.email;
+    const local = getData('cv_clientes_' + email) || [];
+    // Baixa o que está na nuvem e junta cliente a cliente antes de subir (merge).
+    const { data: row, error: e1 } = await _sb.from('clientes').select('dados').eq('user_id', _sbUserId).maybeSingle();
+    if (e1) throw e1;
+    const remoto = (row && row.dados) || [];
+    const merged = _mergeClientes(local, remoto);
+    const mudouLocal = JSON.stringify(merged) !== JSON.stringify(local);
+    if (mudouLocal) { setData('cv_clientes_' + email, merged); _rebuildSnapshotClientes(merged); _invalidarCacheClientes(); }
+    const { error: e2 } = await _sb.from('clientes').upsert({ user_id: _sbUserId, dados: merged, atualizado_em: new Date().toISOString() });
+    if (e2) throw e2;
+    setData('cv_clientes_' + email + '_ts', Date.now());
+    if (mudouLocal) _sbDepoisDeMerge();
   },
   config: async () => {
     const dados = { ...(getData('cv_config_' + usuarioAtual.email) || {}), _nomeRep: usuarioAtual.nome };
@@ -2617,17 +2632,22 @@ function getUsuarios() { return getData('cv_usuarios') || {}; }
 // um fazendo JSON.parse do localStorage. Aqui guardamos o resultado em memória,
 // com chave por e-mail (troca de usuário invalida sozinho) e invalidação
 // explícita sempre que os dados são gravados (ver _invalidarCache*).
-let _cacheClientes = null, _cacheClientesEmail = null;
+let _cacheClientesRaw = null, _cacheClientesEmail = null;
 let _cacheConfig = null, _cacheConfigEmail = null;
-function _invalidarCacheClientes() { _cacheClientes = null; _cacheClientesEmail = null; }
+function _invalidarCacheClientes() { _cacheClientesRaw = null; _cacheClientesEmail = null; }
 function _invalidarCacheConfig() { _cacheConfig = null; _cacheConfigEmail = null; }
 
-function getClientes() {
+// RAW inclui tombstones (clientes excluídos, marcados com _del). Uso interno (sync/save).
+function getClientesRaw() {
   if (!usuarioAtual) return [];
-  if (_cacheClientes && _cacheClientesEmail === usuarioAtual.email) return _cacheClientes;
-  _cacheClientes = getData('cv_clientes_' + usuarioAtual.email) || [];
+  if (_cacheClientesRaw && _cacheClientesEmail === usuarioAtual.email) return _cacheClientesRaw;
+  _cacheClientesRaw = getData('cv_clientes_' + usuarioAtual.email) || [];
   _cacheClientesEmail = usuarioAtual.email;
-  return _cacheClientes;
+  return _cacheClientesRaw;
+}
+// Versão para a UI: esconde os clientes excluídos (tombstones).
+function getClientes() {
+  return getClientesRaw().filter(c => !c._del);
 }
 // Base ATIVA = clientes que não estão no arquivo (fechados/inadimplentes saem daqui)
 function getClientesAtivos() { return getClientes().filter(c => !c.statusArquivo); }
@@ -3299,7 +3319,67 @@ function excluirLog(tipo, id) {
   toast('🗑️ Removido');
 }
 
-function salvarClientes(c) { setData('cv_clientes_' + usuarioAtual.email, c); _invalidarCacheClientes(); _sbPushClientes(); }
+// ===== MERGE MULTI-DISPOSITIVO (cliente a cliente) =====
+// Cada cliente carrega um carimbo _mod (ms). Ao sincronizar, juntamos local +
+// nuvem por id: o _mod mais recente vence. Excluir vira tombstone (_del), para a
+// exclusão se propagar entre aparelhos.
+function _hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0; } return h; }
+function _hashCli(c) { const { _mod, ...rest } = c; return _hashStr(JSON.stringify(rest)); }
+function _modBase(c) {
+  const ts = [c.criadoEm, c.arquivadoEm, c.dataRetornoCustom, c.historico && c.historico[0] && c.historico[0].data]
+    .filter(Boolean).map(d => new Date(d).getTime()).filter(n => !isNaN(n));
+  return ts.length ? Math.max(...ts) : 0;
+}
+function _modDe(c) { return (typeof c._mod === 'number' && c._mod) || _modBase(c); }
+function _rebuildSnapshotClientes(arr) {
+  if (!usuarioAtual) return;
+  const snap = {}; arr.forEach(c => { if (c && c.id) snap[c.id] = _hashCli(c); });
+  setData('cv_cli_snap_' + usuarioAtual.email, snap);
+}
+function _mergeClientes(local, remoto) {
+  const map = new Map();
+  (local || []).forEach(c => { if (c && c.id) map.set(c.id, c); });
+  (remoto || []).forEach(c => {
+    if (!c || !c.id) return;
+    const ex = map.get(c.id);
+    if (!ex || _modDe(c) > _modDe(ex)) map.set(c.id, c); // mais recente vence; empate fica com o local
+  });
+  return [...map.values()];
+}
+// Atualiza a UI quando um merge trouxe mudanças da nuvem.
+function _sbDepoisDeMerge() {
+  try {
+    const dash = document.getElementById('tela-dashboard');
+    const cli  = document.getElementById('tela-clientes');
+    if (dash && dash.classList.contains('ativa')) { atualizarDashboard(); renderizarClientes(); _atualizarBadgeNotif(); }
+    else if (cli && cli.classList.contains('ativa')) { renderizarClientes(document.getElementById('busca-cliente')?.value || ''); }
+  } catch (e) {}
+}
+
+function salvarClientes(c) {
+  if (!usuarioAtual) return;
+  const email = usuarioAtual.email;
+  const raw = getData('cv_clientes_' + email) || [];
+  // Baseline do snapshot = estado atual ANTES desta gravação (1ª vez).
+  let snap = getData('cv_cli_snap_' + email);
+  if (!snap) { snap = {}; raw.forEach(x => { if (x && x.id) snap[x.id] = _hashCli(x); }); }
+  // Preserva tombstones que não vieram no array recebido (exclusões anteriores).
+  const ids = new Set(c.map(x => x && x.id));
+  const tomb = raw.filter(x => x && x._del && !ids.has(x.id));
+  const arr = c.concat(tomb);
+  // Carimba _mod nos clientes novos/modificados (diff contra o snapshot).
+  const agora = Date.now();
+  arr.forEach(cl => {
+    if (!cl || !cl.id) return;
+    const h = _hashCli(cl);
+    if (snap[cl.id] !== h) cl._mod = agora;          // novo ou modificado
+    else if (cl._mod == null) cl._mod = _modBase(cl); // legado: dá um baseline
+  });
+  setData('cv_clientes_' + email, arr);
+  _rebuildSnapshotClientes(arr);
+  _invalidarCacheClientes();
+  _sbPushClientes();
+}
 function getConfig() {
   const email = usuarioAtual?.email || '';
   if (_cacheConfig && _cacheConfigEmail === email) return _cacheConfig;
@@ -7016,8 +7096,11 @@ function salvarEdicaoCliente() {
 
 function confirmarExcluirCliente() {
   if (!confirm('Excluir este cliente e todo o histórico? Essa ação não pode ser desfeita.')) return;
-  const clientes = getClientes().filter(c => c.id !== clienteAtualId);
-  salvarClientes(clientes);
+  // Tombstone: marca como excluído (não remove) para a exclusão propagar entre aparelhos.
+  const raw = getClientesRaw();
+  const cl = raw.find(c => c.id === clienteAtualId);
+  if (cl) { cl._del = true; cl._mod = Date.now(); }
+  salvarClientes(raw);
   fecharModal('modal-editar-cliente');
   irPara(telaAnteriorDetalhe);
   toast('Cliente excluído');

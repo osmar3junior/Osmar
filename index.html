@@ -1383,6 +1383,18 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="config-secao">
+      <div class="config-secao-titulo">🔐 Senha de acesso</div>
+      <div class="config-secao-sub">Troque sua senha quando quiser. Informe a senha atual, escolha a nova e confirme.</div>
+      <input type="password" class="campo-input" id="cfg-senha-atual" placeholder="Senha atual" autocomplete="current-password" style="margin-top:4px;">
+      <input type="password" class="campo-input" id="cfg-senha-nova" placeholder="Nova senha (mínimo 6 caracteres)" autocomplete="new-password" style="margin-top:10px;">
+      <input type="password" class="campo-input" id="cfg-senha-conf" placeholder="Confirmar nova senha" autocomplete="new-password" style="margin-top:10px;">
+      <button class="btn-primario" id="btn-alterar-senha" onclick="alterarSenha()" style="margin-top:12px;">🔐 Alterar senha</button>
+      <div style="text-align:center;margin-top:10px;">
+        <a onclick="abrirEsqueciSenha()" style="font-size:12px;color:var(--texto2);cursor:pointer;text-decoration:underline;">Esqueceu a senha atual?</a>
+      </div>
+    </div>
+
+    <div class="config-secao">
       <div class="config-secao-titulo">📥 Importar base de clientes</div>
       <div class="config-secao-sub">Traga sua carteira completa de uma vez — clientes, marcas e histórico de pedidos. Opcional.</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 8px;">
@@ -2504,8 +2516,9 @@ function _sbStatusSync(estado) {
   const mapa = {
     salvando: { txt: '☁️ Salvando…', cor: 'var(--texto2)', fixo: true },
     ok:       { txt: '✅ Tudo salvo na nuvem', cor: 'var(--verde)', fixo: false },
-    erro:     { txt: '⚠️ Salvo no aparelho — sincroniza quando a internet voltar', cor: 'var(--amarelo)', fixo: true },
-    offline:  { txt: '📴 Sem internet — salvo no aparelho', cor: 'var(--amarelo)', fixo: true }
+    erro:     { txt: '⚠️ Salvo no aparelho — tentando sincronizar de novo…', cor: 'var(--amarelo)', fixo: true },
+    offline:  { txt: '📴 Sem internet — salvo no aparelho', cor: 'var(--amarelo)', fixo: true },
+    semnuvem: { txt: '⚠️ Nuvem desconectada — saia e entre de novo para sincronizar', cor: 'var(--amarelo)', fixo: true }
   }[estado];
   if (!mapa) return;
   el.textContent = mapa.txt;
@@ -2545,10 +2558,33 @@ const _SB_PUSHERS = {
   }
 };
 
+// Tenta recuperar a sessão do Supabase sem pedir senha (ela fica salva pelo
+// próprio Supabase). Só falha se o login realmente expirou/foi encerrado.
+async function _sbGarantirSessao() {
+  if (_sbUserId) return true;
+  try {
+    const { data } = await _sb.auth.getSession();
+    if (data && data.session && data.session.user) {
+      _sbUserId = data.session.user.id;
+      return true;
+    }
+  } catch (e) { console.log('[SB] getSession falhou:', e?.message || e); }
+  return false;
+}
+
+// Revisão periódica: mantém a sessão viva e sobe pendentes se houver.
+async function _sbManterSessao() {
+  if (!usuarioAtual || !navigator.onLine) return;
+  const ok = await _sbGarantirSessao();
+  if (ok && Object.keys(_sbDirty()).length) _sbReenviarPendentes();
+}
+
 async function _sbExecutarPush(tabela) {
   if (!usuarioAtual || !_SB_PUSHERS[tabela]) return;
   _sbMarcarDirty(tabela, true); // registra como pendente até confirmar a subida
-  if (!_sbUserId || !navigator.onLine) { _sbStatusSync(navigator.onLine ? 'erro' : 'offline'); return; }
+  if (!navigator.onLine) { _sbStatusSync('offline'); return; }
+  // Sem sessão ativa? Tenta reconectar sozinho antes de reclamar.
+  if (!_sbUserId && !(await _sbGarantirSessao())) { _sbStatusSync('semnuvem'); return; }
   _sbStatusSync('salvando');
   try {
     await _SB_PUSHERS[tabela]();
@@ -2558,7 +2594,7 @@ async function _sbExecutarPush(tabela) {
   } catch (e) {
     console.log('[SB] push falhou (' + tabela + '):', e?.message || e);
     _sbStatusSync('erro');
-    if (!_sbEmErro) { _sbEmErro = true; toast('⚠️ Sem conexão com a nuvem — seus dados estão salvos no aparelho.'); }
+    if (!_sbEmErro) { _sbEmErro = true; toast('⚠️ Não consegui sincronizar agora — seus dados estão salvos no aparelho.'); }
     // Reenvia automaticamente em 20s
     clearTimeout(_sbTimers['retry_' + tabela]);
     _sbTimers['retry_' + tabela] = setTimeout(() => _sbExecutarPush(tabela), 20000);
@@ -2573,8 +2609,9 @@ function _sbAgendarPush(tabela) {
 }
 
 // Reenvia tudo que ficou pendente (ao voltar a internet e no carregamento).
-function _sbReenviarPendentes() {
-  if (!_sbUserId || !navigator.onLine) return;
+async function _sbReenviarPendentes() {
+  if (!navigator.onLine) return;
+  if (!_sbUserId && !(await _sbGarantirSessao())) return;
   Object.keys(_sbDirty()).forEach(tabela => _sbExecutarPush(tabela));
 }
 
@@ -3796,7 +3833,8 @@ function mostrarLogin() { document.getElementById('form-cadastro').style.display
 
 // ===== RECUPERAÇÃO DE SENHA =====
 function abrirEsqueciSenha() {
-  const email = document.getElementById('login-email').value.trim();
+  // Prefere o e-mail digitado no login; se vier das Configurações (rep já logado), usa o dele.
+  const email = document.getElementById('login-email').value.trim() || (usuarioAtual && usuarioAtual.email) || '';
   if (email) document.getElementById('reset-email').value = email;
   document.getElementById('modal-esqueci-senha').classList.add('aberto');
 }
@@ -3834,6 +3872,49 @@ async function aplicarNovaSenha() {
     toast('✅ Senha atualizada com sucesso!');
     irPara('dashboard');
   } catch(e) { toast('Erro ao salvar senha.'); }
+}
+
+// Troca de senha dentro do app (Configurações): confere a senha atual,
+// atualiza no Supabase e regrava o hash local. Sem texto puro.
+async function alterarSenha() {
+  if (!usuarioAtual) return;
+  const atual = document.getElementById('cfg-senha-atual').value;
+  const nova  = document.getElementById('cfg-senha-nova').value;
+  const conf  = document.getElementById('cfg-senha-conf').value;
+  if (!atual || !nova || !conf) { toast('Preencha os três campos de senha'); return; }
+  if (nova.length < 6)  { toast('A nova senha precisa ter 6+ caracteres'); return; }
+  if (nova !== conf)    { toast('A confirmação não bate com a nova senha'); return; }
+  if (nova === atual)   { toast('A nova senha é igual à atual'); return; }
+
+  // Confere a senha atual contra o hash local.
+  const u = getUsuarios()[usuarioAtual.email];
+  if (!(await _verificarSenhaLocal(atual, u))) { toast('Senha atual incorreta'); return; }
+
+  const btn = document.getElementById('btn-alterar-senha');
+  const txtOrig = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Alterando...';
+  const restaurar = () => { btn.disabled = false; btn.textContent = txtOrig; };
+
+  try {
+    // Precisa de sessão ativa na nuvem para atualizar a senha no Supabase.
+    if (!_sbUserId && !(await _sbGarantirSessao())) {
+      toast('Conecte-se à nuvem primeiro. Saia e entre novamente para sincronizar.');
+      restaurar(); return;
+    }
+    const { error } = await _sb.auth.updateUser({ password: nova });
+    if (error) { toast('Não consegui alterar: ' + (error.message || 'tente de novo')); restaurar(); return; }
+
+    // Só atualiza o hash local DEPOIS que o Supabase confirmou (evita desencontro).
+    await _salvarUsuarioSeguro(usuarioAtual.email, usuarioAtual.nome, nova);
+    document.getElementById('cfg-senha-atual').value = '';
+    document.getElementById('cfg-senha-nova').value = '';
+    document.getElementById('cfg-senha-conf').value = '';
+    await _sbLogEvento('redefiniu_senha', usuarioAtual.email);
+    toast('✅ Senha alterada com sucesso!');
+  } catch (e) {
+    toast('Erro ao alterar a senha. Verifique sua conexão.');
+  }
+  restaurar();
 }
 
 async function _sbLogEvento(tipo, email_rep) {
@@ -9592,8 +9673,24 @@ function ajustarAlturaListaMotivos() {
   window.addEventListener('online', () => {
     toast('🌐 Conexão restaurada!');
     setTimeout(verificarEnderecosPendentes, 1500);
-    if (_sbUserId) { setTimeout(_sbPull, 2000); setTimeout(_sbReenviarPendentes, 2500); }
+    setTimeout(() => { if (_sbUserId) _sbPull(); }, 2000);
+    setTimeout(_sbReenviarPendentes, 2500); // já recupera a sessão sozinho se precisar
   });
+
+  // Mantém a sessão da nuvem sempre viva:
+  // 1) Reage a mudanças de autenticação (token renovado, sessão restaurada, logout).
+  try {
+    _sb.auth.onAuthStateChange((event, session) => {
+      if (session && session.user) {
+        _sbUserId = session.user.id;
+        if (navigator.onLine) _sbReenviarPendentes();
+      } else if (event === 'SIGNED_OUT') {
+        _sbUserId = null;
+      }
+    });
+  } catch (e) {}
+  // 2) Revisão de segurança a cada 4 minutos (caso algo escape do evento).
+  setInterval(_sbManterSessao, 240000);
 })();
 </script>
 </body>

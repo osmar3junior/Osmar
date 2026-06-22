@@ -3383,11 +3383,19 @@ function excluirLog(tipo, id) {
 function _hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0; } return h; }
 function _hashCli(c) { const { _mod, ...rest } = c; return _hashStr(JSON.stringify(rest)); }
 function _modBase(c) {
-  const ts = [c.criadoEm, c.arquivadoEm, c.dataRetornoCustom, c.historico && c.historico[0] && c.historico[0].data]
+  // Só timestamps de eventos PASSADOS (quando o cliente foi mexido).
+  // NUNCA usar dataRetornoCustom aqui: é uma data FUTURA de agenda e inflaria o
+  // "modificado em", fazendo o merge reverter edições recentes do rep.
+  const ts = [c.criadoEm, c.arquivadoEm, c.historico && c.historico[0] && c.historico[0].data]
     .filter(Boolean).map(d => new Date(d).getTime()).filter(n => !isNaN(n));
   return ts.length ? Math.max(...ts) : 0;
 }
-function _modDe(c) { return (typeof c._mod === 'number' && c._mod) || _modBase(c); }
+function _modDe(c) {
+  let v = (typeof c._mod === 'number' && c._mod) ? c._mod : _modBase(c);
+  // Corrige carimbos no futuro gravados pela versão anterior (bug da data de agenda).
+  if (v > Date.now() + 86400000) v = _modBase(c);
+  return v;
+}
 function _rebuildSnapshotClientes(arr) {
   if (!usuarioAtual) return;
   const snap = {}; arr.forEach(c => { if (c && c.id) snap[c.id] = _hashCli(c); });
@@ -3430,7 +3438,7 @@ function salvarClientes(c) {
     if (!cl || !cl.id) return;
     const h = _hashCli(cl);
     if (snap[cl.id] !== h) cl._mod = agora;          // novo ou modificado
-    else if (cl._mod == null) cl._mod = _modBase(cl); // legado: dá um baseline
+    else if (cl._mod == null || cl._mod > agora + 86400000) cl._mod = _modBase(cl); // legado/corrige carimbo no futuro
   });
   setData('cv_clientes_' + email, arr);
   _rebuildSnapshotClientes(arr);

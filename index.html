@@ -1142,17 +1142,6 @@ if ('serviceWorker' in navigator) {
 
       <div class="config-item">
         <div class="config-item-header">
-          <span class="config-item-label">🏷️ Comprou outra marca</span>
-        </div>
-        <div class="config-dias-wrap">
-          <span class="config-dias-label">Voltar em</span>
-          <input type="number" class="config-dias-input" id="cfg-outra_marca" min="1" max="180" value="35">
-          <span class="config-dias-unidade">dias</span>
-        </div>
-      </div>
-
-      <div class="config-item">
-        <div class="config-item-header">
           <span class="config-item-label">📉 Mercado parado</span>
         </div>
         <div class="config-dias-wrap">
@@ -2477,6 +2466,12 @@ if ('serviceWorker' in navigator) {
         <input type="tel" class="campo-input" id="onb-wpp" placeholder="(00) 00000-0000" style="margin:4px 0 14px;" oninput="mascaraTelefone(this)">
         <label class="campo-label">📧 Seu e-mail</label>
         <input type="email" class="campo-input" id="onb-email" placeholder="seu@email.com" style="margin-top:4px;">
+        <div style="font-size:11.5px;color:var(--texto3);margin-top:6px;display:flex;align-items:flex-start;gap:5px;">
+          <span style="color:var(--verde);">✓</span><span>Já preenchemos com o e-mail do seu login. É só conferir — troque se usar outro para relatórios.</span>
+        </div>
+      </div>
+      <div style="max-width:360px;margin:18px auto 0;background:linear-gradient(135deg,rgba(0,214,143,.08),rgba(56,189,248,.06));border:1px solid rgba(0,214,143,.25);border-radius:14px;padding:14px;">
+        <div style="font-size:13.5px;color:var(--texto);line-height:1.5;">💡 <strong>Quase pronto!</strong> Para o app trabalhar 100% a seu favor, depois entre em <strong>⚙️ Configurações</strong> e personalize os prazos de retorno, unidades e metas para a sua realidade. <span style="color:var(--verde);font-weight:700;">(recomendado)</span></div>
       </div>
       <div id="onb-video-4" style="display:none;text-align:center;margin-top:14px;"><a class="onb-video-link" target="_blank" style="font-size:13px;color:var(--verde);cursor:pointer;font-weight:600;">▶️ Ver como funciona (30s)</a></div>
     </div>
@@ -7487,7 +7482,8 @@ function iniciarOnboarding() {
   if (sa) sa.textContent = nm ? `Oi, ${esc(nm)}! 👋` : 'Bem-vindo! 👋';
   _onbRenderMarcas((cfg.marcas || []).filter(Boolean));
   document.getElementById('onb-wpp').value = cfg.wppRep ? cfg.wppRep.replace(/^55/, '') : '';
-  document.getElementById('onb-email').value = cfg.emailRep || '';
+  // Já preenche com o e-mail do login (o que ele usou para entrar) — não precisa digitar de novo.
+  document.getElementById('onb-email').value = cfg.emailRep || usuarioAtual?.email || '';
   _onbIrPasso(1);
   document.getElementById('onboarding').style.display = 'flex';
 }
@@ -8908,11 +8904,14 @@ document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('cli
 
 // ===== MOTIVOS PERSONALIZADOS + DRAG AND DROP =====
 
-const MOTIVOS_DEFAULT_ORDER = ['fechou_pedido','estoque_alto','outra_marca','mercado_parado','produto_nao_girou','aguardando_giro','prazo_pagamento','aguarda_colecao','comprou_concorrente','inadimplente','fechado','nao_vai_comprar'];
+const MOTIVOS_DEFAULT_ORDER = ['fechou_pedido','estoque_alto','mercado_parado','produto_nao_girou','aguardando_giro','prazo_pagamento','aguarda_colecao','comprou_concorrente','inadimplente','fechado','nao_vai_comprar'];
 
 function getMotivosOrdem() {
   const key = 'cv_motivos_ordem_' + (usuarioAtual?.email || '');
-  return getData(key) || MOTIVOS_DEFAULT_ORDER;
+  // Remove 'outra_marca' (aposentado — redundante com 'comprou_concorrente'),
+  // inclusive de ordens já salvas. A definição segue em MOTIVOS_BASE para o
+  // histórico antigo continuar calculando normalmente.
+  return (getData(key) || MOTIVOS_DEFAULT_ORDER).filter(m => m !== 'outra_marca');
 }
 
 // ===== IMPORTAÇÃO DE CLIENTES =====

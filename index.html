@@ -2450,6 +2450,7 @@ async function _sbPull() {
       if (sbTs > (getData('cv_clientes_' + email + '_ts') || 0)) {
         setData('cv_clientes_' + email, rc.data.dados);
         setData('cv_clientes_' + email + '_ts', sbTs);
+        _invalidarCacheClientes();
         atualizou = true;
       }
     }
@@ -2458,6 +2459,7 @@ async function _sbPull() {
       if (sbTs > (getData('cv_config_' + email + '_ts') || 0)) {
         setData('cv_config_' + email, rf.data.dados);
         setData('cv_config_' + email + '_ts', sbTs);
+        _invalidarCacheConfig();
         atualizou = true;
       }
     }
@@ -2602,8 +2604,31 @@ atualizarStatusConexao();
 // ===== STORAGE =====
 function getData(k) { try { return JSON.parse(localStorage.getItem(k)) || null; } catch { return null; } }
 function setData(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+// Escapa texto livre do usuário antes de injetar em innerHTML (evita que um
+// nome com < > " ' & quebre o layout ou um onclick). Não usar em textContent.
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+}
 function getUsuarios() { return getData('cv_usuarios') || {}; }
-function getClientes() { return usuarioAtual ? (getData('cv_clientes_' + usuarioAtual.email) || []) : []; }
+
+// ===== CACHE DE LEITURA (performance) =====
+// getConfig/getClientes eram chamados centenas de vezes por renderização, cada
+// um fazendo JSON.parse do localStorage. Aqui guardamos o resultado em memória,
+// com chave por e-mail (troca de usuário invalida sozinho) e invalidação
+// explícita sempre que os dados são gravados (ver _invalidarCache*).
+let _cacheClientes = null, _cacheClientesEmail = null;
+let _cacheConfig = null, _cacheConfigEmail = null;
+function _invalidarCacheClientes() { _cacheClientes = null; _cacheClientesEmail = null; }
+function _invalidarCacheConfig() { _cacheConfig = null; _cacheConfigEmail = null; }
+
+function getClientes() {
+  if (!usuarioAtual) return [];
+  if (_cacheClientes && _cacheClientesEmail === usuarioAtual.email) return _cacheClientes;
+  _cacheClientes = getData('cv_clientes_' + usuarioAtual.email) || [];
+  _cacheClientesEmail = usuarioAtual.email;
+  return _cacheClientes;
+}
 // Base ATIVA = clientes que não estão no arquivo (fechados/inadimplentes saem daqui)
 function getClientesAtivos() { return getClientes().filter(c => !c.statusArquivo); }
 function getClientesArquivados(tipo) { return getClientes().filter(c => c.statusArquivo && (!tipo || c.statusArquivo === tipo)); }
@@ -2665,8 +2690,8 @@ function renderizarArquivo() {
   cont.innerHTML = lista.map(c => `
     <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;margin-bottom:8px;">
       <div style="flex:1;min-width:0;cursor:pointer;" onclick="fecharModal('modal-arquivo');abrirDetalhe('${c.id}','dashboard')">
-        <div style="font-weight:700;font-size:15px;color:var(--texto);">${c.nome}</div>
-        <div style="font-size:12px;color:var(--texto2);">${c.loja}${c.cidade ? ' · ' + c.cidade : ''}</div>
+        <div style="font-weight:700;font-size:15px;color:var(--texto);">${esc(c.nome)}</div>
+        <div style="font-size:12px;color:var(--texto2);">${esc(c.loja)}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div>
         <div style="font-size:11px;color:${cor};margin-top:3px;">${rotulo}${c.arquivadoEm ? ' em ' + formatarData(c.arquivadoEm) : ''}</div>
       </div>
       <button onclick="reativarCliente('${c.id}')" title="Voltar para a base ativa" style="background:rgba(0,214,143,.15);border:1px solid rgba(0,214,143,.4);border-radius:10px;padding:9px 12px;color:var(--verde);font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:5px;">↩️ Reativar</button>
@@ -2767,7 +2792,7 @@ function mostrarSugestoesCidade(lista) {
   if (!lista.length) { fecharSugestoesCidade(); return; }
   box.innerHTML = lista.map(c =>
     `<div class="cidade-sugestao-item" onmousedown="selecionarCidade('${c.nome.replace(/'/g,"\\'")}','${c.uf}')">
-       <span style="flex:1;">📍 ${c.nome}</span>
+       <span style="flex:1;">📍 ${esc(c.nome)}</span>
        <span class="cidade-sugestao-uf">${c.uf}</span>
      </div>`
   ).join('');
@@ -3274,12 +3299,16 @@ function excluirLog(tipo, id) {
   toast('🗑️ Removido');
 }
 
-function salvarClientes(c) { setData('cv_clientes_' + usuarioAtual.email, c); _sbPushClientes(); }
+function salvarClientes(c) { setData('cv_clientes_' + usuarioAtual.email, c); _invalidarCacheClientes(); _sbPushClientes(); }
 function getConfig() {
+  const email = usuarioAtual?.email || '';
+  if (_cacheConfig && _cacheConfigEmail === email) return _cacheConfig;
   const def = { estoque_alto:21, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguarda_colecao:60, fechou_pedido:45, comprou_concorrente:30, inadimplente:15, fechado:60, nao_vai_comprar:90, dias_esquecidos:60, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''] };
-  return Object.assign(def, getData('cv_config_' + (usuarioAtual?.email || '')) || {});
+  _cacheConfig = Object.assign(def, getData('cv_config_' + email) || {});
+  _cacheConfigEmail = email;
+  return _cacheConfig;
 }
-function salvarConfigData(cfg) { setData('cv_config_' + usuarioAtual.email, cfg); _sbPushConfig(); }
+function salvarConfigData(cfg) { setData('cv_config_' + usuarioAtual.email, cfg); _invalidarCacheConfig(); _sbPushConfig(); }
 
 // ===== AUTH =====
 // Segurança: a senha NUNCA é guardada em texto puro. Guardamos só um hash
@@ -3513,7 +3542,7 @@ function abrirNotificacoes() {
       html += `<div onclick="fecharModal('modal-notificacoes');setTimeout(()=>_abrirGatilhoCliente('${c.id}'),200)" style="display:flex;align-items:flex-start;gap:10px;background:${bg};border:1px solid ${cor};border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='1'">
         <span style="font-size:20px;flex-shrink:0;">🏃</span>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:700;color:var(--texto);">${c.nome}${c.loja?' — '+c.loja:''}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--texto);">${esc(c.nome)}${c.loja?' — '+esc(c.loja):''}</div>
           <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${subtxt}${marcasBadges}</div>
         </div>
         <span style="color:var(--texto3);font-size:16px;align-self:center;">›</span>
@@ -4695,8 +4724,8 @@ function atualizarDashboard() {
         <div class="alerta-item" onclick="abrirDetalhe('${cliente.id}','dashboard')">
           <div class="alerta-dot dot-vermelho"></div>
           <div class="alerta-info">
-            <div class="alerta-nome">${cliente.nome}</div>
-            <div class="alerta-detalhe">${cliente.loja} · ${cliente.dataRetornoCustom ? '📌 Data personalizada' : getMotivoLabel(cliente.historico[0].motivo)}</div>
+            <div class="alerta-nome">${esc(cliente.nome)}</div>
+            <div class="alerta-detalhe">${esc(cliente.loja)} · ${cliente.dataRetornoCustom ? '📌 Data personalizada' : getMotivoLabel(cliente.historico[0].motivo)}</div>
           </div>
           <div class="alerta-seta">›</div>
         </div>`).join('');
@@ -4708,8 +4737,8 @@ function atualizarDashboard() {
         <div class="alerta-item" onclick="abrirDetalhe('${cliente.id}','dashboard')">
           <div class="alerta-dot dot-amarelo"></div>
           <div class="alerta-info">
-            <div class="alerta-nome">${cliente.nome}</div>
-            <div class="alerta-detalhe">${cliente.loja} · ${getUrgenciaLabel(diffDias)}${cliente.dataRetornoCustom ? ' 📌' : ''}</div>
+            <div class="alerta-nome">${esc(cliente.nome)}</div>
+            <div class="alerta-detalhe">${esc(cliente.loja)} · ${getUrgenciaLabel(diffDias)}${cliente.dataRetornoCustom ? ' 📌' : ''}</div>
           </div>
           <div class="alerta-seta">›</div>
         </div>`).join('');
@@ -4773,8 +4802,8 @@ function abrirFinalizarDia() {
     lista.innerHTML = itens.map(({cliente, tel, msg, motivoLabel, pedidoValor, ehVenda}) => `
       <div style="display:flex;align-items:center;gap:10px;padding:12px;background:${ehVenda ? 'rgba(0,214,143,.07)' : 'var(--bg3)'};border:1px solid ${ehVenda ? 'rgba(0,214,143,.3)' : 'var(--borda)'};border-radius:12px;margin-bottom:8px;cursor:pointer;" onclick="fecharModal('modal-finalizar-dia');abrirDetalhe('${cliente.id}','dashboard')">
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:15px;">${cliente.nome}</div>
-          <div style="font-size:12px;color:var(--texto2);">${cliente.loja}${cliente.cidade ? ' · ' + cliente.cidade : ''}</div>
+          <div style="font-weight:700;font-size:15px;">${esc(cliente.nome)}</div>
+          <div style="font-size:12px;color:var(--texto2);">${esc(cliente.loja)}${cliente.cidade ? ' · ' + esc(cliente.cidade) : ''}</div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;">
             <span style="font-size:12px;color:var(--texto2);">${motivoLabel}</span>
             ${pedidoValor ? `<span style="font-size:12px;font-weight:700;color:var(--verde);">💰 R$ ${pedidoValor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
@@ -4979,7 +5008,7 @@ async function geocodificarTodosPendentes() {
     const c = pend[i];
     _progressoGeocode(`Buscando ${i + 1} de ${pend.length}… (${ok} localizado${ok !== 1 ? 's' : ''})`, true);
     const base = c.enderecoPendente || c.endereco;
-    const q = c.cidade ? `${base}, ${c.cidade}, Brasil` : `${base}, Brasil`;
+    const q = c.cidade ? `${base}, ${esc(c.cidade)}, Brasil` : `${base}, Brasil`;
     try {
       const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=pt-BR`);
       const res = await resp.json();
@@ -5103,14 +5132,14 @@ function montarRota(clientes, latRep, lngRep) {
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:${urg.bg};border:1.5px solid ${urg.borda};border-radius:12px;margin-bottom:8px;cursor:pointer;" onclick="fecharModal('modal-rota-hoje');window._rotaIdx=${i};window._vindoDaRota=true;setTimeout(()=>abrirDetalhe('${c.id}','mapa'),200)">
         <div style="width:32px;height:32px;background:${urg.hex};border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#000;flex-shrink:0;">${i+1}</div>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:14px;color:${urg.textColor};">${c.nome}</div>
-          <div style="font-size:11px;color:${urg.textColor};opacity:.7;">${c.loja}${c.cidade?' · '+c.cidade:''}</div>
+          <div style="font-weight:600;font-size:14px;color:${urg.textColor};">${esc(c.nome)}</div>
+          <div style="font-size:11px;color:${urg.textColor};opacity:.7;">${esc(c.loja)}${c.cidade?' · '+esc(c.cidade):''}</div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:3px;">
             <span style="font-size:10px;color:${urg.hex};font-weight:600;">${urg.dot} ${urgLabel}</span>
             ${distStr ? `<span style="font-size:10px;color:${urg.textColor};opacity:.5;">📍 ${distStr}</span>` : ''}
           </div>
         </div>
-        <button onclick="event.stopPropagation();toggleSelecaoRota('${c.id}')" aria-label="Selecionar ${c.nome} para a rota" style="width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;${sel ? 'background:var(--verde);border:1.5px solid var(--verde);' : `background:transparent;border:2px solid ${urg.textColor};opacity:.55;`}">
+        <button onclick="event.stopPropagation();toggleSelecaoRota('${c.id}')" aria-label="Selecionar ${esc(c.nome)} para a rota" style="width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;${sel ? 'background:var(--verde);border:1.5px solid var(--verde);' : `background:transparent;border:2px solid ${urg.textColor};opacity:.55;`}">
           ${sel ? '<span style="color:#04231A;font-size:15px;font-weight:800;line-height:1;">✓</span>' : ''}
         </button>
       </div>`;
@@ -5273,8 +5302,8 @@ function renderizarTop20() {
       <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;">
         <div class="cliente-avatar avatar-${cores[i % cores.length]}" style="position:relative;">${c.nome.charAt(0).toUpperCase()}<span style="position:absolute;top:-6px;left:-6px;background:var(--verde);color:#000;font-size:10px;font-weight:800;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;">${i+1}</span></div>
         <div class="cliente-info">
-          <div class="cliente-nome">${c.nome}</div>
-          <div class="cliente-loja" style="opacity:.75;">${c.loja}${c.cidade ? ' · ' + c.cidade : ''}</div>
+          <div class="cliente-nome">${esc(c.nome)}</div>
+          <div class="cliente-loja" style="opacity:.75;">${esc(c.loja)}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div>
           <div style="margin-top:4px;"><span style="font-size:11px;color:var(--verde);background:rgba(0,214,143,.12);border-radius:6px;padding:2px 7px;font-weight:700;">💰 R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>
         </div>
       </div>
@@ -5308,8 +5337,8 @@ function renderizarProbabilidade() {
       <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;">
         <div class="cliente-avatar avatar-verde">${c.nome.charAt(0).toUpperCase()}</div>
         <div class="cliente-info">
-          <div class="cliente-nome">${c.nome}</div>
-          <div class="cliente-loja" style="opacity:.75;">${c.loja}${c.cidade ? ' · ' + c.cidade : ''}</div>
+          <div class="cliente-nome">${esc(c.nome)}</div>
+          <div class="cliente-loja" style="opacity:.75;">${esc(c.loja)}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div>
           <div style="margin-top:4px;"><span style="font-size:11px;color:${cor};background:rgba(255,255,255,.06);border-radius:6px;padding:2px 7px;font-weight:700;">🎯 ${pct}% · compra a cada ~${mediaDias}d, última há ${diasDesde}d</span></div>
         </div>
       </div>
@@ -5345,8 +5374,8 @@ function renderizarPorProximidade() {
         <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;">
           <div class="cliente-avatar avatar-${cor}">${c.nome.charAt(0).toUpperCase()}</div>
           <div class="cliente-info">
-            <div class="cliente-nome">${c.nome}</div>
-            <div class="cliente-loja" style="opacity:.75;">${c.loja}${c.cidade ? ' · ' + c.cidade : ''}</div>
+            <div class="cliente-nome">${esc(c.nome)}</div>
+            <div class="cliente-loja" style="opacity:.75;">${esc(c.loja)}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px;">
               <span style="font-size:10px;color:var(--verde);background:rgba(0,214,143,.12);border-radius:6px;padding:2px 7px;font-weight:700;">📍 ${distStr}</span>
             </div>
@@ -5405,7 +5434,7 @@ function renderizarPorCidade() {
             const cu = getUrgenciaCor(diff!==null?diff:-999);
             return `<div onclick="abrirDetalhe('${c.id}','clientes')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;">
               <div style="width:36px;height:36px;background:${cu.hex};border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#000;flex-shrink:0;">${c.nome.charAt(0)}</div>
-              <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:600;color:${urg.textColor};">${c.nome}</div><div style="font-size:11px;color:${urg.textColor};opacity:.6;">${c.loja}</div></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:600;color:${urg.textColor};">${esc(c.nome)}</div><div style="font-size:11px;color:${urg.textColor};opacity:.6;">${esc(c.loja)}</div></div>
               <span style="font-size:11px;color:${cu.hex};font-weight:600;">${cu.dot} ${diff===null?'—':getUrgenciaLabel(diff)}</span>
             </div>`;
           }).join('')}
@@ -5955,8 +5984,8 @@ function abrirFiltrado(tipo) {
         <div style="background:${urg.bg};border:1.5px solid ${urg.borda};border-radius:14px;padding:14px;margin-bottom:10px;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer;" onclick="abrirDetalhe('${c.id}','filtrada')">
             <div style="flex:1;min-width:0;">
-              <div style="font-size:15px;font-weight:700;margin-bottom:2px;color:${urg.textColor};">${c.nome}</div>
-              <div style="font-size:12px;color:${urg.textColor};opacity:.7;margin-bottom:5px;">${c.loja}${c.cidade?' · '+c.cidade:''}</div>
+              <div style="font-size:15px;font-weight:700;margin-bottom:2px;color:${urg.textColor};">${esc(c.nome)}</div>
+              <div style="font-size:12px;color:${urg.textColor};opacity:.7;margin-bottom:5px;">${esc(c.loja)}${c.cidade?' · '+esc(c.cidade):''}</div>
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:${marcasHtml?'6px':'0'};">
                 <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(0,0,0,.25);color:${urg.hex};font-weight:600;border:1px solid rgba(255,255,255,.1);">${urg.dot} ${urgLabel}${iconeCustom}</span>
                 ${motivoLabel?`<span style="font-size:11px;color:${urg.textColor};opacity:.55;">${motivoLabel}</span>`:''}
@@ -6045,8 +6074,8 @@ function renderizarClientes(filtro = '') {
       <div class="cliente-item" style="background:${cardBg};border-color:${cardBorda};position:relative;border-width:1.5px;">
         <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;" onclick="abrirDetalhe('${c.id}','clientes')">
           <div class="cliente-info">
-            <div class="cliente-nome" style="color:${cardTextColor};">${c.nome}</div>
-            <div class="cliente-loja" style="color:${cardTextColor};opacity:.75;">${c.loja}${c.cidade ? ' · ' + c.cidade : ''}</div>
+            <div class="cliente-nome" style="color:${cardTextColor};">${esc(c.nome)}</div>
+            <div class="cliente-loja" style="color:${cardTextColor};opacity:.75;">${esc(c.loja)}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px;">
               <span style="font-size:10px;color:${cardTextColor};opacity:.6;background:rgba(0,0,0,.2);border-radius:6px;padding:2px 7px;">${getSegLabel(c.segmento)}</span>
               ${statusHtml}
@@ -6092,7 +6121,12 @@ function renderizarClientes(filtro = '') {
       </div>`;
   }).join('');
 }
-function filtrarClientes() { renderizarClientes(document.getElementById('busca-cliente').value); }
+// Debounce: espera o rep parar de digitar antes de re-renderizar a lista.
+let _buscaTimer = null;
+function filtrarClientes() {
+  clearTimeout(_buscaTimer);
+  _buscaTimer = setTimeout(() => renderizarClientes(document.getElementById('busca-cliente').value), 220);
+}
 
 // ===== ESQUECIDOS =====
 function renderizarEsquecidos() {
@@ -6137,8 +6171,8 @@ function renderizarEsquecidos() {
         <div class="esquecido-dias-label">dias</div>
       </div>
       <div class="esquecido-info" style="flex:1;">
-        <div class="esquecido-nome">${cliente.nome}</div>
-        <div class="esquecido-loja">${cliente.loja}${cliente.cidade ? ' · ' + cliente.cidade : ''}</div>
+        <div class="esquecido-nome">${esc(cliente.nome)}</div>
+        <div class="esquecido-loja">${esc(cliente.loja)}${cliente.cidade ? ' · ' + esc(cliente.cidade) : ''}</div>
         ${marcasHtml ? `<div style="display:flex;flex-direction:column;gap:2px;margin-top:5px;">${marcasHtml}</div>` : ''}
       </div>
       <div class="alerta-seta">›</div>
@@ -6191,7 +6225,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
     endEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;" onclick="abrirModalEditarCliente()" title="Toque para editar endereço">
         <span style="font-size:18px;">📍</span>
-        <span style="font-size:13px;color:var(--texto2);flex:1;line-height:1.4;">${cliente.endereco}</span>
+        <span style="font-size:13px;color:var(--texto2);flex:1;line-height:1.4;">${esc(cliente.endereco)}</span>
       </div>
       <button onclick="abrirRotaCliente('${encodeURIComponent(cliente.endereco)}')" style="background:linear-gradient(180deg,#33CCFF,#0EA5D6);border:none;border-radius:10px;padding:10px 16px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:6px;min-height:44px;flex-shrink:0;box-shadow:0 4px 0 #0875A8,0 6px 10px rgba(0,0,0,.3);">
         🧭 Rota
@@ -7195,7 +7229,7 @@ function gerarRelatorioEmail() {
         });
       } else if (h.tipo === 'visita') {
         const motivoLabel = MOTIVOS_BASE[h.motivo]?.label || h.motivo || 'Visita';
-        linhasVisitas.push(`• ${c.nome} | ${c.loja || ''}${c.cidade ? ' · ' + c.cidade : ''} — ${motivoLabel} [${formatData(h.data)}]`);
+        linhasVisitas.push(`• ${esc(c.nome)} | ${c.loja || ''}${c.cidade ? ' · ' + esc(c.cidade) : ''} — ${motivoLabel} [${formatData(h.data)}]`);
       }
     });
   });
@@ -8672,8 +8706,8 @@ function _renderPreviewImportacao(clientes) {
         ? `<span style="font-size:10px;background:rgba(251,191,36,.15);color:#FBB52C;border-radius:5px;padding:1px 6px;flex-shrink:0;">↻ atualizar</span>`
         : `<span style="font-size:10px;background:rgba(0,214,143,.12);color:var(--verde);border-radius:5px;padding:1px 6px;flex-shrink:0;">+ novo</span>`;
       return `<div style="background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:10px 12px;margin-bottom:6px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">${tag}<span style="font-size:13px;font-weight:700;color:var(--texto);">${c.nome}</span></div>
-        <div style="font-size:11px;color:var(--texto2);">${c.loja}${c.cidade?' · '+c.cidade:''}${c.marcas.length?' · '+c.marcas.join(', '):''}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">${tag}<span style="font-size:13px;font-weight:700;color:var(--texto);">${esc(c.nome)}</span></div>
+        <div style="font-size:11px;color:var(--texto2);">${esc(c.loja)}${c.cidade?' · '+esc(c.cidade):''}${c.marcas.length?' · '+c.marcas.join(', '):''}</div>
         ${c.historico.length?`<div style="font-size:11px;color:var(--texto3);margin-top:2px;">📦 Último pedido: R$ ${(c.historico[0].pedidoValor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>`:''}
       </div>`;
     }).join('') +

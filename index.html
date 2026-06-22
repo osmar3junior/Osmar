@@ -2500,6 +2500,7 @@ const _SB_DIRTY_KEY = 'cv_sb_dirty';
 const _sbTimers = {};
 let _sbStatusTimer = null;
 let _sbEmErro = false;
+let _sbUltimoErro = ''; // último motivo de falha de sync (mostrado ao tocar no aviso)
 
 function _sbDirty() { return getData(_SB_DIRTY_KEY) || {}; }
 function _sbMarcarDirty(tabela, sujo) {
@@ -2521,7 +2522,16 @@ function _sbStatusSync(estado) {
     semnuvem: { txt: '⚠️ Nuvem desconectada — saia e entre de novo para sincronizar', cor: 'var(--amarelo)', fixo: true }
   }[estado];
   if (!mapa) return;
-  el.textContent = mapa.txt;
+  // No estado de erro, deixa o aviso clicável para revelar o motivo técnico (diagnóstico no celular).
+  if (estado === 'erro' && _sbUltimoErro) {
+    el.textContent = mapa.txt + '  (toque para ver o motivo)';
+    el.style.cursor = 'pointer';
+    el.onclick = () => alert('Detalhe da sincronização:\n\n' + _sbUltimoErro);
+  } else {
+    el.textContent = mapa.txt;
+    el.style.cursor = '';
+    el.onclick = null;
+  }
   el.style.color = mapa.cor;
   el.style.display = 'block';
   if (!mapa.fixo) _sbStatusTimer = setTimeout(() => { el.style.display = 'none'; }, 3000);
@@ -2592,9 +2602,19 @@ async function _sbExecutarPush(tabela) {
     _sbEmErro = false;
     if (Object.keys(_sbDirty()).length === 0) _sbStatusSync('ok');
   } catch (e) {
-    console.log('[SB] push falhou (' + tabela + '):', e?.message || e);
+    // Monta um detalhe legível do erro (Supabase traz message/code/details/hint).
+    const partes = [
+      'Tabela: ' + tabela,
+      e?.message ? 'Msg: ' + e.message : '',
+      e?.code ? 'Código: ' + e.code : '',
+      e?.details ? 'Detalhe: ' + e.details : '',
+      e?.hint ? 'Dica: ' + e.hint : ''
+    ].filter(Boolean);
+    if (!partes.some(p => p.startsWith('Msg'))) { try { partes.push('Erro: ' + JSON.stringify(e)); } catch (_) {} }
+    _sbUltimoErro = partes.join('\n');
+    console.log('[SB] push falhou:', _sbUltimoErro);
     _sbStatusSync('erro');
-    if (!_sbEmErro) { _sbEmErro = true; toast('⚠️ Não consegui sincronizar agora — seus dados estão salvos no aparelho.'); }
+    if (!_sbEmErro) { _sbEmErro = true; toast('⚠️ Falha ao sincronizar: ' + (e?.message || 'toque no aviso amarelo para ver o motivo')); }
     // Reenvia automaticamente em 20s
     clearTimeout(_sbTimers['retry_' + tabela]);
     _sbTimers['retry_' + tabela] = setTimeout(() => _sbExecutarPush(tabela), 20000);

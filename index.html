@@ -1424,6 +1424,17 @@ if ('serviceWorker' in navigator) {
       <input type="text" class="campo-input" id="cfg-gemini-key" placeholder="AIza..." style="margin-top:4px;font-family:monospace;font-size:13px;letter-spacing:.5px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
 
+    <div class="config-secao">
+      <div class="config-secao-titulo">🚀 Tela de boas-vindas</div>
+      <div class="config-secao-sub">O assistente de primeiro acesso (marcas, metas e contato). Desligue para reabri-lo e testar.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+        <span style="font-size:13px;color:var(--texto);">Onboarding concluído</span>
+        <button id="cfg-onb-toggle" data-ativo="true" onclick="toggleOnboardingFeito()" style="width:48px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;background:#00D68F;">
+          <span id="cfg-onb-knob" style="position:absolute;top:3px;left:25px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s,background .2s;"></span>
+        </button>
+      </div>
+    </div>
+
     <button class="btn-primario" onclick="salvarConfig()">Salvar configurações</button>
 
     <div class="config-secao" style="margin-top:8px;background:linear-gradient(135deg,rgba(0,214,143,.05),rgba(56,189,248,.05));border:1px solid rgba(0,214,143,.2);border-radius:16px;padding:18px;">
@@ -2390,6 +2401,94 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
     <button class="btn-primario" style="width:100%;" onclick="salvarPosto()">💾 Salvar posto</button>
+  </div>
+</div>
+
+<!-- ===== ONBOARDING (boas-vindas dos representantes) ===== -->
+<div id="onboarding" style="display:none;position:fixed;inset:0;z-index:2000;background:var(--bg);flex-direction:column;">
+  <!-- Progresso -->
+  <div style="display:flex;gap:8px;justify-content:center;padding:18px 20px 8px;">
+    <span id="onb-dot-1" style="width:36px;height:5px;border-radius:3px;background:var(--verde);transition:background .2s;"></span>
+    <span id="onb-dot-2" style="width:36px;height:5px;border-radius:3px;background:var(--borda);transition:background .2s;"></span>
+    <span id="onb-dot-3" style="width:36px;height:5px;border-radius:3px;background:var(--borda);transition:background .2s;"></span>
+    <span id="onb-dot-4" style="width:36px;height:5px;border-radius:3px;background:var(--borda);transition:background .2s;"></span>
+  </div>
+
+  <div id="onb-scroll" style="flex:1;overflow-y:auto;padding:8px 22px 16px;">
+    <!-- PASSO 1: boas-vindas -->
+    <div id="onb-passo-1">
+      <div style="text-align:center;margin-top:24px;">
+        <div style="font-size:54px;margin-bottom:8px;">👋</div>
+        <div id="onb-saudacao" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--texto);margin-bottom:6px;">Bem-vindo!</div>
+        <div style="font-size:14px;color:var(--texto2);line-height:1.5;max-width:340px;margin:0 auto 24px;">Vamos deixar seu app pronto em menos de 1 minuto. Assim ele já começa trabalhando a seu favor.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;max-width:360px;margin:0 auto;">
+        <div style="display:flex;gap:12px;align-items:flex-start;background:var(--bg2);border:1px solid var(--borda);border-radius:14px;padding:14px;">
+          <span style="font-size:24px;">🏷️</span><div><div style="font-weight:700;color:var(--texto);font-size:14px;">Suas marcas e metas</div><div style="font-size:12.5px;color:var(--texto2);">O app acompanha seu desempenho e te avisa o que está em risco.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;background:var(--bg2);border:1px solid var(--borda);border-radius:14px;padding:14px;">
+          <span style="font-size:24px;">📅</span><div><div style="font-weight:700;color:var(--texto);font-size:14px;">A hora certa de cada cliente</div><div style="font-size:12.5px;color:var(--texto2);">Nunca mais perca uma venda por esquecimento.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;background:var(--bg2);border:1px solid var(--borda);border-radius:14px;padding:14px;">
+          <span style="font-size:24px;">💬</span><div><div style="font-weight:700;color:var(--texto);font-size:14px;">Rota e relatório no seu WhatsApp</div><div style="font-size:12.5px;color:var(--texto2);">Tudo a um toque, mesmo na estrada.</div></div>
+        </div>
+      </div>
+      <!-- Espaço para vídeo (oculto até ter o link) -->
+      <div id="onb-video-1" style="display:none;text-align:center;margin-top:16px;"><a class="onb-video-link" target="_blank" style="font-size:13px;color:var(--verde);cursor:pointer;font-weight:600;">▶️ Ver como funciona (30s)</a></div>
+    </div>
+
+    <!-- PASSO 2: marcas -->
+    <div id="onb-passo-2" style="display:none;">
+      <div style="text-align:center;margin:14px 0 18px;">
+        <div style="font-size:40px;margin-bottom:6px;">🏷️</div>
+        <div style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;color:var(--texto);">Quais marcas você representa?</div>
+        <div style="font-size:13px;color:var(--texto2);margin-top:4px;">Adicione uma por linha. Você pode editar depois.</div>
+      </div>
+      <div id="onb-marcas-lista" style="max-width:360px;margin:0 auto;"></div>
+      <div style="max-width:360px;margin:4px auto 0;">
+        <button onclick="onbAddMarca()" style="width:100%;background:var(--bg3);border:1px dashed var(--borda);border-radius:11px;padding:11px;color:var(--verde);font-weight:700;font-family:'Syne',sans-serif;font-size:13px;cursor:pointer;">+ Adicionar outra marca</button>
+      </div>
+      <div id="onb-video-2" style="display:none;text-align:center;margin-top:14px;"><a class="onb-video-link" target="_blank" style="font-size:13px;color:var(--verde);cursor:pointer;font-weight:600;">▶️ Ver como funciona (30s)</a></div>
+    </div>
+
+    <!-- PASSO 3: metas + SKU + comissão -->
+    <div id="onb-passo-3" style="display:none;">
+      <div style="text-align:center;margin:14px 0 18px;">
+        <div style="font-size:40px;margin-bottom:6px;">🎯</div>
+        <div style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;color:var(--texto);">Suas metas por marca</div>
+        <div style="font-size:13px;color:var(--texto2);margin-top:4px;">Defina a meta, a unidade (SKU) e a sua comissão. Pode deixar em branco e preencher depois.</div>
+      </div>
+      <div id="onb-metas-lista" style="max-width:360px;margin:0 auto;"></div>
+      <div style="max-width:360px;margin:4px auto 0;">
+        <button onclick="onbCriarUnidade()" style="width:100%;background:var(--bg3);border:1px dashed var(--borda);border-radius:11px;padding:11px;color:var(--verde);font-weight:700;font-family:'Syne',sans-serif;font-size:13px;cursor:pointer;">+ Criar unidade</button>
+      </div>
+      <div id="onb-video-3" style="display:none;text-align:center;margin-top:14px;"><a class="onb-video-link" target="_blank" style="font-size:13px;color:var(--verde);cursor:pointer;font-weight:600;">▶️ Ver como funciona (30s)</a></div>
+    </div>
+
+    <!-- PASSO 4: contato -->
+    <div id="onb-passo-4" style="display:none;">
+      <div style="text-align:center;margin:14px 0 18px;">
+        <div style="font-size:40px;margin-bottom:6px;">📲</div>
+        <div style="font-family:'Syne',sans-serif;font-size:21px;font-weight:800;color:var(--texto);">Seu contato</div>
+        <div style="font-size:13px;color:var(--texto2);margin-top:4px;">Para enviar sua rota no WhatsApp e os relatórios por e-mail.</div>
+      </div>
+      <div style="max-width:360px;margin:0 auto;">
+        <label class="campo-label">💬 Seu WhatsApp</label>
+        <input type="tel" class="campo-input" id="onb-wpp" placeholder="(00) 00000-0000" style="margin:4px 0 14px;" oninput="mascaraTelefone(this)">
+        <label class="campo-label">📧 Seu e-mail</label>
+        <input type="email" class="campo-input" id="onb-email" placeholder="seu@email.com" style="margin-top:4px;">
+      </div>
+      <div id="onb-video-4" style="display:none;text-align:center;margin-top:14px;"><a class="onb-video-link" target="_blank" style="font-size:13px;color:var(--verde);cursor:pointer;font-weight:600;">▶️ Ver como funciona (30s)</a></div>
+    </div>
+  </div>
+
+  <!-- Navegação -->
+  <div style="border-top:1px solid var(--borda);padding:14px 22px;display:flex;flex-direction:column;gap:10px;background:var(--bg);">
+    <div style="display:flex;gap:10px;">
+      <button id="onb-btn-voltar" onclick="onbVoltar()" style="display:none;flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:14px;color:var(--texto2);font-weight:700;font-family:'Syne',sans-serif;font-size:14px;cursor:pointer;">← Voltar</button>
+      <button id="onb-btn-proximo" class="btn-primario" onclick="onbProximo()" style="flex:2;margin:0;">Começar →</button>
+    </div>
+    <a onclick="onbPular()" style="text-align:center;font-size:12.5px;color:var(--texto3);cursor:pointer;text-decoration:underline;">Pular por agora — configuro depois</a>
   </div>
 </div>
 
@@ -3503,6 +3602,7 @@ async function fazerLogin() {
     setData('cv_session', usuarioAtual);
     irPara('dashboard');
     _sbAuth(email, senha);
+    setTimeout(_checarOnboarding, 2500); // espera o pull da nuvem antes de decidir mostrar o assistente
   } else {
     // Cache foi limpo — tenta recuperar pelo Supabase
     toast('🔄 Recuperando dados da nuvem...');
@@ -3566,6 +3666,7 @@ async function fazerCadastro() {
   setData('cv_session', usuarioAtual);
   irPara('dashboard');
   _sbAuth(email, senha);
+  setTimeout(_checarOnboarding, 600); // novo rep: mostra o assistente de boas-vindas
 }
 function sair() {
   if (!confirm('Deseja mesmo sair?\n\nSeus dados continuam salvos, mas você vai precisar entrar com email e senha de novo.')) return;
@@ -7310,6 +7411,7 @@ function carregarConfig() {
   document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 60;
   document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
   _renderGatilhoConfig(cfg);
+  _renderOnbToggle(cfg.onboardingFeito);
   document.getElementById('cfg-wpp-rep').value = cfg.wppRep ? cfg.wppRep.replace(/^55/, '') : '';
   const geminiEl = document.getElementById('cfg-gemini-key');
   if (geminiEl) geminiEl.value = cfg.geminiKey || '';
@@ -7362,6 +7464,185 @@ function salvarConfig() {
   salvarConfigData(cfg);
   atualizarSemaforoDash();
   toast('Configurações salvas!');
+}
+
+// ===== ONBOARDING (boas-vindas dos representantes) =====
+let _onbPasso = 1;
+// Unidades que abrem no passo 3 (R$ é sempre acrescentado no fim).
+const _ONB_SKUS_BASE = ['peças', 'caixas', 'unidades', 'kg', 'dúzias', 'pacotes', 'faturamento'];
+let _onbSkusExtra = []; // unidades criadas pelo rep durante o onboarding
+
+// Mostra o assistente na primeira vez (ou quando reativado nas Configurações).
+function _checarOnboarding() {
+  if (!usuarioAtual) return;
+  if (getConfig().onboardingFeito) return;
+  iniciarOnboarding();
+}
+
+function iniciarOnboarding() {
+  const cfg = getConfig();
+  _onbSkusExtra = [];
+  const nm = (usuarioAtual?.nome || '').trim().split(' ')[0] || '';
+  const sa = document.getElementById('onb-saudacao');
+  if (sa) sa.textContent = nm ? `Oi, ${esc(nm)}! 👋` : 'Bem-vindo! 👋';
+  _onbRenderMarcas((cfg.marcas || []).filter(Boolean));
+  document.getElementById('onb-wpp').value = cfg.wppRep ? cfg.wppRep.replace(/^55/, '') : '';
+  document.getElementById('onb-email').value = cfg.emailRep || '';
+  _onbIrPasso(1);
+  document.getElementById('onboarding').style.display = 'flex';
+}
+
+function _onbIrPasso(n) {
+  _onbPasso = n;
+  [1, 2, 3, 4].forEach(i => {
+    const el = document.getElementById('onb-passo-' + i);
+    if (el) el.style.display = (i === n) ? 'block' : 'none';
+    const dot = document.getElementById('onb-dot-' + i);
+    if (dot) dot.style.background = (i <= n) ? 'var(--verde)' : 'var(--borda)';
+  });
+  if (n === 3) _onbRenderMetas();
+  document.getElementById('onb-btn-voltar').style.display = (n > 1) ? 'block' : 'none';
+  const prox = document.getElementById('onb-btn-proximo');
+  prox.textContent = n === 1 ? 'Começar →' : n === 4 ? '🎉 Concluir' : 'Próximo →';
+  const sc = document.getElementById('onb-scroll'); if (sc) sc.scrollTop = 0;
+}
+
+function _onbMarcaInput(v) {
+  return `<input type="text" class="campo-input onb-marca-input" maxlength="30" placeholder="Ex: Nome da marca" value="${(v || '').replace(/"/g, '&quot;')}" style="margin-bottom:8px;">`;
+}
+function _onbRenderMarcas(marcas) {
+  const cont = document.getElementById('onb-marcas-lista');
+  const base = marcas.length ? marcas : ['', '', ''];
+  cont.innerHTML = base.map(m => _onbMarcaInput(m)).join('');
+}
+function onbAddMarca() {
+  const cont = document.getElementById('onb-marcas-lista');
+  if (cont.querySelectorAll('.onb-marca-input').length >= 10) { toast('Máximo de 10 marcas'); return; }
+  cont.insertAdjacentHTML('beforeend', _onbMarcaInput(''));
+}
+function _onbColetarMarcas() {
+  return [...document.querySelectorAll('#onb-marcas-lista .onb-marca-input')].map(i => i.value.trim()).filter(Boolean);
+}
+
+function _onbRenderMetas() {
+  const marcas = _onbColetarMarcas();
+  const cont = document.getElementById('onb-metas-lista');
+  if (!marcas.length) {
+    cont.innerHTML = '<div style="font-size:13px;color:var(--texto3);text-align:center;padding:16px;">Volte e cadastre ao menos uma marca para definir metas.</div>';
+    return;
+  }
+  const cfg = getConfig();
+  // Base pedida + unidades já ativas/personalizadas + criadas agora + R$ no fim.
+  const skus = [...new Set([..._ONB_SKUS_BASE, ...(cfg.skus || []), ...(cfg.skusCustom || []).filter(Boolean), ..._onbSkusExtra, 'reais'])];
+  const metaDe = m => (cfg.metas || []).find(x => x.marca === m) || {};
+  cont.innerHTML = marcas.map(m => {
+    const ex = metaDe(m);
+    const skuSel = ex.sku || skus[0];
+    const skuOpts = skus.map(s => `<option value="${esc(s)}" ${s === skuSel ? 'selected' : ''}>${_skuLabel(s)}</option>`).join('');
+    return `<div class="onb-meta-card" data-marca="${esc(m)}" style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;margin-bottom:10px;">
+      <div style="font-weight:700;color:var(--texto);margin-bottom:8px;">🏷️ ${esc(m)}</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="number" class="campo-input onb-meta-valor" placeholder="Meta" value="${ex.valor || ''}" style="flex:1;">
+        <select class="campo-input onb-meta-sku" style="flex:1;">${skuOpts}</select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:8px 10px;">
+        <span style="font-size:12px;color:var(--amarelo);white-space:nowrap;">💰 Comissão</span>
+        <input type="number" min="0" max="100" step="0.1" class="campo-input onb-meta-com" placeholder="%" value="${ex.comissao || ''}" style="flex:1;padding:5px 8px;font-size:13px;">
+        <span style="font-size:13px;color:var(--texto2);font-weight:700;">%</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function onbCriarUnidade() {
+  const nome = (prompt('Nome da nova unidade (ex: fardo, metro², resma):') || '').trim();
+  if (!nome) return;
+  const jaExiste = [..._ONB_SKUS_BASE, ..._onbSkusExtra, 'reais'].some(s => s.toLowerCase() === nome.toLowerCase());
+  if (jaExiste) { toast('Essa unidade já está na lista'); return; }
+  _onbSkusExtra.push(nome);
+  // Acrescenta a opção em todos os seletores do passo 3, sem re-renderizar (preserva o preenchido).
+  document.querySelectorAll('#onb-metas-lista .onb-meta-sku').forEach(sel => {
+    const opt = document.createElement('option');
+    opt.value = nome; opt.textContent = nome;
+    sel.insertBefore(opt, sel.lastElementChild); // antes do "R$ Reais"
+  });
+  toast('✅ Unidade "' + nome + '" criada');
+}
+
+function onbVoltar() { if (_onbPasso > 1) _onbIrPasso(_onbPasso - 1); }
+function onbProximo() {
+  if (_onbPasso === 2 && !_onbColetarMarcas().length) { toast('Adicione ao menos uma marca (ou toque em Pular)'); return; }
+  if (_onbPasso < 4) { _onbIrPasso(_onbPasso + 1); return; }
+  _onbFinalizar(false);
+}
+function onbPular() {
+  if (!confirm('Pular a configuração inicial?\n\nVocê pode cadastrar tudo depois em ⚙️ Configurações.')) return;
+  _onbFinalizar(true);
+}
+
+function _onbFinalizar(pulou) {
+  const cfg = getConfig();
+  if (!pulou) {
+    const marcas = _onbColetarMarcas();
+    cfg.marcas = Array.from({ length: 10 }, (_, i) => marcas[i] || '');
+    // Cria uma meta por marca que tenha valor ou comissão preenchidos.
+    const cards = [...document.querySelectorAll('#onb-metas-lista .onb-meta-card')];
+    const novas = [];
+    cards.forEach(card => {
+      const marca = card.dataset.marca;
+      const valor = Number(card.querySelector('.onb-meta-valor').value) || 0;
+      const sku = card.querySelector('.onb-meta-sku').value;
+      const comissao = Number(card.querySelector('.onb-meta-com').value) || 0;
+      if (valor > 0 || comissao > 0) {
+        novas.push({ id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), marca, sku, tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor, comissao, cicloIdeal: 30, exibirEm: 'reais' });
+      }
+    });
+    // Substitui as metas das marcas que passaram pelo onboarding; mantém as outras.
+    const marcasOnb = new Set(novas.map(m => m.marca));
+    cfg.metas = (cfg.metas || []).filter(m => !marcasOnb.has(m.marca)).concat(novas);
+    // Garante que toda unidade escolhida/criada fique disponível nas Configurações.
+    const catalogo = (typeof SKU_OPCOES !== 'undefined') ? SKU_OPCOES.map(o => o.value) : [];
+    cfg.skus = cfg.skus || [];
+    cfg.skusCustom = cfg.skusCustom || ['', '', ''];
+    new Set(novas.map(m => m.sku)).forEach(s => {
+      if (s === 'reais') return; // R$ é sempre disponível
+      if (catalogo.includes(s)) { if (!cfg.skus.includes(s)) cfg.skus.push(s); }       // unidade do catálogo → ativa
+      else if (!cfg.skusCustom.includes(s)) {                                          // unidade personalizada → guarda
+        const i = cfg.skusCustom.findIndex(x => !x);
+        if (i >= 0) cfg.skusCustom[i] = s; else cfg.skusCustom.push(s);
+      }
+    });
+    cfg.wppRep = (document.getElementById('onb-wpp').value || '').replace(/\D/g, '');
+    cfg.emailRep = (document.getElementById('onb-email').value || '').trim();
+  }
+  cfg.onboardingFeito = true;
+  salvarConfigData(cfg);
+  document.getElementById('onboarding').style.display = 'none';
+  atualizarDashboard();
+  toast(pulou ? 'Tudo certo — configure quando quiser em ⚙️ Configurações.' : '🎉 Tudo pronto! Bem-vindo ao Carteira Viva.');
+}
+
+// Toggle nas Configurações (para você reabrir o onboarding e testar).
+function _renderOnbToggle(feito) {
+  const btn = document.getElementById('cfg-onb-toggle');
+  const knob = document.getElementById('cfg-onb-knob');
+  if (!btn) return;
+  btn.dataset.ativo = feito ? 'true' : 'false';
+  btn.style.background = feito ? '#00D68F' : '#333';
+  knob.style.left = feito ? '25px' : '3px';
+  knob.style.background = feito ? '#fff' : '#888';
+}
+function toggleOnboardingFeito() {
+  const cfg = getConfig();
+  cfg.onboardingFeito = !cfg.onboardingFeito;
+  salvarConfigData(cfg);
+  _renderOnbToggle(cfg.onboardingFeito);
+  if (!cfg.onboardingFeito) {
+    toast('Onboarding reativado — abrindo para teste...');
+    setTimeout(iniciarOnboarding, 500);
+  } else {
+    toast('Onboarding marcado como concluído.');
+  }
 }
 
 function selecionarPeriodoRelatorio(el) {
@@ -7495,7 +7776,7 @@ function getMetasConfig() {
 }
 
 function _skuLabel(sku) {
-  const todos = [...(window.SKU_OPCOES || []), { value:'reais', label:'R$ Reais' }];
+  const todos = [...((typeof SKU_OPCOES !== 'undefined' ? SKU_OPCOES : []) || []), { value:'reais', label:'R$ Reais' }];
   const found = todos.find(o => o.value === sku);
   return found ? found.label : sku;
 }
@@ -9676,6 +9957,7 @@ function ajustarAlturaListaMotivos() {
   if (session && getUsuarios()[session.email]) {
     usuarioAtual = session;
     irPara('dashboard');
+    setTimeout(_checarOnboarding, 2500); // mostra o assistente se ainda não foi concluído
     setTimeout(verificarEnderecosPendentes, 3000);
     setTimeout(solicitarPermissaoNotificacao, 2000);
     setTimeout(verificarENotificarEsquecidos, 5000);

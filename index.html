@@ -5733,6 +5733,7 @@ function renderizarChipsMarca() {
 
 function setMarcaFiltro(marca) {
   marcaFiltroAtual = marca;
+  _clientesVisiveis = 50;
   renderizarChipsMarca();
   if (visualizacaoAtual === 'lista') renderizarClientes(document.getElementById('busca-cliente')?.value || '');
   else if (visualizacaoAtual === 'cidade') renderizarPorCidade();
@@ -6518,7 +6519,8 @@ function renderizarClientes(filtro = '') {
   const _metaHojeCache = calcularMetaDiariaHoje(); // { clienteId: { marca: { meta, sku } } }
 
   const cores = ['verde','amarelo','vermelho','azul'];
-  lista.innerHTML = filtrados.map((c, i) => {
+  const _totalFiltrados = filtrados.length;
+  lista.innerHTML = filtrados.slice(0, _clientesVisiveis).map((c, i) => {
     const cor = cores[i % cores.length];
     let statusHtml = '';
     let cardBg = 'var(--bg2)';
@@ -6620,13 +6622,21 @@ function renderizarClientes(filtro = '') {
           <button onclick="event.stopPropagation();abrirEditarDireto('${c.id}')" style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 9px;color:${cardTextColor};opacity:.7;font-size:13px;cursor:pointer;">✏️</button>
         </div>
       </div>`;
-  }).join('');
+  }).join('') + (_totalFiltrados > _clientesVisiveis
+    ? `<div style="padding:16px 0 8px;"><button onclick="carregarMaisClientes()" style="width:100%;background:var(--bg3);border:1.5px solid var(--borda);border-radius:12px;padding:13px;color:var(--verde);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Ver mais ${_totalFiltrados - _clientesVisiveis} clientes ↓</button></div>`
+    : '');
 }
 // Debounce: espera o rep parar de digitar antes de re-renderizar a lista.
 let _buscaTimer = null;
+let _clientesVisiveis = 50; // paginação: quantos cards estão na tela
 function filtrarClientes() {
+  _clientesVisiveis = 50; // busca nova → volta ao início
   clearTimeout(_buscaTimer);
   _buscaTimer = setTimeout(() => renderizarClientes(document.getElementById('busca-cliente').value), 220);
+}
+function carregarMaisClientes() {
+  _clientesVisiveis += 50;
+  renderizarClientes(document.getElementById('busca-cliente')?.value || '');
 }
 
 // ===== ESQUECIDOS =====

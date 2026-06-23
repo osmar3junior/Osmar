@@ -437,6 +437,18 @@ if ('serviceWorker' in navigator) {
     50%     { box-shadow:0 0 0 6px rgba(255,192,67,.5); border-color:#FFC043; transform:scale(1.18); color:#FFC043; background:rgba(255,192,67,.18); }
   }
   .btn-meta-salvar-pisca { animation:piscaMetaSalvar .55s ease-in-out 5; }
+  @keyframes piscaFoco {
+    0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(255,192,67,0); }
+    50%      { opacity:.65; box-shadow:0 0 5px 2px rgba(255,192,67,.55); }
+  }
+  .foco-badge {
+    display:inline-flex; align-items:center;
+    background:rgba(255,192,67,.18); border:1px solid rgba(255,192,67,.5);
+    color:#FFC043; border-radius:4px; padding:1px 5px;
+    font-size:9px; font-weight:800; letter-spacing:.8px;
+    white-space:nowrap; flex-shrink:0;
+    animation:piscaFoco .85s ease-in-out infinite;
+  }
   @keyframes pulsaRota {
     0%,100% { border-color:rgba(0,214,143,.25); box-shadow:none; }
     50%      { border-color:#00D68F; box-shadow:0 0 28px rgba(0,214,143,.8), 0 0 60px rgba(0,214,143,.4), inset 0 0 8px rgba(0,214,143,.2); }
@@ -1726,6 +1738,7 @@ if ('serviceWorker' in navigator) {
       <span class="rota-ordem-label">Ordenar:</span>
       <button class="rota-ordem-btn ativo" data-ordem="data" onclick="trocarOrdemRota('data')">📅 Por data</button>
       <button class="rota-ordem-btn" data-ordem="proximidade" onclick="trocarOrdemRota('proximidade')">📍 Por proximidade</button>
+      <button class="rota-ordem-btn" data-ordem="foco" onclick="trocarOrdemRota('foco')">⚡ Por FOCO</button>
     </div>
 
     <!-- Banner: clientes com endereço mas sem coordenada -->
@@ -5144,7 +5157,7 @@ function abrirFinalizarDia() {
 // ===== ROTA DE HOJE =====
 let rotaDeHojeClientes = [];
 let periodoRota = 'hoje';        // 'hoje' | 'proximos' | 'atrasados'
-let ordemRota = 'data';          // 'data' (urgência) | 'proximidade' (GPS)
+let ordemRota = 'data';          // 'data' (urgência) | 'proximidade' (GPS) | 'foco' (marcas vencidas × potencial)
 let _rotaSelecionados = new Set(); // ids dos clientes marcados para rota personalizada
 let _rotaClientesGPS = [];       // clientes com GPS + histórico (cache da abertura)
 let _rotaPos = null;             // posição do representante {lat, lng} ou null
@@ -5376,10 +5389,40 @@ function _nearestNeighbor(lista, latIni, lngIni) {
   return out;
 }
 
+function _scoreFoco(c) {
+  const metas = (getConfig().metas || []);
+  let score = 0, focoCount = 0;
+  (c.marcas || []).forEach(marca => {
+    const m = metas.find(m => m.marca === marca);
+    if (!m?.cicloIdeal) return;
+    let ult = null;
+    (c.historico || []).forEach(h => {
+      if (h.motivo !== 'fechou_pedido') return;
+      const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : (c.marcas||[])[0] === marca;
+      if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
+    });
+    const dias = ult ? Math.floor((new Date() - ult) / 86400000) : m.cicloIdeal + 1;
+    if (dias >= m.cicloIdeal) {
+      focoCount++;
+      const pot = calcularPotencialCliente(c);
+      const pv = pot[marca] || {};
+      score += (pv.max || pv.avg || 1);
+    }
+  });
+  return { score, focoCount };
+}
+
 function montarRota(clientes, latRep, lngRep) {
   let ordenados;
 
-  if (ordemRota === 'proximidade' && latRep !== null) {
+  if (ordemRota === 'foco') {
+    // POR FOCO: mais marcas com ciclo vencido × maior potencial primeiro
+    ordenados = [...clientes].sort((a, b) => {
+      const sa = _scoreFoco(a), sb = _scoreFoco(b);
+      if (sb.focoCount !== sa.focoCount) return sb.focoCount - sa.focoCount;
+      return sb.score - sa.score;
+    });
+  } else if (ordemRota === 'proximidade' && latRep !== null) {
     // POR PROXIMIDADE: vizinho mais próximo a partir da sua posição, ignorando a data.
     // As cores continuam mostrando a urgência de cada cliente.
     ordenados = _nearestNeighbor(clientes, latRep, lngRep);
@@ -5426,9 +5469,11 @@ function montarRota(clientes, latRep, lngRep) {
   document.getElementById('rota-distancia-total').textContent = distTotal < 1 ? `${Math.round(distTotal*1000)}m` : `${distTotal.toFixed(0)}km`;
   document.getElementById('rota-tempo-total').textContent = minTotal >= 60 ? `${Math.floor(minTotal/60)}h${minTotal%60}m` : `${minTotal}min`;
   document.getElementById('rota-hoje-resumo').style.display = 'block';
-  const ctxGPS = latRep
-    ? (ordemRota === 'proximidade' ? 'pela sua proximidade · cores = prioridade' : 'por urgência e proximidade')
-    : 'por urgência (sem GPS)';
+  const ctxGPS = ordemRota === 'foco'
+    ? `por FOCO · ${ordenados.filter(c => _scoreFoco(c).focoCount > 0).length} cliente(s) com marca vencida`
+    : latRep
+      ? (ordemRota === 'proximidade' ? 'pela sua proximidade · cores = prioridade' : 'por urgência e proximidade')
+      : 'por urgência (sem GPS)';
   document.getElementById('rota-hoje-sub').textContent = `${subtituloPeriodo(periodoRota)} · Rota ${ctxGPS}.`;
 
   // Renderiza lista
@@ -6426,7 +6471,23 @@ function renderizarClientes(filtro = '') {
               const potCompact = _pv.n > 0
                 ? `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.8);">${fmtK(_pv.avg)}${_un ? ' '+_un : ''}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(_pv.max)}${_un ? ' '+_un : ''}</strong></span>`
                 : '';
-              return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;margin-bottom:2px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potCompact}` : ''}</div>`;
+              // Badge FOCO: aparece quando o ciclo ideal da marca está vencido
+              let focoTag = '';
+              if (_cm?.cicloIdeal > 0) {
+                let _ultCompra = null;
+                (c.historico || []).forEach(h => {
+                  if (h.motivo !== 'fechou_pedido') return;
+                  const _tem = h.pedidos
+                    ? h.pedidos.some(p => p.marca === marca)
+                    : (c.marcas || [])[0] === marca;
+                  if (_tem && (!_ultCompra || new Date(h.data) > _ultCompra)) _ultCompra = new Date(h.data);
+                });
+                const _diasSem = _ultCompra
+                  ? Math.floor((new Date() - _ultCompra) / 86400000)
+                  : _cm.cicloIdeal + 1;
+                if (_diasSem >= _cm.cicloIdeal) focoTag = `<span class="foco-badge">FOCO</span>`;
+              }
+              return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;margin-bottom:2px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${focoTag}${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potCompact}` : ''}</div>`;
               });
               return `<div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">${itens.join('')}</div>`;
             })()}
@@ -8284,6 +8345,9 @@ function renderizarMetasConfig(cfg) {
         <input type="number" min="1" max="365" class="campo-input" style="flex:1;padding:5px 8px;font-size:13px;" placeholder="dias" value="${meta.cicloIdeal || ''}" onchange="editarMetaField('${meta.id}','cicloIdeal',Number(this.value))">
         <span style="font-size:12px;color:var(--texto2);white-space:nowrap;">dias entre compras</span>
       </div>
+      <div style="font-size:11px;color:var(--texto3);line-height:1.5;margin-top:5px;padding:0 2px;">
+        💡 O giro ideal controla o <strong style="color:var(--texto2);">retorno automático</strong> quando a marca não é vendida na visita. Se o rep vende outras marcas mas não esta, o app já agenda o retorno por aqui — sem depender do giro padrão do representante.
+      </div>
     </div>`;
   }).join('');
 }
@@ -8673,10 +8737,15 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
   const cont = document.getElementById('campos-pedido-blocos');
   if (!cont) return;
   const marcas = (cliente && cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
-  cont.innerHTML = marcas.map((marca, i) => `
+  const metas = (getConfig().metas || []);
+  cont.innerHTML = marcas.map((marca, i) => {
+    const metaCfg = metas.find(m => m.marca === marca);
+    const skuMeta = metaCfg ? metaCfg.sku : null;
+    const somenteValor = skuMeta === 'reais' || skuMeta === 'faturamento';
+    return `
     <div style="${marca ? 'border:1.5px solid rgba(140,160,255,.25);background:rgba(140,160,255,.05);border-radius:14px;padding:12px;' : ''} ${i > 0 ? 'margin-top:10px;' : ''}">
       ${marca ? `<div style="display:inline-block;font-size:12px;font-weight:700;color:#A9B8FF;background:rgba(140,160,255,.12);border-radius:8px;padding:3px 10px;margin-bottom:10px;">🏷️ ${marca}</div>` : ''}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div style="display:grid;grid-template-columns:${somenteValor ? '1fr' : '1fr 1fr'};gap:10px;margin-bottom:10px;">
         <div>
           <label class="campo-label">Valor do pedido</label>
           <div style="position:relative;">
@@ -8684,16 +8753,17 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
             <input type="text" inputmode="numeric" class="campo-input" id="pedido-valor-${i}" placeholder="0,00" style="font-size:14px;padding:10px 12px 10px 34px;" oninput="mascaraMoeda(this)">
           </div>
         </div>
-        <div>
+        ${!somenteValor ? `<div>
           <label class="campo-label">Quantidade</label>
           <input type="number" class="campo-input" id="pedido-quantidade-${i}" placeholder="0" min="0" style="font-size:14px;padding:10px 12px;">
-        </div>
+        </div>` : ''}
       </div>
       <div>
         <label class="campo-label">Unidade</label>
         <select class="campo-input" id="pedido-unidade-${i}" style="font-size:14px;padding:10px 12px;"></select>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   marcas.forEach((marca, i) => popularUnidadesPedido(unidadePadrao, 'pedido-unidade-' + i));
 }
 function popularUnidadesPedido(valorAtual, selId) {

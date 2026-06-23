@@ -5987,6 +5987,7 @@ function limparValidacaoEndereco() {
 }
 
 let enderecoValidadoNc = null;
+let _ncSugestoesGeo = [];
 
 function limparValidacaoEnderecoNc() {
   enderecoValidadoNc = null;
@@ -6029,14 +6030,19 @@ async function validarEnderecoNc() {
       status.style.display = 'block';
       status.innerHTML = `<span style="color:var(--vermelho);">❌ Endereço não encontrado. Tente ser mais específico.</span>`;
     } else {
+      _ncSugestoesGeo = res;
       sugestoes.style.display = 'block';
-      sugestoes.innerHTML = res.map((r, i) => `
-        <div onclick="confirmarSugestaoNc(${i},'${encodeURIComponent(r.lat)}','${encodeURIComponent(r.lon)}','${encodeURIComponent(r.display_name)}')"
+      sugestoes.innerHTML = res.map((r, i) => {
+        const addr = r.address || {};
+        const cidade = addr.city || addr.town || addr.village || addr.municipality || '';
+        const cidadeHint = cidade ? `<span style="color:var(--verde);font-weight:600;"> · ${cidade}</span>` : '';
+        return `<div onclick="confirmarSugestaoNc(${i})"
           style="padding:12px 14px;border-bottom:1px solid var(--borda);cursor:pointer;"
           onmouseenter="this.style.background='rgba(0,214,143,.07)'" onmouseleave="this.style.background='transparent'">
-          <div style="font-size:12px;font-weight:600;color:var(--texto);margin-bottom:2px;">📍 ${r.display_name.split(',').slice(0,3).join(',')}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--texto);margin-bottom:2px;">📍 ${r.display_name.split(',').slice(0,3).join(',')}${cidadeHint}</div>
           <div style="font-size:10px;color:var(--texto3);">${r.display_name}</div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
       status.style.display = 'block';
       status.innerHTML = `<span style="color:var(--amarelo);">👆 Selecione o endereço correto</span>`;
     }
@@ -6047,22 +6053,25 @@ async function validarEnderecoNc() {
   btn.textContent = '🔍 Validar'; btn.disabled = false;
 }
 
-function confirmarSugestaoNc(idx, latEnc, lngEnc, displayEnc) {
-  const lat = decodeURIComponent(latEnc);
-  const lng = decodeURIComponent(lngEnc);
-  const display = decodeURIComponent(displayEnc);
-  const resumo = display.split(',').slice(0,3).join(',').trim();
+function confirmarSugestaoNc(idx) {
+  const r = _ncSugestoesGeo[idx];
+  if (!r) return;
+  const lat = r.lat;
+  const lng = r.lon;
+  const display = r.display_name;
+  const resumo = display.split(',').slice(0, 3).join(',').trim();
   enderecoValidadoNc = { lat, lng, display: resumo };
   document.getElementById('nc-endereco').value = resumo;
   document.getElementById('btn-validar-nc')?.classList.remove('btn-validar-pisca');
   document.getElementById('nc-end-sugestoes').style.display = 'none';
   document.getElementById('nc-end-status').style.display = 'block';
   document.getElementById('nc-end-status').innerHTML = `<span style="color:var(--verde);">✅ Endereço validado! Alfinete será criado no mapa.</span>`;
-  // Preenche cidade automaticamente se estiver vazia
+  // Preenche cidade usando o campo address do Nominatim (preciso, não mais extração por posição)
   const cidadeEl = document.getElementById('nc-cidade');
   if (cidadeEl && !cidadeEl.value) {
-    const partes = display.split(',');
-    if (partes.length >= 3) cidadeEl.value = partes[partes.length - 3].trim();
+    const addr = r.address || {};
+    const cidade = addr.city || addr.town || addr.village || addr.municipality || '';
+    if (cidade) cidadeEl.value = cidade;
   }
 }
 

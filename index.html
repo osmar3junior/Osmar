@@ -8065,13 +8065,13 @@ function calcularRealMarca(meta) {
         // Formato novo — cada item tem marca explícita
         h.pedidos.forEach(p => {
           if ((p.marca || '').trim().toLowerCase() !== marcaMeta) return;
-          real += meta.sku === 'reais' ? (Number(p.valor) || 0) : (Number(p.qtd) || 0);
+          real += (meta.sku === 'reais' || meta.sku === 'faturamento') ? (Number(p.valor) || 0) : (Number(p.qtd) || 0);
         });
       } else {
         // Formato legado — verifica se o cliente tem a marca no perfil
         const clienteMarcas = (c.marcas || []).map(m => (m || '').trim().toLowerCase());
         if (!clienteMarcas.includes(marcaMeta)) return;
-        real += meta.sku === 'reais' ? (Number(h.pedidoValor) || 0) : (Number(h.pedidoQtd) || 0);
+        real += (meta.sku === 'reais' || meta.sku === 'faturamento') ? (Number(h.pedidoValor) || 0) : (Number(h.pedidoQtd) || 0);
       }
     });
   });
@@ -8144,7 +8144,7 @@ function _detalheVendasMarca(meta) {
           if ((p.marca || '').trim().toLowerCase() !== marcaMeta) return;
           const qtd = Number(p.qtd) || 0;
           const val = Number(p.valor) || 0;
-          totalQtd += meta.sku === 'reais' ? val : qtd;
+          totalQtd += (meta.sku === 'reais' || meta.sku === 'faturamento') ? val : qtd;
           totalVal += val;
           linhas.push({ id: c.id, nome: c.nome, loja: c.loja || '', cidade: c.cidade || '', qtd, val, data: h.data, unidade: p.unidade || meta.sku });
         });
@@ -8153,7 +8153,7 @@ function _detalheVendasMarca(meta) {
         if (!clienteMarcas.includes(marcaMeta)) return;
         const qtd = Number(h.pedidoQtd) || 0;
         const val = Number(h.pedidoValor) || 0;
-        totalQtd += meta.sku === 'reais' ? val : qtd;
+        totalQtd += (meta.sku === 'reais' || meta.sku === 'faturamento') ? val : qtd;
         totalVal += val;
         linhas.push({ id: c.id, nome: c.nome, loja: c.loja || '', cidade: c.cidade || '', qtd, val, data: h.data, unidade: h.pedidoUnidade || meta.sku });
       }
@@ -8166,8 +8166,8 @@ function _detalheVendasMarca(meta) {
 
   const itens = linhas.map(l => {
     const local  = [l.loja, l.cidade].filter(Boolean).join(' · ');
-    const qtdTxt = meta.sku === 'reais' ? `R$ ${fmtV(l.val)}` : `${l.qtd} ${_skuLabel(l.unidade)}`;
-    const valTxt = meta.sku === 'reais' ? '' : `R$ ${fmtV(l.val)}`;
+    const qtdTxt = (meta.sku === 'reais' || meta.sku === 'faturamento') ? `R$ ${fmtV(l.val)}` : `${l.qtd} ${_skuLabel(l.unidade)}`;
+    const valTxt = (meta.sku === 'reais' || meta.sku === 'faturamento') ? '' : `R$ ${fmtV(l.val)}`;
     return `<div onclick="abrirPedidoExistente(this.dataset.cid,this.dataset.hdata)" data-cid="${l.id}" data-hdata="${l.data}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--borda);border-radius:10px;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent;" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background='transparent'">
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:600;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.nome}</div>
@@ -8183,7 +8183,7 @@ function _detalheVendasMarca(meta) {
     </div>`;
   }).join('');
 
-  const totalQtdTxt = meta.sku === 'reais' ? `R$ ${fmtV(totalQtd)}` : `${totalQtd} ${skuLabel}`;
+  const totalQtdTxt = (meta.sku === 'reais' || meta.sku === 'faturamento') ? `R$ ${fmtV(totalQtd)}` : `${totalQtd} ${skuLabel}`;
 
   return `<div style="border-top:1px solid var(--borda);padding:10px 0 0;">
     <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">${linhas.length} venda${linhas.length !== 1 ? 's' : ''} no período</div>
@@ -8192,7 +8192,7 @@ function _detalheVendasMarca(meta) {
       <span style="font-size:11px;color:var(--texto2);">${linhas.length} cliente${linhas.length !== 1 ? 's' : ''}</span>
       <div style="text-align:right;">
         <span style="font-size:13px;font-weight:700;color:var(--texto);">${totalQtdTxt}</span>
-        ${meta.sku !== 'reais' ? `<span style="font-size:11px;color:var(--texto2);margin-left:8px;">R$ ${fmtV(totalVal)}</span>` : ''}
+        ${(meta.sku !== 'reais' && meta.sku !== 'faturamento') ? `<span style="font-size:11px;color:var(--texto2);margin-left:8px;">R$ ${fmtV(totalVal)}</span>` : ''}
       </div>
     </div>
   </div>`;
@@ -8336,7 +8336,7 @@ function renderizarRelatorios() {
     const _bufferLabel  = cfg.bufferMeta > 0 ? ` <span style="font-size:10px;color:var(--verde);opacity:.7;">(+${cfg.bufferMeta}% margem)</span>` : '';
     const dataFimFmt    = fim.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
     const fmtMedia = v => {
-      if (meta.sku === 'reais') {
+      if (meta.sku === 'reais' || meta.sku === 'faturamento') {
         if (v >= 1000000) return 'R$ ' + (v/1000000).toFixed(1).replace('.',',') + 'M';
         if (v >= 1000) return 'R$ ' + Math.round(v/1000) + 'k';
         return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
@@ -8353,7 +8353,7 @@ function renderizarRelatorios() {
       mediaNumTxt = '✓'; mediaUnitTxt = 'meta batida!'; mediaSubTxt = 'Continue vendendo para superar a meta';
     } else {
       mediaNumTxt = fmtMedia(mediaDiaria);
-      mediaUnitTxt = meta.sku === 'reais' ? 'por dia' : `${skuLabel} / dia`;
+      mediaUnitTxt = (meta.sku === 'reais' || meta.sku === 'faturamento') ? 'por dia' : `${skuLabel} / dia`;
       mediaSubTxt = `${diasRestantes} dia${diasRestantes !== 1 ? 's úteis' : ' útil'} restante${diasRestantes !== 1 ? 's' : ''} · faltam ${fmtN(Math.round(falta))} ${skuLabel}`;
     }
 

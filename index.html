@@ -5580,7 +5580,7 @@ function renderizarProspectos() {
       <div style="font-size:11px;color:rgba(255,192,67,.8);margin-bottom:6px;">🏷️ ${esc(marcas)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <span style="font-size:10px;color:var(--texto3);">${ult?'Última visita: '+ult:'Sem visitas registradas'}</span>
-        ${c.endereco?`<button onclick="event.stopPropagation();abrirRotaCliente('${encodeURIComponent(c.endereco)}')" style="background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:7px;padding:4px 10px;color:#7DD3FC;font-size:11px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;">🧭 Ir</button>`:''}
+        ${(c.endereco||c.lat)?`<button onclick="event.stopPropagation();_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}')" style="background:linear-gradient(180deg,#33CCFF,#0EA5D6);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:11px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;box-shadow:0 3px 0 #0875A8;">🧭 Waze</button>`:''}
       </div>
     </div>`;
   }).join('');
@@ -7419,6 +7419,13 @@ function carregarDataRetorno(cliente) {
 // ===== ROTA =====
 let enderecoRota = '';
 
+let _rotaLat = null, _rotaLng = null;
+function _navegarProspecto(lat, lng, endEnc) {
+  _rotaLat = lat || null;
+  _rotaLng = lng || null;
+  abrirRotaCliente(endEnc);
+}
+
 function abrirRotaCliente(enderecoEncoded) {
   enderecoRota = decodeURIComponent(enderecoEncoded);
   document.getElementById('modal-rota-endereco').textContent = '📍 ' + enderecoRota;
@@ -7426,15 +7433,21 @@ function abrirRotaCliente(enderecoEncoded) {
 }
 
 function navegarWaze() {
-  const query = encodeURIComponent(enderecoRota);
-  window.open(`https://waze.com/ul?q=${query}&navigate=yes`, '_blank');
+  const url = (_rotaLat && _rotaLng)
+    ? `https://waze.com/ul?ll=${_rotaLat},${_rotaLng}&navigate=yes`
+    : `https://waze.com/ul?q=${encodeURIComponent(enderecoRota)}&navigate=yes`;
+  window.open(url, '_blank');
   fecharModal('modal-rota');
+  _rotaLat = null; _rotaLng = null;
 }
 
 function navegarGoogleMaps() {
-  const query = encodeURIComponent(enderecoRota);
-  window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+  const url = (_rotaLat && _rotaLng)
+    ? `https://www.google.com/maps/dir/?api=1&destination=${_rotaLat},${_rotaLng}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoRota)}`;
+  window.open(url, '_blank');
   fecharModal('modal-rota');
+  _rotaLat = null; _rotaLng = null;
 }
 
 function onLembreteInput() {

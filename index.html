@@ -734,6 +734,18 @@ if ('serviceWorker' in navigator) {
       <div style="color:var(--verde);font-size:20px;">›</div>
     </button>
 
+    <!-- BOTÃO OPORTUNIDADES AGORA -->
+    <button onclick="abrirOportunidades()" style="width:100%;background:linear-gradient(135deg,#1a1200,#2a1f00);border:1.5px solid rgba(255,192,67,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(255,192,67,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">💡</div>
+        <div style="text-align:left;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Oportunidades agora</div>
+          <div style="font-size:11px;color:var(--texto2);">Onde é mais fácil vender neste momento</div>
+        </div>
+      </div>
+      <div style="color:#FFC043;font-size:20px;">›</div>
+    </button>
+
     <!-- BOTÃO FINALIZAR DIA -->
     <button onclick="abrirFinalizarDia()" style="width:100%;background:linear-gradient(135deg,#10192b,#16243f);border:1.5px solid rgba(56,113,189,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:12px;">
@@ -1839,6 +1851,20 @@ if ('serviceWorker' in navigator) {
 
       <button onclick="gerarRelatorioEmail()" style="width:100%;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));color:#04231A;border:none;border-radius:12px;padding:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px var(--verde-glow);">Gerar e-mail</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL OPORTUNIDADES AGORA -->
+<div class="modal-overlay" id="modal-oportunidades">
+  <div class="modal-box" style="max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+      <div>
+        <div class="modal-titulo" style="margin-bottom:2px;">💡 Oportunidades agora</div>
+        <div style="font-size:12px;color:var(--texto2);margin-bottom:16px;line-height:1.5;">Clientes mais prontos para comprar — cruzando giro, potencial e distância</div>
+      </div>
+      <button onclick="fecharOportunidades()" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:8px;">✕</button>
+    </div>
+    <div id="opp-lista"></div>
   </div>
 </div>
 
@@ -5412,6 +5438,98 @@ function _scoreFoco(c) {
   return { score, focoCount };
 }
 
+function _calcularOportunidades(lat, lng) {
+  const clientes = getClientesAtivos();
+  const metas = (getConfig().metas || []);
+  const opps = [];
+  clientes.forEach(c => {
+    const marcas = c.marcas || [];
+    const pot = calcularPotencialCliente(c);
+    let melhorScore = 0, melhorMarca = null, melhorMat = 0, melhorPot = 0;
+    marcas.forEach(marca => {
+      const m = metas.find(m => m.marca === marca);
+      if (!m?.cicloIdeal) return;
+      let ult = null;
+      (c.historico || []).forEach(h => {
+        if (h.motivo !== 'fechou_pedido') return;
+        const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : marcas[0] === marca;
+        if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
+      });
+      const diasSem = ult ? Math.floor((new Date() - ult) / 86400000) : m.cicloIdeal + 1;
+      const mat = Math.min(3, diasSem / m.cicloIdeal);
+      const pv = pot[marca] || {};
+      const potVal = pv.max || pv.avg || 0;
+      if (potVal <= 0) return;
+      let distFator = 1;
+      if (lat && c.lat && c.lng) {
+        const dist = calcularDistancia(lat, lng, parseFloat(c.lat), parseFloat(c.lng));
+        distFator = Math.max(0.1, 1 - dist / 80);
+      }
+      const score = mat * potVal * distFator;
+      if (score > melhorScore) { melhorScore = score; melhorMarca = marca; melhorMat = mat; melhorPot = potVal; }
+    });
+    if (melhorScore > 0) {
+      const dist = (lat && c.lat && c.lng) ? calcularDistancia(lat, lng, parseFloat(c.lat), parseFloat(c.lng)) : null;
+      opps.push({ c, marca: melhorMarca, score: melhorScore, mat: melhorMat, potVal: melhorPot, dist });
+    }
+  });
+  return opps.sort((a, b) => b.score - a.score).slice(0, 7);
+}
+
+function abrirOportunidades() {
+  document.getElementById('modal-oportunidades').classList.add('aberto');
+  document.getElementById('opp-lista').innerHTML = '<div style="text-align:center;padding:32px;color:var(--texto2);">📍 Calculando oportunidades...</div>';
+  const render = (lat, lng) => {
+    const opps = _calcularOportunidades(lat, lng);
+    const lista = document.getElementById('opp-lista');
+    if (!opps.length) {
+      lista.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--texto2);font-size:13px;line-height:1.6;">Configure o <strong style="color:var(--texto);">giro ideal</strong> nas metas de cada marca para o app calcular as oportunidades.</div>';
+      return;
+    }
+    const semGPS = lat === null;
+    lista.innerHTML = (semGPS ? '<div style="font-size:11px;color:var(--amarelo);background:rgba(255,192,67,.08);border:1px solid rgba(255,192,67,.2);border-radius:8px;padding:8px 10px;margin-bottom:12px;">📍 GPS não disponível — ordenado por giro e potencial, sem considerar distância</div>' : '') +
+    opps.map((o, i) => {
+      const pot = calcularPotencialCliente(o.c);
+      const pv = pot[o.marca] || {};
+      const pctBarra = Math.min(100, Math.round((o.mat / 3) * 100));
+      const corBarra = o.mat >= 1 ? 'var(--verde)' : o.mat >= 0.7 ? 'var(--amarelo)' : 'var(--texto3)';
+      const labelMat = o.mat >= 1 ? '✅ Pronto para comprar' : o.mat >= 0.7 ? '🟡 Quase no ponto' : '⏳ Chegando lá';
+      const distTxt = o.dist !== null ? (o.dist < 1 ? `${Math.round(o.dist*1000)}m` : `${o.dist.toFixed(1)}km`) : '';
+      return `<div onclick="fecharOportunidades();setTimeout(()=>abrirDetalhe('${o.c.id}','clientes'),200)" style="background:var(--bg3);border:1px solid ${o.mat>=1?'rgba(0,214,143,.25)':'var(--borda)'};border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+          <div style="min-width:0;">
+            <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(o.c.nome)}</div>
+            <div style="font-size:11px;color:var(--texto2);">${esc(o.c.loja||'')}${distTxt?' · <strong style="color:var(--texto);">'+distTxt+'</strong>':''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:12px;font-weight:700;color:var(--verde);">máx ${fmtK(pv.max||pv.avg||0)}</div>
+            <div style="font-size:10px;color:var(--texto3);">méd ${fmtK(pv.avg||0)}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,.75);">${esc(o.marca)}</span>
+          ${o.mat>=1?'<span class="foco-badge">FOCO</span>':''}
+          <span style="font-size:11px;color:${corBarra};font-weight:600;">${labelMat}</span>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:6px;height:4px;overflow:hidden;">
+          <div style="background:${corBarra};height:100%;width:${pctBarra}%;border-radius:6px;"></div>
+        </div>
+      </div>`;
+    }).join('');
+  };
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      p => render(p.coords.latitude, p.coords.longitude),
+      () => render(null, null),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  } else { render(null, null); }
+}
+
+function fecharOportunidades() {
+  document.getElementById('modal-oportunidades').classList.remove('aberto');
+}
+
 function montarRota(clientes, latRep, lngRep) {
   let ordenados;
 
@@ -7647,11 +7765,17 @@ function _onbRenderMetas() {
         <input type="number" class="campo-input onb-meta-valor" placeholder="Meta" value="${ex.valor || ''}" style="flex:1;">
         <select class="campo-input onb-meta-sku" style="flex:1;">${skuOpts}</select>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:8px 10px;">
+      <div style="display:flex;align-items:center;gap:8px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:8px 10px;margin-bottom:8px;">
         <span style="font-size:12px;color:var(--amarelo);white-space:nowrap;">💰 Comissão</span>
         <input type="number" min="0" max="100" step="0.1" class="campo-input onb-meta-com" placeholder="%" value="${ex.comissao || ''}" style="flex:1;padding:5px 8px;font-size:13px;">
         <span style="font-size:13px;color:var(--texto2);font-weight:700;">%</span>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.25);border-radius:9px;padding:8px 10px;">
+        <span style="font-size:12px;color:#A78BFA;white-space:nowrap;">🔄 Giro ideal</span>
+        <input type="number" min="1" max="365" class="campo-input onb-meta-giro" placeholder="dias" value="${ex.cicloIdeal || 30}" style="flex:1;padding:5px 8px;font-size:13px;">
+        <span style="font-size:12px;color:var(--texto2);white-space:nowrap;">dias entre compras</span>
+      </div>
+      <div style="font-size:11px;color:var(--texto3);line-height:1.5;margin-top:5px;padding:0 2px;">💡 O giro ideal controla o <strong style="color:var(--texto2);">retorno automático</strong> quando a marca não é vendida na visita — sem depender do giro padrão do representante.</div>
     </div>`;
   }).join('');
 }
@@ -7695,8 +7819,9 @@ function _onbFinalizar(pulou) {
       const valor = Number(card.querySelector('.onb-meta-valor').value) || 0;
       const sku = card.querySelector('.onb-meta-sku').value;
       const comissao = Number(card.querySelector('.onb-meta-com').value) || 0;
+      const cicloIdeal = Number(card.querySelector('.onb-meta-giro').value) || 30;
       if (valor > 0 || comissao > 0) {
-        novas.push({ id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), marca, sku, tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor, comissao, cicloIdeal: 30, exibirEm: 'reais' });
+        novas.push({ id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), marca, sku, tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor, comissao, cicloIdeal, exibirEm: 'reais' });
       }
     });
     // Substitui as metas das marcas que passaram pelo onboarding; mantém as outras.

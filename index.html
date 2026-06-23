@@ -8881,8 +8881,9 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
     const skuMeta = metaCfg ? metaCfg.sku : null;
     const somenteValor = skuMeta === 'reais' || skuMeta === 'faturamento';
     const temMetaUnidade = skuMeta && !somenteValor;
+    const temMeta = skuMeta !== null;
     const labelQtd = temMetaUnidade ? `Quantidade (${_skuLabel(skuMeta)})` : 'Quantidade';
-    const selectAttr = temMetaUnidade
+    const selectAttr = temMeta
       ? `disabled style="font-size:14px;padding:10px 12px;opacity:.6;cursor:not-allowed;background:var(--bg2);"`
       : `style="font-size:14px;padding:10px 12px;"`;
     return `
@@ -8904,13 +8905,13 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
       <div>
         <label class="campo-label">Unidade</label>
         <select class="campo-input" id="pedido-unidade-${i}" ${selectAttr}></select>
-        ${temMetaUnidade ? `<div style="font-size:10px;color:var(--texto3);margin-top:4px;">🔒 Definida pela meta — não editável</div>` : ''}
+        ${temMeta ? `<div style="font-size:10px;color:var(--texto3);margin-top:4px;">🔒 Definida pela meta — não editável</div>` : ''}
       </div>
     </div>`;
   }).join('');
   marcas.forEach((marca, i) => {
     const mc = metas.find(m => m.marca === marca);
-    const skuDefault = (mc && mc.sku !== 'reais' && mc.sku !== 'faturamento') ? mc.sku : unidadePadrao;
+    const skuDefault = mc ? mc.sku : unidadePadrao;
     popularUnidadesPedido(skuDefault, 'pedido-unidade-' + i);
   });
 }

@@ -8880,6 +8880,11 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
     const metaCfg = metas.find(m => m.marca === marca);
     const skuMeta = metaCfg ? metaCfg.sku : null;
     const somenteValor = skuMeta === 'reais' || skuMeta === 'faturamento';
+    const temMetaUnidade = skuMeta && !somenteValor;
+    const labelQtd = temMetaUnidade ? `Quantidade (${_skuLabel(skuMeta)})` : 'Quantidade';
+    const selectAttr = temMetaUnidade
+      ? `disabled style="font-size:14px;padding:10px 12px;opacity:.6;cursor:not-allowed;background:var(--bg2);"`
+      : `style="font-size:14px;padding:10px 12px;"`;
     return `
     <div style="${marca ? 'border:1.5px solid rgba(140,160,255,.25);background:rgba(140,160,255,.05);border-radius:14px;padding:12px;' : ''} ${i > 0 ? 'margin-top:10px;' : ''}">
       ${marca ? `<div style="display:inline-block;font-size:12px;font-weight:700;color:#A9B8FF;background:rgba(140,160,255,.12);border-radius:8px;padding:3px 10px;margin-bottom:10px;">🏷️ ${marca}</div>` : ''}
@@ -8892,17 +8897,22 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
           </div>
         </div>
         ${!somenteValor ? `<div>
-          <label class="campo-label">Quantidade</label>
-          <input type="number" class="campo-input" id="pedido-quantidade-${i}" placeholder="0" min="0" style="font-size:14px;padding:10px 12px;">
+          <label class="campo-label">${labelQtd}</label>
+          <input type="number" class="campo-input" id="pedido-quantidade-${i}" placeholder="0" min="0" style="font-size:14px;padding:10px 12px;${temMetaUnidade ? 'border-color:rgba(0,214,143,.35);' : ''}">
         </div>` : ''}
       </div>
       <div>
         <label class="campo-label">Unidade</label>
-        <select class="campo-input" id="pedido-unidade-${i}" style="font-size:14px;padding:10px 12px;"></select>
+        <select class="campo-input" id="pedido-unidade-${i}" ${selectAttr}></select>
+        ${temMetaUnidade ? `<div style="font-size:10px;color:var(--texto3);margin-top:4px;">🔒 Definida pela meta — não editável</div>` : ''}
       </div>
     </div>`;
   }).join('');
-  marcas.forEach((marca, i) => popularUnidadesPedido(unidadePadrao, 'pedido-unidade-' + i));
+  marcas.forEach((marca, i) => {
+    const mc = metas.find(m => m.marca === marca);
+    const skuDefault = (mc && mc.sku !== 'reais' && mc.sku !== 'faturamento') ? mc.sku : unidadePadrao;
+    popularUnidadesPedido(skuDefault, 'pedido-unidade-' + i);
+  });
 }
 function popularUnidadesPedido(valorAtual, selId) {
   const sel = document.getElementById(selId || 'pedido-unidade');

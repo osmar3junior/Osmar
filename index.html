@@ -441,6 +441,16 @@ if ('serviceWorker' in navigator) {
     0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(255,192,67,0); }
     50%      { opacity:.65; box-shadow:0 0 5px 2px rgba(255,192,67,.55); }
   }
+  /* PROSPECTOS */
+  .prospect-tag { display:inline-flex;align-items:center;gap:4px;background:rgba(255,192,67,.15);border:1px solid rgba(255,192,67,.4);color:#FFC043;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.4px; }
+  @keyframes piscaProspect {
+    0%,100% { box-shadow:0 0 0 0 rgba(255,192,67,0); }
+    50%      { box-shadow:0 0 0 5px rgba(255,192,67,.3); }
+  }
+  .prospect-card-borda { border-color:rgba(255,192,67,.35) !important; animation:piscaProspect 2s ease-in-out infinite; }
+  .btn-prospect-visita { background:linear-gradient(180deg,#D97706,#92400E);color:#fff;box-shadow:0 5px 0 #78350F,0 8px 12px rgba(0,0,0,.4);border-bottom:none; }
+  .prospect-data-btn { flex:1;background:var(--bg3);border:1.5px solid var(--borda);border-radius:10px;padding:11px 6px;color:var(--texto2);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s,background .15s; }
+  .prospect-data-btn:active { border-color:#FFC043;color:#FFC043;background:rgba(255,192,67,.1); }
   .foco-badge {
     display:inline-flex; align-items:center;
     background:rgba(255,192,67,.18); border:1px solid rgba(255,192,67,.5);
@@ -744,6 +754,21 @@ if ('serviceWorker' in navigator) {
         </div>
       </div>
       <div style="color:#FFC043;font-size:20px;">›</div>
+    </button>
+
+    <!-- BOTÃO PROSPECTOS -->
+    <button onclick="abrirProspectos()" id="btn-prospectos-dash" style="width:100%;background:linear-gradient(135deg,#1a1200,#2a1f00);border:1.5px solid rgba(255,192,67,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(255,192,67,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🔭</div>
+        <div style="text-align:left;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Clientes em prospecção</div>
+          <div style="font-size:11px;color:var(--texto2);">Lojas que ainda não compraram — acompanhe de perto</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="badge-prospectos" style="display:none;background:#FFC043;color:#000;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:800;font-family:'Syne',sans-serif;"></span>
+        <div style="color:#FFC043;font-size:20px;">›</div>
+      </div>
     </button>
 
     <!-- BOTÃO FINALIZAR DIA -->
@@ -1619,6 +1644,15 @@ if ('serviceWorker' in navigator) {
     <div class="campo-grupo"><label class="campo-label">E-mail do cliente</label><input type="email" class="campo-input" id="nc-email" placeholder="cliente@email.com"></div>
     <div class="campo-grupo"><label class="campo-label">Marcas representadas <span style="color:var(--texto3);font-weight:400;">(até 5)</span></label><div class="sku-grid" id="nc-marcas-grid"></div></div>
 
+    <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;margin-bottom:14px;">
+      <div style="font-size:11px;color:var(--texto2);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Esta loja é:</div>
+      <div style="display:flex;gap:8px;">
+        <button type="button" id="nc-tipo-cliente" onclick="setNcTipo('cliente')" style="flex:1;padding:10px;border-radius:9px;border:1.5px solid var(--verde);background:rgba(0,214,143,.12);color:var(--verde);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">👥 Cliente ativo</button>
+        <button type="button" id="nc-tipo-prospect" onclick="setNcTipo('prospect')" style="flex:1;padding:10px;border-radius:9px;border:1.5px solid var(--borda);background:var(--bg2);color:var(--texto2);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔭 Em prospecção</button>
+      </div>
+    </div>
+    <input type="hidden" id="nc-tipo" value="cliente">
+
     <div class="modal-btns">
       <button class="btn-secundario" onclick="fecharModal('modal-novo-cliente')">Cancelar</button>
       <button class="btn-primario" style="flex:2" onclick="salvarNovoCliente()">Adicionar</button>
@@ -1850,6 +1884,55 @@ if ('serviceWorker' in navigator) {
       </div>
 
       <button onclick="gerarRelatorioEmail()" style="width:100%;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));color:#04231A;border:none;border-radius:12px;padding:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px var(--verde-glow);">Gerar e-mail</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LISTA DE PROSPECTOS -->
+<div class="modal-overlay" id="modal-prospectos">
+  <div class="modal-box" style="max-height:88vh;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-shrink:0;">
+      <div>
+        <div class="modal-titulo" style="margin-bottom:2px;">🔭 Clientes em prospecção</div>
+        <div style="font-size:12px;color:var(--texto2);">Ordenados por data de retorno</div>
+      </div>
+      <button onclick="fecharModal('modal-prospectos')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div id="prospectos-lista" style="overflow-y:auto;flex:1;"></div>
+  </div>
+</div>
+
+<!-- MODAL VISITA DE PROSPECÇÃO -->
+<div class="modal-overlay" id="modal-prospect-visita">
+  <div class="modal-box">
+    <div class="modal-titulo">📍 Visita de prospecção</div>
+    <div class="modal-sub">Como foi? Quando voltar?</div>
+    <button onclick="abrirConversaoParaCliente()" style="width:100%;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:12px;padding:15px;color:#04231A;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px;box-shadow:0 6px 20px var(--verde-glow);">✅ Fechou! Virou cliente →</button>
+    <textarea class="campo-obs" id="prospect-obs" placeholder="Como foi a visita? Objeções, contato, contexto... (opcional)" style="margin-bottom:14px;"></textarea>
+    <div style="font-size:11px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Quando voltar?</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button class="prospect-data-btn" onclick="salvarRetornoProspecto(30)">30 dias</button>
+      <button class="prospect-data-btn" onclick="salvarRetornoProspecto(60)">60 dias</button>
+      <button class="prospect-data-btn" onclick="salvarRetornoProspecto(90)">90 dias</button>
+    </div>
+    <input type="date" id="prospect-data-custom" class="campo-input" style="margin-bottom:12px;">
+    <div class="modal-btns">
+      <button class="btn-secundario" onclick="fecharModal('modal-prospect-visita')">Cancelar</button>
+      <button class="btn-primario" style="flex:2;" onclick="salvarRetornoProspectoCustom()">📅 Confirmar data</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONVERSÃO PROSPECT → CLIENTE -->
+<div class="modal-overlay" id="modal-conversao-prospect">
+  <div class="modal-box">
+    <div class="modal-titulo">🎉 Virou cliente!</div>
+    <div class="modal-sub">Quais marcas você vendeu? Toque nas que fecharam.</div>
+    <div id="conversao-marcas-grid" class="sku-grid" style="margin-bottom:16px;gap:10px;"></div>
+    <div style="font-size:11px;color:var(--texto3);margin-bottom:16px;line-height:1.5;">Após confirmar, o app abre o lançamento da venda com a unidade e meta já configuradas.</div>
+    <div class="modal-btns">
+      <button class="btn-secundario" onclick="fecharModal('modal-conversao-prospect')">Cancelar</button>
+      <button class="btn-primario" style="flex:2;" onclick="confirmarConversaoParaCliente()">Registrar venda →</button>
     </div>
   </div>
 </div>
@@ -2468,6 +2551,9 @@ if ('serviceWorker' in navigator) {
         <div style="display:flex;gap:12px;align-items:flex-start;background:rgba(255,192,67,.07);border:1px solid rgba(255,192,67,.25);border-radius:14px;padding:14px;">
           <span style="font-size:24px;">💡</span><div><div style="font-weight:700;color:var(--texto);font-size:14px;">Onde é mais fácil vender agora</div><div style="font-size:12.5px;color:var(--texto2);">O app cruza giro, potencial e distância para indicar os clientes com maior chance de fechar neste momento.</div></div>
         </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;background:rgba(255,192,67,.07);border:1px solid rgba(255,192,67,.25);border-radius:14px;padding:14px;">
+          <span style="font-size:24px;">🔭</span><div><div style="font-weight:700;color:var(--texto);font-size:14px;">Prospectos que não ficam esquecidos</div><div style="font-size:12.5px;color:var(--texto2);">Cadastre lojas em prospecção e o app avisa quando você estiver perto delas na rota — na hora certa de bater à porta.</div></div>
+        </div>
       </div>
       <!-- Espaço para vídeo (oculto até ter o link) -->
       <div id="onb-video-1" style="display:none;text-align:center;margin-top:16px;"><a class="onb-video-link" target="_blank" style="font-size:13px;color:var(--verde);cursor:pointer;font-weight:600;">▶️ Ver como funciona (30s)</a></div>
@@ -2848,7 +2934,8 @@ function getClientes() {
   return getClientesRaw().filter(c => !c._del);
 }
 // Base ATIVA = clientes que não estão no arquivo (fechados/inadimplentes saem daqui)
-function getClientesAtivos() { return getClientes().filter(c => !c.statusArquivo); }
+function getClientesAtivos() { return getClientes().filter(c => !c.statusArquivo && c.tipo !== 'prospect'); }
+function getProspectos() { return getClientes().filter(c => !c.statusArquivo && c.tipo === 'prospect'); }
 function getClientesArquivados(tipo) { return getClientes().filter(c => c.statusArquivo && (!tipo || c.statusArquivo === tipo)); }
 
 // ===== ARQUIVO (fechados / inadimplentes) =====
@@ -5000,6 +5087,7 @@ function atualizarDashboard() {
   migrarArquivo();
   atualizarSemaforoDash();
   atualizarBadgeDespesas();
+  atualizarBadgeProspectos();
   const clientes = getClientesAtivos();
   const cfg = getConfig();
   document.getElementById('num-total').textContent = clientes.length;
@@ -5439,6 +5527,147 @@ function _scoreFoco(c) {
     }
   });
   return { score, focoCount };
+}
+
+// ===== PROSPECTOS =====
+function setNcTipo(tipo) {
+  const el = document.getElementById('nc-tipo');
+  if (el) el.value = tipo;
+  const btnC = document.getElementById('nc-tipo-cliente');
+  const btnP = document.getElementById('nc-tipo-prospect');
+  if (!btnC || !btnP) return;
+  const isC = tipo === 'cliente';
+  btnC.style.cssText = `flex:1;padding:10px;border-radius:9px;border:1.5px solid ${isC?'var(--verde)':'var(--borda)'};background:${isC?'rgba(0,214,143,.12)':'var(--bg2)'};color:${isC?'var(--verde)':'var(--texto2)'};font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;`;
+  btnP.style.cssText = `flex:1;padding:10px;border-radius:9px;border:1.5px solid ${!isC?'#FFC043':'var(--borda)'};background:${!isC?'rgba(255,192,67,.12)':'var(--bg2)'};color:${!isC?'#FFC043':'var(--texto2)'};font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;`;
+}
+
+function abrirProspectos() {
+  renderizarProspectos();
+  document.getElementById('modal-prospectos').classList.add('aberto');
+}
+
+function renderizarProspectos() {
+  const prospectos = getProspectos();
+  const lista = document.getElementById('prospectos-lista');
+  if (!lista) return;
+  if (!prospectos.length) {
+    lista.innerHTML = `<div class="empty-state"><div class="empty-icon">🔭</div><div class="empty-titulo">Sem prospectos</div><div class="empty-desc">Cadastre clientes marcando "Em prospecção" para acompanhá-los aqui.</div></div>`;
+    return;
+  }
+  const hoje = new Date();
+  const ordenados = [...prospectos].sort((a, b) => {
+    const da = a.dataRetornoCustom ? new Date(a.dataRetornoCustom) : new Date(a.criadoEm);
+    const db = b.dataRetornoCustom ? new Date(b.dataRetornoCustom) : new Date(b.criadoEm);
+    return da - db;
+  });
+  lista.innerHTML = ordenados.map(c => {
+    const retorno = c.dataRetornoCustom ? new Date(c.dataRetornoCustom) : null;
+    const diffDias = retorno ? Math.round((retorno - hoje) / 86400000) : null;
+    const vencido = diffDias !== null && diffDias < 0;
+    const eHoje = diffDias === 0;
+    const retornoTxt = !retorno ? 'Nunca visitado' : vencido ? `Atrasado ${Math.abs(diffDias)}d` : eHoje ? 'Visitar hoje' : `Em ${diffDias}d · ${retorno.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}`;
+    const retornoCor = (!retorno || vencido) ? 'var(--vermelho)' : eHoje ? 'var(--amarelo)' : 'var(--texto2)';
+    const marcas = (c.marcas||[]).join(' · ') || 'Marca a definir';
+    const ult = c.historico?.length ? new Date(c.historico[0].data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : null;
+    return `<div onclick="fecharModal('modal-prospectos');setTimeout(()=>abrirDetalhe('${c.id}','prospectos'),200)" style="background:var(--bg3);border:1.5px solid rgba(255,192,67,.25);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--texto);margin-bottom:1px;">${esc(c.nome)}</div>
+          <div style="font-size:11px;color:var(--texto2);">${esc(c.loja||'')}${c.cidade?' · '+esc(c.cidade):''}</div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${retornoCor};white-space:nowrap;flex-shrink:0;">${retornoTxt}</span>
+      </div>
+      <div style="font-size:11px;color:rgba(255,192,67,.8);margin-bottom:6px;">🏷️ ${esc(marcas)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:10px;color:var(--texto3);">${ult?'Última visita: '+ult:'Sem visitas registradas'}</span>
+        ${c.endereco?`<button onclick="event.stopPropagation();abrirRotaCliente('${encodeURIComponent(c.endereco)}')" style="background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:7px;padding:4px 10px;color:#7DD3FC;font-size:11px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;">🧭 Ir</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function atualizarBadgeProspectos() {
+  const badge = document.getElementById('badge-prospectos');
+  if (!badge) return;
+  const hoje = new Date();
+  const vencidos = getProspectos().filter(c => !c.dataRetornoCustom || new Date(c.dataRetornoCustom) <= hoje);
+  if (vencidos.length > 0) {
+    badge.style.display = 'inline-flex';
+    badge.textContent = vencidos.length;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function abrirProspectVisita() {
+  const el = document.getElementById('prospect-obs');
+  const dt = document.getElementById('prospect-data-custom');
+  if (el) el.value = '';
+  if (dt) dt.value = '';
+  document.getElementById('modal-prospect-visita').classList.add('aberto');
+}
+
+function salvarRetornoProspecto(dias) {
+  _salvarVisitaProspecto(dias, null);
+}
+
+function salvarRetornoProspectoCustom() {
+  const val = document.getElementById('prospect-data-custom').value;
+  if (!val) { toast('Escolha uma data primeiro'); return; }
+  const hoje = new Date();
+  const escolhida = new Date(val + 'T00:00:00');
+  const diff = Math.round((escolhida - hoje) / 86400000);
+  _salvarVisitaProspecto(Math.max(1, diff), val);
+}
+
+function _salvarVisitaProspecto(dias, dataIso) {
+  const clientes = getClientes();
+  const idx = clientes.findIndex(c => c.id === clienteAtualId);
+  if (idx === -1) return;
+  const obs = document.getElementById('prospect-obs')?.value.trim() || '';
+  const retorno = new Date();
+  retorno.setDate(retorno.getDate() + dias);
+  const isoRetorno = dataIso || retorno.toISOString().slice(0, 10);
+  if (!clientes[idx].historico) clientes[idx].historico = [];
+  clientes[idx].historico.unshift({ tipo:'visita', motivo:'prospect_visita', data:new Date().toISOString(), obs, retorno:isoRetorno });
+  clientes[idx].dataRetornoCustom = isoRetorno;
+  salvarClientes(clientes);
+  fecharModal('modal-prospect-visita');
+  abrirDetalhe(clienteAtualId, telaAnteriorDetalhe);
+  const dtFmt = new Date(isoRetorno+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  toast(`🔭 Retorno agendado: ${dtFmt}`);
+  atualizarBadgeProspectos();
+}
+
+function abrirConversaoParaCliente() {
+  fecharModal('modal-prospect-visita');
+  const cfg = getConfig();
+  const marcas = (cfg.marcas||[]).filter(Boolean);
+  if (!marcas.length) { toast('Cadastre suas marcas em Configurações primeiro'); return; }
+  const grid = document.getElementById('conversao-marcas-grid');
+  grid.innerHTML = marcas.map(m => `<div class="sku-chip" data-marca="${esc(m)}" onclick="this.classList.toggle('ativo')" style="font-size:14px;padding:10px 16px;">${esc(m)}</div>`).join('');
+  document.getElementById('modal-conversao-prospect').classList.add('aberto');
+}
+
+function confirmarConversaoParaCliente() {
+  const marcasSel = Array.from(document.querySelectorAll('#conversao-marcas-grid .sku-chip.ativo')).map(el => el.dataset.marca);
+  if (!marcasSel.length) { toast('Selecione pelo menos uma marca que você vendeu'); return; }
+  const clientes = getClientes();
+  const idx = clientes.findIndex(c => c.id === clienteAtualId);
+  if (idx === -1) return;
+  clientes[idx].tipo = 'cliente';
+  clientes[idx].marcas = [...new Set([...(clientes[idx].marcas||[]), ...marcasSel])];
+  salvarClientes(clientes);
+  fecharModal('modal-conversao-prospect');
+  motivoSelecionado = 'fechou_pedido';
+  const cliente = clientes[idx];
+  const unidadesSeg = { moda:'peças', calcados:'pares', alimentos:'caixas', higiene:'caixas', ferragens:'unidades', medico:'frascos', papelaria:'unidades', eletronicos:'unidades', pneus:'unidades' };
+  const unidadePadrao = unidadesSeg[cliente.segmento] || null;
+  renderizarCamposPedido(cliente, unidadePadrao);
+  document.getElementById('campos-pedido').style.display = 'block';
+  abrirModalPedido();
+  toast('🎉 Preencha os dados da venda e salve!');
+  atualizarBadgeProspectos();
 }
 
 function _calcularOportunidades(lat, lng) {
@@ -6732,6 +6961,14 @@ function abrirDetalhe(clienteId, telaOrigem) {
   document.getElementById('det-nome').textContent = cliente.nome;
   const marcasTxt = (cliente.marcas && cliente.marcas.length) ? cliente.marcas.join(', ') : '';
   document.getElementById('det-loja').textContent = `${cliente.loja}${cliente.cidade ? ' · '+cliente.cidade : ''}${marcasTxt ? ' · '+marcasTxt : ''}`;
+  // Badge de prospecto
+  let _ptag = document.getElementById('det-prospect-tag');
+  if (!_ptag) { _ptag = document.createElement('div'); _ptag.id = 'det-prospect-tag'; document.getElementById('det-nome').after(_ptag); }
+  _ptag.style.display = cliente.tipo === 'prospect' ? 'block' : 'none';
+  _ptag.innerHTML = cliente.tipo === 'prospect' ? `<span class="prospect-tag" style="margin-bottom:6px;display:inline-flex;">🔭 EM PROSPECÇÃO</span>` : '';
+  // Botão de visita: muda texto para prospectos
+  const btnVisita = document.querySelector('.btn-acao.btn-visita');
+  if (btnVisita) btnVisita.textContent = cliente.tipo === 'prospect' ? '🔭 Registrar visita' : '📍 Resultado da Visita';
   // Endereço do check-in
   let endEl = document.getElementById('det-endereco-tag');
   if (!endEl) {
@@ -7269,6 +7506,12 @@ function editarContato(idx) {
 
 // ===== CONTATO =====
 function abrirModalContato(tipo) {
+  // Prospectos têm fluxo próprio de visita
+  const clienteAtual = getClientes().find(c => c.id === clienteAtualId);
+  if (clienteAtual?.tipo === 'prospect' && tipo === 'visita') {
+    abrirProspectVisita();
+    return;
+  }
   editandoContatoIdx = -1;
   tipoContatoAtual = tipo;
   motivoSelecionado = null;
@@ -7560,6 +7803,7 @@ function confirmarExcluirCliente() {
 
 // ===== NOVO CLIENTE =====
 function abrirModalNovoCliente() {
+  setNcTipo('cliente');
   ['nc-nome','nc-loja','nc-cidade','nc-telefone','nc-email','nc-endereco','nc-lat','nc-lng','nc-cnpj'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
@@ -7612,6 +7856,7 @@ function salvarNovoCliente() {
     telefone: document.getElementById('nc-telefone').value.trim(),
     emailCliente: document.getElementById('nc-email').value.trim(),
     marcas: getMarcasSelecionadas('nc-marcas-grid'),
+    tipo: document.getElementById('nc-tipo')?.value || 'cliente',
     historico: [], criadoEm: new Date().toISOString()
   };
 

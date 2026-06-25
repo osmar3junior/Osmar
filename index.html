@@ -378,10 +378,26 @@ if ('serviceWorker' in navigator) {
   .btn-secundario { flex:1; background:var(--bg3); border:1px solid var(--borda); border-radius:10px; padding:13px; color:var(--texto); font-family:'Syne',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
 
   /* CARTÕES DAS FORMAS DE CADASTRO */
-  .forma-card { border:1.5px solid rgba(140,160,255,.22); background:rgba(140,160,255,.04); border-radius:14px; padding:12px; margin-bottom:10px; }
-  .forma-tag { display:inline-block; font-size:11px; font-weight:700; color:#A9B8FF; background:rgba(140,160,255,.12); border-radius:8px; padding:3px 10px; margin-bottom:10px; letter-spacing:.2px; }
-  .forma-card.destaque-verde { border-color:rgba(0,214,143,.3); background:rgba(0,214,143,.05); }
-  .forma-card.destaque-verde .forma-tag { color:var(--verde); background:rgba(0,214,143,.12); }
+  .forma-card { border-radius:14px; padding:13px; margin-bottom:10px; }
+  .forma-tag { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; border-radius:8px; padding:3px 10px; margin-bottom:10px; letter-spacing:.2px; }
+  .forma-card-1 { border:1.5px solid rgba(0,214,143,.4); background:rgba(0,214,143,.06); }
+  .forma-card-1 .forma-tag { color:#00D68F; background:rgba(0,214,143,.14); }
+  .forma-card-2 { border:1.5px solid rgba(56,189,248,.35); background:rgba(56,189,248,.05); }
+  .forma-card-2 .forma-tag { color:#38BDF8; background:rgba(56,189,248,.12); }
+  .forma-card-3 { border:1.5px solid rgba(167,139,250,.35); background:rgba(167,139,250,.05); }
+  .forma-card-3 .forma-tag { color:#A78BFA; background:rgba(167,139,250,.12); }
+  .forma-card-4 { border:1.5px solid rgba(251,191,36,.3); background:rgba(251,191,36,.04); }
+  .forma-card-4 .forma-tag { color:#FBBF24; background:rgba(251,191,36,.12); }
+  .forma-num { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; font-size:11px; font-weight:800; flex-shrink:0; }
+  .forma-card-1 .forma-num { background:rgba(0,214,143,.2); color:#00D68F; }
+  .forma-card-2 .forma-num { background:rgba(56,189,248,.2); color:#38BDF8; }
+  .forma-card-3 .forma-num { background:rgba(167,139,250,.2); color:#A78BFA; }
+  .forma-card-4 .forma-num { background:rgba(251,191,36,.18); color:#FBBF24; }
+  @keyframes piscaFormas {
+    0%,100% { opacity:1; }
+    50%      { opacity:0; }
+  }
+  .formas-titulo-pisca { animation:piscaFormas .55s ease-in-out 7; }
 
   /* PISCAR BOTÃO VALIDAR (4ª forma de endereço) — chama atenção só quando há texto não validado */
   @keyframes piscaValidar {
@@ -1599,11 +1615,14 @@ if ('serviceWorker' in navigator) {
 
     <!-- 4 FORMAS DE CADASTRAR -->
     <div class="campo-grupo">
-      <label class="campo-label">Localização <span style="color:var(--texto3);font-weight:400;">(escolha uma das 4 formas)</span></label>
+      <div id="formas-titulo" class="formas-titulo-pisca" style="text-align:center;margin-bottom:14px;padding:10px 12px;background:rgba(255,255,255,.04);border-radius:12px;border:1px solid rgba(255,255,255,.08);">
+        <div style="font-size:11px;color:var(--texto3);margin-bottom:3px;">📍 LOCALIZAÇÃO DO CLIENTE</div>
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#FFC043;letter-spacing:.3px;line-height:1.4;">ESCOLHA UMA DAS 4 FORMAS<br>PARA CADASTRAR O SEU CLIENTE</div>
+      </div>
 
       <!-- 1ª FORMA: CNPJ -->
-      <div class="forma-card destaque-verde">
-        <div class="forma-tag">1ª · 🔍 Pelo CNPJ — preenche tudo sozinho</div>
+      <div class="forma-card forma-card-1">
+        <div class="forma-tag"><span class="forma-num">1</span> 🔍 Pelo CNPJ — preenche tudo sozinho</div>
         <div style="display:flex;gap:8px;align-items:flex-start;">
           <input type="text" inputmode="numeric" class="campo-input" id="nc-cnpj" placeholder="00.000.000/0000-00" style="flex:1;" oninput="mascaraCnpj(this)">
           <button onclick="buscarCnpjNc()" id="btn-cnpj-nc" style="background:rgba(0,214,143,.12);border:1px solid rgba(0,214,143,.35);border-radius:10px;padding:11px 12px;color:var(--verde);font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;">🔍 Buscar</button>
@@ -1612,26 +1631,26 @@ if ('serviceWorker' in navigator) {
       </div>
 
       <!-- 2ª FORMA: GPS -->
-      <div class="forma-card">
-        <div class="forma-tag">2ª · 📡 Pela sua localização atual</div>
-        <div id="nc-gps-chip" onclick="aplicarLocalizacaoNc()" style="display:none;background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--verde);cursor:pointer;">
+      <div class="forma-card forma-card-2">
+        <div class="forma-tag"><span class="forma-num">2</span> 📡 Pela sua localização atual</div>
+        <div id="nc-gps-chip" onclick="aplicarLocalizacaoNc()" style="display:none;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#38BDF8;cursor:pointer;">
           📍 Localização detectada — <span class="texto-pulsa">toque aqui para usar</span><br><span id="nc-gps-chip-texto" style="color:var(--texto2);font-weight:400;"></span>
         </div>
         <div id="nc-gps-status" style="display:none;font-size:12px;color:var(--texto2);">📡 Detectando sua localização...</div>
       </div>
 
       <!-- 3ª FORMA: MAPA -->
-      <div class="forma-card">
-        <div class="forma-tag">3ª · 🗺️ Marcando no mapa</div>
-        <button type="button" onclick="abrirMapaParaNovoCliente()" style="width:100%;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:10px 12px;color:#38BDF8;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">🗺️ Marcar local no mapa</button>
+      <div class="forma-card forma-card-3">
+        <div class="forma-tag"><span class="forma-num">3</span> 🗺️ Marcando no mapa</div>
+        <button type="button" onclick="abrirMapaParaNovoCliente()" style="width:100%;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 12px;color:#A78BFA;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">🗺️ Marcar local no mapa</button>
       </div>
 
       <!-- 4ª FORMA: DIGITAR ENDEREÇO -->
-      <div class="forma-card">
-        <div class="forma-tag">4ª · ⌨️ Digitando o endereço</div>
+      <div class="forma-card forma-card-4">
+        <div class="forma-tag"><span class="forma-num">4</span> ⌨️ Digitando o endereço</div>
         <div style="display:flex;gap:8px;align-items:flex-start;">
           <input type="text" class="campo-input" id="nc-endereco" placeholder="Ex: Rua das Flores, 123" style="flex:1;" oninput="limparValidacaoEnderecoNc()">
-          <button onclick="validarEnderecoNc()" id="btn-validar-nc" style="background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:11px 12px;color:var(--verde);font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;">🔍 Validar</button>
+          <button onclick="validarEnderecoNc()" id="btn-validar-nc" style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:11px 12px;color:#FBBF24;font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;">🔍 Validar</button>
         </div>
         <div id="nc-end-status" style="display:none;margin-top:8px;font-size:12px;"></div>
         <div id="nc-end-sugestoes" style="display:none;margin-top:8px;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;overflow:hidden;"></div>
@@ -1671,6 +1690,21 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
     <input type="hidden" id="nc-tipo" value="cliente">
+
+    <!-- PAINEL INLINE PROSPECÇÃO — aparece quando rep seleciona "Em prospecção" -->
+    <div id="nc-prospect-inline" style="display:none;margin-top:12px;background:rgba(255,192,67,.05);border:1.5px solid rgba(255,192,67,.3);border-radius:12px;padding:13px;">
+      <div style="font-size:11px;font-weight:700;color:#FFC043;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">📍 Como foi essa visita?</div>
+      <button type="button" onclick="ncFechouVirou()" style="width:100%;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:11px;padding:13px;color:#04231A;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:0 4px 14px var(--verde-glow);">✅ Fechou! Virou cliente →</button>
+      <textarea id="nc-prospect-obs" placeholder="Como foi? Objeções, contato, contexto... (opcional)" style="width:100%;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:10px 12px;color:var(--texto);font-size:12px;resize:none;height:72px;margin-bottom:12px;font-family:'DM Sans',sans-serif;box-sizing:border-box;"></textarea>
+      <div style="font-size:10px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Quando voltar?</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button type="button" class="prospect-data-btn" id="nc-p-30" onclick="ncSetRetorno(30,this)">30 dias</button>
+        <button type="button" class="prospect-data-btn" id="nc-p-60" onclick="ncSetRetorno(60,this)">60 dias</button>
+        <button type="button" class="prospect-data-btn" id="nc-p-90" onclick="ncSetRetorno(90,this)">90 dias</button>
+      </div>
+      <div style="font-size:10px;color:var(--texto3);margin-bottom:5px;">📅 Ou escolha uma data personalizada de retorno</div>
+      <input type="date" id="nc-prospect-data" class="campo-input" style="margin-bottom:0;" oninput="ncSetRetornoCustom(this.value)">
+    </div>
 
     <div class="modal-btns">
       <button class="btn-secundario" onclick="fecharModal('modal-novo-cliente')">Cancelar</button>
@@ -1934,6 +1968,7 @@ if ('serviceWorker' in navigator) {
       <button class="prospect-data-btn" onclick="salvarRetornoProspecto(60)">60 dias</button>
       <button class="prospect-data-btn" onclick="salvarRetornoProspecto(90)">90 dias</button>
     </div>
+    <div style="font-size:10px;color:var(--texto3);margin-bottom:5px;margin-top:2px;">📅 Ou escolha uma data personalizada de retorno</div>
     <input type="date" id="prospect-data-custom" class="campo-input" style="margin-bottom:12px;">
     <div class="modal-btns">
       <button class="btn-secundario" onclick="fecharModal('modal-prospect-visita')">Cancelar</button>
@@ -5558,6 +5593,33 @@ function setNcTipo(tipo) {
   const isC = tipo === 'cliente';
   btnC.style.cssText = `flex:1;padding:10px;border-radius:9px;border:1.5px solid ${isC?'var(--verde)':'var(--borda)'};background:${isC?'rgba(0,214,143,.12)':'var(--bg2)'};color:${isC?'var(--verde)':'var(--texto2)'};font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;`;
   btnP.style.cssText = `flex:1;padding:10px;border-radius:9px;border:1.5px solid ${!isC?'#FFC043':'var(--borda)'};background:${!isC?'rgba(255,192,67,.12)':'var(--bg2)'};color:${!isC?'#FFC043':'var(--texto2)'};font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;`;
+  const inline = document.getElementById('nc-prospect-inline');
+  if (inline) inline.style.display = isC ? 'none' : 'block';
+}
+
+function ncFechouVirou() {
+  setNcTipo('cliente');
+}
+
+function ncSetRetorno(dias, btn) {
+  window._ncProspectDias = dias;
+  window._ncProspectDataCustom = null;
+  const dtEl = document.getElementById('nc-prospect-data');
+  if (dtEl) dtEl.value = '';
+  ['nc-p-30','nc-p-60','nc-p-90'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.style.borderColor = ''; b.style.color = ''; b.style.background = ''; }
+  });
+  if (btn) { btn.style.borderColor = '#FFC043'; btn.style.color = '#FFC043'; btn.style.background = 'rgba(255,192,67,.12)'; }
+}
+
+function ncSetRetornoCustom(val) {
+  window._ncProspectDataCustom = val || null;
+  window._ncProspectDias = null;
+  ['nc-p-30','nc-p-60','nc-p-90'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.style.borderColor = ''; b.style.color = ''; b.style.background = ''; }
+  });
 }
 
 function abrirProspectos() {
@@ -7852,6 +7914,16 @@ function abrirModalNovoCliente() {
   document.getElementById('btn-validar-nc')?.classList.remove('btn-validar-pisca');
   enderecoValidadoNc = null;
   localizacaoDetectadaNc = null;
+  window._ncProspectDias = null;
+  window._ncProspectDataCustom = null;
+  const ncObs = document.getElementById('nc-prospect-obs');
+  const ncData = document.getElementById('nc-prospect-data');
+  if (ncObs) ncObs.value = '';
+  if (ncData) ncData.value = '';
+  ['nc-p-30','nc-p-60','nc-p-90'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.style.borderColor = ''; b.style.color = ''; b.style.background = ''; }
+  });
   const st = document.getElementById('nc-end-status');
   const sg = document.getElementById('nc-end-sugestoes');
   const chip = document.getElementById('nc-gps-chip');
@@ -7916,12 +7988,34 @@ function salvarNovoCliente() {
     }
   }
 
+  // Se prospect com visita registrada, adiciona entrada no histórico
+  if (novoCliente.tipo === 'prospect') {
+    const obs = document.getElementById('nc-prospect-obs')?.value.trim() || '';
+    let isoRetorno = null;
+    if (window._ncProspectDataCustom) {
+      isoRetorno = window._ncProspectDataCustom;
+    } else if (window._ncProspectDias) {
+      const ret = new Date();
+      ret.setDate(ret.getDate() + window._ncProspectDias);
+      isoRetorno = ret.toISOString().slice(0, 10);
+    }
+    if (obs || isoRetorno) {
+      novoCliente.historico.unshift({ tipo:'visita', motivo:'prospect_visita', data:new Date().toISOString(), obs, retorno: isoRetorno || null });
+      if (isoRetorno) novoCliente.dataRetornoCustom = isoRetorno;
+    }
+  }
+
   const clientes = getClientes();
   clientes.unshift(novoCliente);
   salvarClientes(clientes);
   fecharModal('modal-novo-cliente');
   renderizarClientes();
-  const msg = novoCliente.lat ? 'Cliente adicionado com alfinete no mapa! ✅' : 'Cliente adicionado!';
+  atualizarBadgeProspectos();
+  let msg = novoCliente.lat ? 'Cliente adicionado com alfinete no mapa! ✅' : 'Cliente adicionado!';
+  if (novoCliente.tipo === 'prospect' && novoCliente.dataRetornoCustom) {
+    const dtFmt = new Date(novoCliente.dataRetornoCustom + 'T00:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+    msg = `🔭 Prospecto cadastrado! Retorno: ${dtFmt}`;
+  }
   toast(msg);
 }
 

@@ -427,6 +427,11 @@ if ('serviceWorker' in navigator) {
     50%     { transform:scale(1.3); }
   }
   #notif-badge { animation:piscaBadge 1s ease-in-out 5; }
+  @keyframes piscaBadgeProspect {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:0; transform:scale(.85); }
+  }
+  .badge-prospect-pisca { animation:piscaBadgeProspect .5s ease-in-out 5; }
   @keyframes piscaMeta {
     0%,100% { opacity:1; transform:scale(1); }
     50%      { opacity:.45; transform:scale(.96); }
@@ -766,7 +771,7 @@ if ('serviceWorker' in navigator) {
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <span id="badge-prospectos" style="display:none;background:#FFC043;color:#000;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:800;font-family:'Syne',sans-serif;"></span>
+        <span id="badge-prospectos" style="display:none;position:relative;background:#FFC043;color:#000;border-radius:999px;min-width:26px;height:26px;align-items:center;justify-content:center;font-size:13px;font-weight:800;font-family:'DM Sans',sans-serif;padding:0 7px;white-space:nowrap;box-shadow:0 2px 8px rgba(255,192,67,.5);"></span>
         <div style="color:#FFC043;font-size:20px;">›</div>
       </div>
     </button>
@@ -5594,8 +5599,12 @@ function atualizarBadgeProspectos() {
   if (vencidos.length > 0) {
     badge.style.display = 'inline-flex';
     badge.textContent = vencidos.length;
+    badge.classList.remove('badge-prospect-pisca');
+    void badge.offsetWidth; // force reflow para reiniciar animação
+    badge.classList.add('badge-prospect-pisca');
   } else {
     badge.style.display = 'none';
+    badge.classList.remove('badge-prospect-pisca');
   }
 }
 

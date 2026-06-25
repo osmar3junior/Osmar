@@ -8578,26 +8578,35 @@ function _detalheVendasMarca(meta) {
 
   linhas.sort((a, b) => new Date(b.data) - new Date(a.data));
 
+  const somenteValor = (meta.sku === 'reais' || meta.sku === 'faturamento');
+
   const itens = linhas.map(l => {
     const local  = [l.loja, l.cidade].filter(Boolean).join(' · ');
-    const qtdTxt = (meta.sku === 'reais' || meta.sku === 'faturamento') ? `R$ ${fmtV(l.val)}` : `${l.qtd} ${_skuLabel(l.unidade)}`;
-    const valTxt = (meta.sku === 'reais' || meta.sku === 'faturamento') ? '' : `R$ ${fmtV(l.val)}`;
+    const qtdTxt = somenteValor ? `R$ ${fmtV(l.val)}` : `${l.qtd} ${_skuLabel(l.unidade)}`;
+    const valTxt = somenteValor ? '' : `R$ ${fmtV(l.val)}`;
+    const pmTxt  = (!somenteValor && l.qtd > 0 && l.val > 0)
+      ? `PM R$ ${fmtV(l.val / l.qtd)}/${_skuLabel(l.unidade)}`
+      : null;
     return `<div onclick="abrirPedidoExistente(this.dataset.cid,this.dataset.hdata)" data-cid="${l.id}" data-hdata="${l.data}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--borda);border-radius:10px;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent;" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background='transparent'">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.nome}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'Syne',sans-serif;">${l.nome}</div>
         <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${local || '—'} <span style="color:var(--texto3);">· ${fmtD(l.data)}</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:10px;">
         <div style="text-align:right;">
-          <div style="font-size:13px;font-weight:600;color:var(--texto);">${qtdTxt}</div>
-          ${valTxt ? `<div style="font-size:11px;color:var(--texto2);">${valTxt}</div>` : ''}
+          <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'Syne',sans-serif;">${qtdTxt}</div>
+          ${valTxt ? `<div style="font-size:11px;color:var(--texto2);font-family:'Syne',sans-serif;">${valTxt}</div>` : ''}
+          ${pmTxt ? `<div style="font-size:11px;font-weight:700;color:#7C8EF0;font-family:'Syne',sans-serif;margin-top:1px;">${pmTxt}</div>` : ''}
         </div>
         <span style="color:var(--texto3);font-size:16px;line-height:1;">›</span>
       </div>
     </div>`;
   }).join('');
 
-  const totalQtdTxt = (meta.sku === 'reais' || meta.sku === 'faturamento') ? `R$ ${fmtV(totalQtd)}` : `${totalQtd} ${skuLabel}`;
+  const totalQtdTxt = somenteValor ? `R$ ${fmtV(totalQtd)}` : `${totalQtd} ${skuLabel}`;
+  const pmGeral = (!somenteValor && totalQtd > 0 && totalVal > 0)
+    ? `PM geral R$ ${fmtV(totalVal / totalQtd)}/${skuLabel}`
+    : null;
 
   return `<div style="border-top:1px solid var(--borda);padding:10px 0 0;">
     <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">${linhas.length} venda${linhas.length !== 1 ? 's' : ''} no período</div>
@@ -8605,8 +8614,9 @@ function _detalheVendasMarca(meta) {
     <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 0;margin-top:2px;">
       <span style="font-size:11px;color:var(--texto2);">${linhas.length} cliente${linhas.length !== 1 ? 's' : ''}</span>
       <div style="text-align:right;">
-        <span style="font-size:13px;font-weight:700;color:var(--texto);">${totalQtdTxt}</span>
-        ${(meta.sku !== 'reais' && meta.sku !== 'faturamento') ? `<span style="font-size:11px;color:var(--texto2);margin-left:8px;">R$ ${fmtV(totalVal)}</span>` : ''}
+        <span style="font-size:13px;font-weight:700;color:var(--texto);font-family:'Syne',sans-serif;">${totalQtdTxt}</span>
+        ${!somenteValor ? `<span style="font-size:11px;color:var(--texto2);margin-left:8px;font-family:'Syne',sans-serif;">R$ ${fmtV(totalVal)}</span>` : ''}
+        ${pmGeral ? `<div style="font-size:11px;font-weight:700;color:#7C8EF0;font-family:'Syne',sans-serif;margin-top:2px;">${pmGeral}</div>` : ''}
       </div>
     </div>
   </div>`;
@@ -9325,9 +9335,9 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
           <input type="number" class="campo-input" id="pedido-quantidade-${i}" placeholder="0" min="0" style="font-size:14px;padding:10px 12px;${temMetaUnidade ? 'border-color:rgba(0,214,143,.35);' : ''}" oninput="atualizarProgressoPedido();calcPrecoMedioPedido(${i})">
         </div>` : ''}
       </div>
-      ${!somenteValor ? `<div id="preco-medio-box-${i}" style="display:none;align-items:center;justify-content:space-between;background:rgba(140,160,255,.07);border:1px solid rgba(140,160,255,.2);border-radius:9px;padding:7px 11px;margin-bottom:8px;">
-        <div style="font-size:10px;font-weight:700;color:#A9B8FF;letter-spacing:.3px;">💡 PREÇO MÉDIO / UNIDADE</div>
-        <div id="preco-medio-val-${i}" style="font-size:13px;font-weight:800;color:#C4D0FF;font-family:'Syne',sans-serif;"></div>
+      ${!somenteValor ? `<div id="preco-medio-box-${i}" style="display:none;align-items:center;justify-content:space-between;background:rgba(140,160,255,.07);border:1px solid rgba(140,160,255,.2);border-radius:9px;padding:9px 12px;margin-bottom:8px;">
+        <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--texto2);">Preço médio</span>
+        <span id="preco-medio-val-${i}" style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#C4D0FF;"></span>
       </div>` : ''}
       <div>
         <label class="campo-label">Unidade</label>

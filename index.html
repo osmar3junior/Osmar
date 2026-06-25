@@ -393,11 +393,11 @@ if ('serviceWorker' in navigator) {
   .forma-card-2 .forma-num { background:rgba(56,189,248,.2); color:#38BDF8; }
   .forma-card-3 .forma-num { background:rgba(167,139,250,.2); color:#A78BFA; }
   .forma-card-4 .forma-num { background:rgba(251,191,36,.18); color:#FBBF24; }
-  @keyframes piscaFormas {
-    0%,100% { opacity:1; }
-    50%      { opacity:0; }
+  @keyframes amberGlow {
+    0%,100% { text-shadow:0 0 0px rgba(255,192,67,0); color:#FFC043; }
+    50%      { text-shadow:0 0 14px rgba(255,192,67,.9), 0 0 28px rgba(255,192,67,.4); color:#FFD97A; }
   }
-  .formas-titulo-pisca { animation:piscaFormas .55s ease-in-out 7; }
+  .formas-titulo-pisca { animation:amberGlow 1.8s ease-in-out 5; }
 
   /* PISCAR BOTÃO VALIDAR (4ª forma de endereço) — chama atenção só quando há texto não validado */
   @keyframes piscaValidar {

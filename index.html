@@ -456,6 +456,14 @@ if ('serviceWorker' in navigator) {
   .btn-prospect-visita { background:linear-gradient(180deg,#D97706,#92400E);color:#fff;box-shadow:0 5px 0 #78350F,0 8px 12px rgba(0,0,0,.4);border-bottom:none; }
   .prospect-data-btn { flex:1;background:var(--bg3);border:1.5px solid var(--borda);border-radius:10px;padding:11px 6px;color:var(--texto2);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s,background .15s; }
   .prospect-data-btn:active { border-color:#FFC043;color:#FFC043;background:rgba(255,192,67,.1); }
+  .canal-pedido-btn { flex:1;border-radius:9px;border:1.5px solid var(--borda);background:var(--bg2);color:var(--texto3);font-size:11px;font-weight:700;padding:9px 4px;cursor:pointer;text-align:center;font-family:'Syne',sans-serif;line-height:1.4;transition:border-color .15s,background .15s,color .15s; }
+  .canal-pedido-btn.sel-visit { border-color:#D97706;background:rgba(217,119,6,.12);color:#FFC043; }
+  .canal-pedido-btn.sel-wpp   { border-color:#22C55E;background:rgba(34,197,94,.09);color:#4ade80; }
+  .bloco-marca-pedido { border-radius:14px;border:1.5px solid var(--borda);padding:13px;transition:border-color .2s; }
+  .bloco-marca-pedido.ok-visit { border-color:rgba(217,119,6,.55); }
+  .bloco-marca-pedido.ok-wpp   { border-color:rgba(34,197,94,.45); }
+  .pedido-progress-bar { height:3px;background:var(--bg3);border-radius:2px;flex:1;margin:0 10px;overflow:hidden; }
+  .pedido-progress-fill { height:100%;background:#FFC043;border-radius:2px;transition:width .3s; }
   .foco-badge {
     display:inline-flex; align-items:center;
     background:rgba(255,192,67,.18); border:1px solid rgba(255,192,67,.5);
@@ -965,7 +973,7 @@ if ('serviceWorker' in navigator) {
     <div class="detalhe-nome" id="det-nome">-</div>
     <div class="detalhe-loja" id="det-loja">-</div>
     <div class="detalhe-acoes">
-      <button class="btn-acao btn-visita" onclick="abrirModalContato('visita')">📍 Resultado da Visita</button>
+      <button class="btn-acao btn-visita" onclick="abrirModalContato('visita')">📍 Resultado da Visita/Contato</button>
       <button class="btn-acao btn-zap" onclick="abrirWhatsAppOuMenu()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         WhatsApp
@@ -1153,7 +1161,7 @@ if ('serviceWorker' in navigator) {
             WhatsApp
           </button>
           <button class="bsb bsb-visita" onclick="registrarVisitaMapa()">
-            📍 Resultado da Visita
+            📍 Resultado da Visita/Contato
           </button>
           <button id="bs-btn-nav" class="bsb bsb-nav" onclick="navegarParaCliente()">
             🧭 Rota
@@ -1567,9 +1575,15 @@ if ('serviceWorker' in navigator) {
       <button onclick="fecharModalPedido()" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
     </div>
     <div id="campos-pedido-blocos" style="overflow-y:auto;flex:1;min-height:0;padding-right:4px;"></div>
-    <div class="modal-btns" style="margin-top:14px;flex-shrink:0;">
-      <button class="btn-secundario" onclick="fecharModalPedido()">Voltar</button>
-      <button class="btn-primario" style="flex:2;margin-top:0;" onclick="salvarPedidoDireto()">💾 Salvar venda</button>
+    <div style="flex-shrink:0;margin-top:12px;">
+      <div id="pedido-progress-row" style="display:none;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span id="pedido-progress-label" style="font-size:10px;color:var(--texto3);white-space:nowrap;"></span>
+        <div class="pedido-progress-bar"><div class="pedido-progress-fill" id="pedido-progress-fill" style="width:0%"></div></div>
+      </div>
+      <div class="modal-btns" style="margin:0;">
+        <button class="btn-secundario" onclick="fecharModalPedido()">Voltar</button>
+        <button class="btn-primario" id="btn-salvar-pedido-final" style="flex:2;margin-top:0;" onclick="salvarPedidoDireto()">💾 Salvar venda</button>
+      </div>
     </div>
   </div>
 </div>
@@ -6977,7 +6991,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
   _ptag.innerHTML = cliente.tipo === 'prospect' ? `<span class="prospect-tag" style="margin-bottom:6px;display:inline-flex;">🔭 EM PROSPECÇÃO</span>` : '';
   // Botão de visita: muda texto para prospectos
   const btnVisita = document.querySelector('.btn-acao.btn-visita');
-  if (btnVisita) btnVisita.textContent = cliente.tipo === 'prospect' ? '🔭 Registrar visita' : '📍 Resultado da Visita';
+  if (btnVisita) btnVisita.textContent = cliente.tipo === 'prospect' ? '🔭 Registrar visita' : '📍 Resultado da Visita/Contato';
   // Endereço do check-in
   let endEl = document.getElementById('det-endereco-tag');
   if (!endEl) {
@@ -7517,6 +7531,7 @@ function editarContato(idx) {
       if (valorEl) valorEl.value = p.valor ? p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
       if (qtdEl) qtdEl.value = p.qtd || '';
       popularUnidadesPedido(p.unidade, 'pedido-unidade-' + i);
+      if (p.canal) setPedidoCanal(i, p.canal);
     });
     atualizarResumoPedido();
   } else {
@@ -7601,7 +7616,7 @@ function salvarContato() {
         setTimeout(() => primeiro.style.borderColor = '', 2500);
       }
       // Pisca o botão "Salvar venda" em âmbar para chamar atenção
-      const btnSv = document.querySelector('#modal-pedido .btn-primario');
+      const btnSv = document.getElementById('btn-salvar-pedido-final');
       if (btnSv) {
         btnSv.classList.remove('btn-meta-salvar-pisca');
         void btnSv.offsetWidth;
@@ -7619,8 +7634,9 @@ function salvarContato() {
       const valor = valorParaFloat(valorEl ? valorEl.value : '');
       const qtd = parseInt(qtdEl ? qtdEl.value : '');
       const unidade = unidadeEl ? unidadeEl.value : '';
+      const canal = (window._pedidoCanais && window._pedidoCanais[i]) || null;
       if (valor > 0 || qtd > 0) {
-        pedidos.push({ marca, valor: valor > 0 ? valor : undefined, qtd: qtd > 0 ? qtd : undefined, unidade: unidade || undefined });
+        pedidos.push({ marca, valor: valor > 0 ? valor : undefined, qtd: qtd > 0 ? qtd : undefined, unidade: unidade || undefined, canal: canal || undefined });
         if (valor > 0) valorTotal += valor;
       }
     });
@@ -8517,7 +8533,7 @@ function abrirPedidoExistente(clienteId, dataStr) {
 
   // Muda título e botão para modo edição
   const titulo = document.querySelector('#modal-pedido .modal-titulo');
-  const btnSalvar = document.querySelector('#modal-pedido .btn-primario');
+  const btnSalvar = document.getElementById('btn-salvar-pedido-final');
   if (titulo)   titulo.textContent   = '✏️ Editar pedido';
   if (btnSalvar) btnSalvar.textContent = '💾 Salvar alterações';
 
@@ -9152,6 +9168,7 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
   if (!cont) return;
   const marcas = (cliente && cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
   const metas = (getConfig().metas || []);
+  window._pedidoCanais = new Array(marcas.length).fill(null);
   cont.innerHTML = marcas.map((marca, i) => {
     const metaCfg = metas.find(m => m.marca === marca);
     const skuMeta = metaCfg ? metaCfg.sku : null;
@@ -9162,20 +9179,28 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
     const selectAttr = temMeta
       ? `disabled style="font-size:14px;padding:10px 12px;opacity:.6;cursor:not-allowed;background:var(--bg2);"`
       : `style="font-size:14px;padding:10px 12px;"`;
+    const numLabel = marcas.length > 1 ? `<span style="font-size:10px;color:var(--texto3);margin-left:6px;">${i+1} de ${marcas.length}</span>` : '';
     return `
-    <div style="${marca ? 'border:1.5px solid rgba(140,160,255,.25);background:rgba(140,160,255,.05);border-radius:14px;padding:12px;' : ''} ${i > 0 ? 'margin-top:10px;' : ''}">
-      ${marca ? `<div style="display:inline-block;font-size:12px;font-weight:700;color:#A9B8FF;background:rgba(140,160,255,.12);border-radius:8px;padding:3px 10px;margin-bottom:10px;">🏷️ ${marca}</div>` : ''}
+    <div class="bloco-marca-pedido" id="bloco-marca-${i}" style="${i > 0 ? 'margin-top:10px;' : ''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+        ${marca ? `<div style="display:inline-flex;align-items:center;font-size:13px;font-weight:800;color:#FFC043;background:rgba(255,192,67,.12);border:1px solid rgba(255,192,67,.35);border-radius:8px;padding:4px 11px;font-family:'Syne',sans-serif;">🏷 ${marca}</div>` : '<div></div>'}
+        <div style="display:flex;align-items:center;gap:4px;">${numLabel}<span id="check-marca-${i}" style="opacity:0;font-size:12px;color:#4ade80;transition:opacity .2s;">✓</span></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button type="button" class="canal-pedido-btn" id="canal-visit-${i}" onclick="setPedidoCanal(${i},'visita')">📍 Visita<br>Presencial</button>
+        <button type="button" class="canal-pedido-btn" id="canal-wpp-${i}" onclick="setPedidoCanal(${i},'wpp')">💬 WhatsApp<br>/ e-mail</button>
+      </div>
       <div style="display:grid;grid-template-columns:${somenteValor ? '1fr' : '1fr 1fr'};gap:10px;margin-bottom:10px;">
         <div>
           <label class="campo-label">Valor do pedido</label>
           <div style="position:relative;">
             <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--texto2);font-size:13px;font-weight:600;">R$</span>
-            <input type="text" inputmode="numeric" class="campo-input" id="pedido-valor-${i}" placeholder="0,00" style="font-size:14px;padding:10px 12px 10px 34px;" oninput="mascaraMoeda(this)">
+            <input type="text" inputmode="numeric" class="campo-input" id="pedido-valor-${i}" placeholder="0,00" style="font-size:14px;padding:10px 12px 10px 34px;" oninput="mascaraMoeda(this);atualizarProgressoPedido()">
           </div>
         </div>
         ${!somenteValor ? `<div>
           <label class="campo-label">${labelQtd}</label>
-          <input type="number" class="campo-input" id="pedido-quantidade-${i}" placeholder="0" min="0" style="font-size:14px;padding:10px 12px;${temMetaUnidade ? 'border-color:rgba(0,214,143,.35);' : ''}">
+          <input type="number" class="campo-input" id="pedido-quantidade-${i}" placeholder="0" min="0" style="font-size:14px;padding:10px 12px;${temMetaUnidade ? 'border-color:rgba(0,214,143,.35);' : ''}" oninput="atualizarProgressoPedido()">
         </div>` : ''}
       </div>
       <div>
@@ -9190,6 +9215,46 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
     const skuDefault = mc ? mc.sku : unidadePadrao;
     popularUnidadesPedido(skuDefault, 'pedido-unidade-' + i);
   });
+  atualizarProgressoPedido();
+}
+
+function setPedidoCanal(idx, canal) {
+  if (!window._pedidoCanais) window._pedidoCanais = [];
+  window._pedidoCanais[idx] = canal;
+  const bv = document.getElementById('canal-visit-' + idx);
+  const bw = document.getElementById('canal-wpp-' + idx);
+  const bloco = document.getElementById('bloco-marca-' + idx);
+  const check = document.getElementById('check-marca-' + idx);
+  if (bv) { bv.className = 'canal-pedido-btn' + (canal === 'visita' ? ' sel-visit' : ''); }
+  if (bw) { bw.className = 'canal-pedido-btn' + (canal === 'wpp' ? ' sel-wpp' : ''); }
+  if (bloco) { bloco.className = 'bloco-marca-pedido ' + (canal === 'visita' ? 'ok-visit' : 'ok-wpp'); }
+  if (check) { check.style.opacity = '1'; }
+  atualizarProgressoPedido();
+}
+
+function atualizarProgressoPedido() {
+  const canais = window._pedidoCanais || [];
+  const total = canais.length;
+  if (total === 0) return;
+  const preenchidos = canais.filter(c => c !== null).length;
+  const pct = Math.round((preenchidos / total) * 100);
+  const row = document.getElementById('pedido-progress-row');
+  const label = document.getElementById('pedido-progress-label');
+  const fill = document.getElementById('pedido-progress-fill');
+  const btn = document.getElementById('btn-salvar-pedido-final');
+  if (row) row.style.display = total > 1 ? 'flex' : 'none';
+  if (label) label.textContent = preenchidos + ' de ' + total + ' marcas com canal';
+  if (fill) fill.style.width = pct + '%';
+  if (btn) {
+    if (preenchidos === 0) {
+      btn.textContent = '💾 Salvar venda';
+    } else if (preenchidos < total) {
+      btn.textContent = '💾 Salvar (' + preenchidos + '/' + total + ' marcas)';
+    } else {
+      const todosWpp = canais.every(c => c === 'wpp');
+      btn.textContent = todosWpp ? '💬 Salvar venda' : '📍 Salvar venda';
+    }
+  }
 }
 function popularUnidadesPedido(valorAtual, selId) {
   const sel = document.getElementById(selId || 'pedido-unidade');
@@ -10255,10 +10320,11 @@ function fecharModalPedido() {
     }
   }
   document.getElementById('modal-pedido').classList.remove('aberto');
+  window._pedidoCanais = [];
   // Restaura título e botão se estava em modo edição
   if (_histEditandoClienteId) {
     const titulo    = document.querySelector('#modal-pedido .modal-titulo');
-    const btnSalvar = document.querySelector('#modal-pedido .btn-primario');
+    const btnSalvar = document.getElementById('btn-salvar-pedido-final');
     if (titulo)    titulo.textContent    = '✅ Dados do pedido';
     if (btnSalvar) btnSalvar.textContent = '💾 Salvar venda';
     _histEditandoClienteId = null;

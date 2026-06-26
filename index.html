@@ -1217,6 +1217,17 @@ if ('serviceWorker' in navigator) {
 
       <div class="config-item">
         <div class="config-item-header">
+          <span class="config-item-label">✅ Fechou pedido</span>
+        </div>
+        <div class="config-dias-wrap">
+          <span class="config-dias-label">Voltar em</span>
+          <input type="number" class="config-dias-input" id="cfg-fechou_pedido" min="1" max="180" value="45">
+          <span class="config-dias-unidade">dias</span>
+        </div>
+      </div>
+
+      <div class="config-item">
+        <div class="config-item-header">
           <span class="config-item-label">📦 Estoque alto</span>
         </div>
         <div class="config-dias-wrap">
@@ -1228,33 +1239,11 @@ if ('serviceWorker' in navigator) {
 
       <div class="config-item">
         <div class="config-item-header">
-          <span class="config-item-label">📉 Mercado parado</span>
-        </div>
-        <div class="config-dias-wrap">
-          <span class="config-dias-label">Voltar em</span>
-          <input type="number" class="config-dias-input" id="cfg-mercado_parado" min="1" max="180" value="30">
-          <span class="config-dias-unidade">dias</span>
-        </div>
-      </div>
-
-      <div class="config-item">
-        <div class="config-item-header">
           <span class="config-item-label">⏳ Aguardando giro</span>
         </div>
         <div class="config-dias-wrap">
           <span class="config-dias-label">Voltar em</span>
           <input type="number" class="config-dias-input" id="cfg-aguardando_giro" min="1" max="180" value="30">
-          <span class="config-dias-unidade">dias</span>
-        </div>
-      </div>
-
-      <div class="config-item">
-        <div class="config-item-header">
-          <span class="config-item-label">💳 Aguardando pagamento</span>
-        </div>
-        <div class="config-dias-wrap">
-          <span class="config-dias-label">Voltar em</span>
-          <input type="number" class="config-dias-input" id="cfg-prazo_pagamento" min="1" max="180" value="45">
           <span class="config-dias-unidade">dias</span>
         </div>
       </div>
@@ -1283,16 +1272,6 @@ if ('serviceWorker' in navigator) {
 
       <div class="config-item">
         <div class="config-item-header">
-          <span class="config-item-label">✅ Fechou pedido</span>
-        </div>
-        <div class="config-dias-wrap">
-          <span class="config-dias-label">Voltar em</span>
-          <input type="number" class="config-dias-input" id="cfg-fechou_pedido" min="1" max="180" value="45">
-          <span class="config-dias-unidade">dias</span>
-        </div>
-      </div>
-      <div class="config-item">
-        <div class="config-item-header">
           <span class="config-item-label">🥊 Comprou do concorrente</span>
         </div>
         <div class="config-dias-wrap">
@@ -1301,6 +1280,7 @@ if ('serviceWorker' in navigator) {
           <span class="config-dias-unidade">dias</span>
         </div>
       </div>
+
       <div class="config-item">
         <div class="config-item-header">
           <span class="config-item-label">⚠️ Inadimplente</span>
@@ -1311,6 +1291,7 @@ if ('serviceWorker' in navigator) {
           <span class="config-dias-unidade">dias</span>
         </div>
       </div>
+
       <div class="config-item">
         <div class="config-item-header">
           <span class="config-item-label">🔒 Fechado</span>
@@ -1321,16 +1302,10 @@ if ('serviceWorker' in navigator) {
           <span class="config-dias-unidade">dias</span>
         </div>
       </div>
-      <div class="config-item">
-        <div class="config-item-header">
-          <span class="config-item-label">🚫 Não vai comprar mais</span>
-        </div>
-        <div class="config-dias-wrap">
-          <span class="config-dias-label">Voltar em</span>
-          <input type="number" class="config-dias-input" id="cfg-nao_vai_comprar" min="1" max="180" value="90">
-          <span class="config-dias-unidade">dias</span>
-        </div>
-      </div>
+
+      <input type="hidden" id="cfg-mercado_parado">
+      <input type="hidden" id="cfg-prazo_pagamento">
+      <input type="hidden" id="cfg-nao_vai_comprar">
 
       <!-- Motivos personalizados -->
       <div id="cfg-custom-row-0" class="config-item" style="display:none;">
@@ -1504,6 +1479,13 @@ if ('serviceWorker' in navigator) {
           <span id="cfg-onb-knob" style="position:absolute;top:3px;left:25px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s,background .2s;"></span>
         </button>
       </div>
+    </div>
+
+    <div class="config-secao">
+      <div class="config-secao-titulo">🔔 Notificações diárias</div>
+      <div class="config-secao-sub">Receba um resumo toda manhã com sua rota, prospectos e meta — mesmo com o app fechado.</div>
+      <div id="notif-status-box" style="margin-top:10px;"></div>
+      <button onclick="ativarNotificacoes()" id="btn-ativar-notif" style="margin-top:10px;width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.4);border-radius:11px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔔 Ativar notificações</button>
     </div>
 
     <button class="btn-primario" onclick="salvarConfig()">Salvar configurações</button>
@@ -3812,6 +3794,7 @@ async function fazerLogin() {
     irPara('dashboard');
     _sbAuth(email, senha);
     setTimeout(_checarOnboarding, 2500); // espera o pull da nuvem antes de decidir mostrar o assistente
+    setTimeout(() => { if (Notification.permission === 'granted') _salvarDadosNotifSW(); }, 3000);
   } else {
     // Cache foi limpo — tenta recuperar pelo Supabase
     toast('🔄 Recuperando dados da nuvem...');
@@ -8079,6 +8062,7 @@ function salvarNovoCliente() {
 
 // ===== CONFIG =====
 function carregarConfig() {
+  _atualizarStatusNotif();
   const cfg = getConfig();
   Object.keys(MOTIVOS_BASE).forEach(k => {
     const el = document.getElementById('cfg-' + k);
@@ -8344,6 +8328,105 @@ function _renderOnbToggle(feito) {
   knob.style.left = feito ? '25px' : '3px';
   knob.style.background = feito ? '#fff' : '#888';
 }
+// ===== NOTIFICAÇÕES =====
+function _atualizarStatusNotif() {
+  const box = document.getElementById('notif-status-box');
+  const btn = document.getElementById('btn-ativar-notif');
+  if (!box) return;
+  if (!('Notification' in window)) {
+    box.innerHTML = `<div style="font-size:12px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Seu navegador não suporta notificações.</div>`;
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+  const perm = Notification.permission;
+  if (perm === 'granted') {
+    box.innerHTML = `<div style="display:flex;align-items:center;gap:8px;background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.25);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--verde);font-family:'DM Sans',sans-serif;">✅ Notificações ativadas — você receberá o resumo diário toda manhã.</div>`;
+    if (btn) btn.textContent = '🔔 Testar notificação agora';
+  } else if (perm === 'denied') {
+    box.innerHTML = `<div style="font-size:12px;color:#F87171;font-family:'DM Sans',sans-serif;line-height:1.5;">⚠️ Notificações bloqueadas pelo navegador. Acesse as configurações do Chrome → Notificações e permita este site.</div>`;
+    if (btn) btn.style.display = 'none';
+  } else {
+    box.innerHTML = `<div style="font-size:12px;color:var(--texto2);font-family:'DM Sans',sans-serif;">Toque no botão abaixo e permita as notificações quando o navegador perguntar.</div>`;
+    if (btn) btn.style.display = 'block';
+  }
+}
+
+async function ativarNotificacoes() {
+  if (!('Notification' in window)) { toast('Seu navegador não suporta notificações'); return; }
+
+  if (Notification.permission === 'granted') {
+    await _dispararNotificacaoLocal();
+    return;
+  }
+
+  const perm = await Notification.requestPermission();
+  _atualizarStatusNotif();
+  if (perm !== 'granted') { toast('Permissão negada — ative nas configurações do navegador'); return; }
+
+  await _registrarPeriodicSync();
+  await _salvarDadosNotifSW();
+  toast('✅ Notificações ativadas!');
+  setTimeout(_dispararNotificacaoLocal, 1000);
+}
+
+async function _registrarPeriodicSync() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if ('periodicSync' in reg) {
+      await reg.periodicSync.register('carteira-daily', {
+        minInterval: 22 * 60 * 60 * 1000
+      });
+    }
+  } catch(e) { console.log('PeriodicSync não disponível:', e.message); }
+}
+
+async function _salvarDadosNotifSW() {
+  try {
+    const clientes = getClientesAtivos();
+    const hoje = new Date();
+    const clientesHoje = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; }).length;
+    const prospectos = getProspectos().filter(c => !c.dataRetornoCustom || new Date(c.dataRetornoCustom) <= hoje).length;
+    const metas = getMetasConfig();
+    let metaLabel = null;
+    if (metas.length) {
+      const m = metas[0];
+      const real = calcularRealMarca(m);
+      const pct = m.valor > 0 ? Math.round((real / m.valor) * 100) : 0;
+      metaLabel = `${m.marca} ${pct}%`;
+    }
+    const dados = { clientesHoje, prospectos, metaLabel };
+    const reg = await navigator.serviceWorker.ready;
+    reg.active?.postMessage({ tipo: 'salvarDadosNotif', dados });
+  } catch(e) {}
+}
+
+async function _dispararNotificacaoLocal() {
+  if (Notification.permission !== 'granted') return;
+  await _salvarDadosNotifSW();
+  const clientes = getClientesAtivos();
+  const hoje = new Date();
+  const clientesHoje = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; }).length;
+  const prospectos = getProspectos().filter(c => !c.dataRetornoCustom || new Date(c.dataRetornoCustom) <= hoje).length;
+  const metas = getMetasConfig();
+  const linhas = [];
+  if (clientesHoje > 0) linhas.push(`📍 ${clientesHoje} cliente${clientesHoje > 1 ? 's' : ''} para visitar hoje`);
+  if (prospectos > 0)   linhas.push(`🔭 ${prospectos} prospecto${prospectos > 1 ? 's' : ''} com retorno hoje`);
+  if (metas.length) {
+    const m = metas[0];
+    const real = calcularRealMarca(m);
+    const pct = m.valor > 0 ? Math.round((real / m.valor) * 100) : 0;
+    linhas.push(`🎯 Meta ${m.marca}: ${pct}%`);
+  }
+  if (!linhas.length) linhas.push('Abra o app para ver sua rota de hoje.');
+  const reg = await navigator.serviceWorker.ready;
+  reg.showNotification('📊 Carteira Viva — Bom dia!', {
+    body: linhas.join('\n'),
+    tag: 'carteira-daily',
+    requireInteraction: false,
+    data: { url: './' }
+  });
+}
+
 function toggleOnboardingFeito() {
   const cfg = getConfig();
   cfg.onboardingFeito = !cfg.onboardingFeito;

@@ -10319,7 +10319,7 @@ Responda SOMENTE com JSON válido, sem nenhum texto antes ou depois:
     generationConfig:{ temperature:0, maxOutputTokens:300 }
   };
 
-  const modelos = ['gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro'];
+  const modelos = ['gemini-1.5-pro','gemini-1.5-flash'];
   let lastErr = null;
   for (const modelo of modelos) {
     const r = await fetch(

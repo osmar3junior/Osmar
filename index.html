@@ -398,6 +398,7 @@ if ('serviceWorker' in navigator) {
     50%      { text-shadow:0 0 14px rgba(255,192,67,.9), 0 0 28px rgba(255,192,67,.4); color:#FFD97A; }
   }
   .formas-titulo-pisca { animation:amberGlow 1.8s ease-in-out 5; }
+  .foco-btn-glow { animation:amberGlow 1.4s ease-in-out 5; }
 
   /* PISCAR BOTÃO VALIDAR (4ª forma de endereço) — chama atenção só quando há texto não validado */
   @keyframes piscaValidar {
@@ -1835,9 +1836,9 @@ if ('serviceWorker' in navigator) {
     <!-- Toggle de ordenação -->
     <div class="rota-ordem-seletor">
       <span class="rota-ordem-label">Ordenar:</span>
-      <button class="rota-ordem-btn ativo" data-ordem="data" onclick="trocarOrdemRota('data')">📅 Por data</button>
+      <button class="rota-ordem-btn" data-ordem="foco" id="btn-ordem-foco" onclick="trocarOrdemRota('foco')">⚡ Por FOCO</button>
       <button class="rota-ordem-btn" data-ordem="proximidade" onclick="trocarOrdemRota('proximidade')">📍 Por proximidade</button>
-      <button class="rota-ordem-btn" data-ordem="foco" onclick="trocarOrdemRota('foco')">⚡ Por FOCO</button>
+      <button class="rota-ordem-btn ativo" data-ordem="data" onclick="trocarOrdemRota('data')">📅 Por data</button>
     </div>
 
     <!-- Banner: clientes com endereço mas sem coordenada -->
@@ -5419,6 +5420,29 @@ function renderizarRotaPeriodo() {
   montarRota(lista, _rotaPos ? _rotaPos.lat : null, _rotaPos ? _rotaPos.lng : null);
 }
 
+function _animarBotoesOrdemRota() {
+  const btns = ['foco','proximidade','data'].map(d => document.querySelector(`.rota-ordem-btn[data-ordem="${d}"]`));
+  const duracaoGlow = 900;
+  const intervalo   = 320;
+  const voltas      = 3;
+  let ciclo = 0;
+  function rodarCiclo() {
+    if (ciclo >= voltas) return;
+    btns.forEach((btn, i) => {
+      if (!btn) return;
+      setTimeout(() => {
+        btn.classList.remove('foco-btn-glow');
+        void btn.offsetWidth;
+        btn.classList.add('foco-btn-glow');
+        setTimeout(() => btn.classList.remove('foco-btn-glow'), duracaoGlow);
+      }, i * intervalo);
+    });
+    ciclo++;
+    setTimeout(rodarCiclo, btns.length * intervalo + 200);
+  }
+  setTimeout(rodarCiclo, 300);
+}
+
 function abrirRotaDeHoje() {
   const clientes = getClientesAtivos();
   const comGPS = clientes.filter(c => c.lat && c.lng && ((c.historico && c.historico.length > 0) || c.dataRetornoCustom));
@@ -5436,6 +5460,7 @@ function abrirRotaDeHoje() {
   document.getElementById('rota-hoje-sub').textContent = 'Calculando rota otimizada...';
   document.getElementById('modal-rota-hoje').classList.add('aberto');
   atualizarBannerSemGps();
+  _animarBotoesOrdemRota();
 
   if (comGPS.length === 0) {
     document.getElementById('rota-hoje-sub').textContent = clientesSemCoordenada().length > 0

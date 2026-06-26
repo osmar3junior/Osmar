@@ -2382,18 +2382,18 @@ if ('serviceWorker' in navigator) {
 
     <!-- Teclado numérico -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px;margin-bottom:12px;">
-      <button onclick="despTeclado('7')" class="desp-key">7</button>
-      <button onclick="despTeclado('8')" class="desp-key">8</button>
-      <button onclick="despTeclado('9')" class="desp-key">9</button>
-      <button onclick="despTeclado('4')" class="desp-key">4</button>
-      <button onclick="despTeclado('5')" class="desp-key">5</button>
-      <button onclick="despTeclado('6')" class="desp-key">6</button>
-      <button onclick="despTeclado('1')" class="desp-key">1</button>
-      <button onclick="despTeclado('2')" class="desp-key">2</button>
-      <button onclick="despTeclado('3')" class="desp-key">3</button>
-      <button onclick="despTeclado('00')" class="desp-key" style="color:var(--texto2);">00</button>
-      <button onclick="despTeclado('0')" class="desp-key">0</button>
-      <button onclick="despTeclado('del')" class="desp-key" style="color:#F87171;font-size:18px;">⌫</button>
+      <button ontouchstart="despTeclado('7');event.preventDefault()" onclick="despTeclado('7')" class="desp-key">7</button>
+      <button ontouchstart="despTeclado('8');event.preventDefault()" onclick="despTeclado('8')" class="desp-key">8</button>
+      <button ontouchstart="despTeclado('9');event.preventDefault()" onclick="despTeclado('9')" class="desp-key">9</button>
+      <button ontouchstart="despTeclado('4');event.preventDefault()" onclick="despTeclado('4')" class="desp-key">4</button>
+      <button ontouchstart="despTeclado('5');event.preventDefault()" onclick="despTeclado('5')" class="desp-key">5</button>
+      <button ontouchstart="despTeclado('6');event.preventDefault()" onclick="despTeclado('6')" class="desp-key">6</button>
+      <button ontouchstart="despTeclado('1');event.preventDefault()" onclick="despTeclado('1')" class="desp-key">1</button>
+      <button ontouchstart="despTeclado('2');event.preventDefault()" onclick="despTeclado('2')" class="desp-key">2</button>
+      <button ontouchstart="despTeclado('3');event.preventDefault()" onclick="despTeclado('3')" class="desp-key">3</button>
+      <button ontouchstart="despTeclado('00');event.preventDefault()" onclick="despTeclado('00')" class="desp-key" style="color:var(--texto2);">00</button>
+      <button ontouchstart="despTeclado('0');event.preventDefault()" onclick="despTeclado('0')" class="desp-key">0</button>
+      <button ontouchstart="despTeclado('del');event.preventDefault()" onclick="despTeclado('del')" class="desp-key" style="color:#F87171;font-size:18px;">⌫</button>
     </div>
 
     <!-- Data + Descrição compactos -->

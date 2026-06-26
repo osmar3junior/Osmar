@@ -8799,7 +8799,24 @@ function _coletarVendas(desde, ate) {
 }
 
 function _somaVendas(desde, ate) {
-  return _coletarVendas(desde, ate).reduce((s, v) => s + v.valor, 0);
+  return _somaVendasMarca(desde, ate, null);
+}
+
+// Soma vendas no intervalo. marca null = geral (todas). Com marca, usa o
+// detalhamento por marca em h.pedidos (vendas antigas sem detalhe entram só no geral).
+function _somaVendasMarca(desde, ate, marca) {
+  const marcaNorm = marca ? marca.trim().toLowerCase() : null;
+  let total = 0;
+  getClientes().forEach(c => (c.historico || []).forEach(h => {
+    if (h.motivo !== 'fechou_pedido') return;
+    const d = new Date(h.data);
+    if (d < desde || d > ate) return;
+    if (!marcaNorm) { total += Number(h.pedidoValor) || 0; return; }
+    if (h.pedidos && h.pedidos.length) {
+      h.pedidos.forEach(p => { if ((p.marca || '').trim().toLowerCase() === marcaNorm) total += Number(p.valor) || 0; });
+    }
+  }));
+  return total;
 }
 
 // ===== ABA VENDAS =====

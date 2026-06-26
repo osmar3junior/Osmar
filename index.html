@@ -1493,11 +1493,7 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
 
-    <div class="config-secao">
-      <div class="config-secao-titulo">🤖 OCR de notas fiscais</div>
-      <div class="config-secao-sub">Cole aqui sua chave do Google Gemini para que o app leia automaticamente o valor das suas notas. É gratuita e leva 3 minutos para obter. <span onclick="abrirGuiaApi()" style="color:var(--verde);cursor:pointer;font-weight:600;">Ver passo a passo →</span></div>
-      <input type="text" class="campo-input" id="cfg-gemini-key" placeholder="AIza..." style="margin-top:4px;font-family:monospace;font-size:13px;letter-spacing:.5px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-    </div>
+    <input type="hidden" id="cfg-gemini-key">
 
     <div class="config-secao">
       <div class="config-secao-titulo">🚀 Tela de boas-vindas</div>

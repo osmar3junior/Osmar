@@ -587,8 +587,8 @@ if ('serviceWorker' in navigator) {
   .dot-cinza-meta { background:var(--texto3); }
   .rel-card { background:var(--bg2); border:1px solid var(--borda); border-radius:16px; margin-bottom:20px; }
   .rel-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:4px; }
-  .rel-col-label { font-size:10px; color:var(--texto2); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
-  .rel-col-valor { font-size:16px; font-weight:700; color:var(--texto); }
+  .rel-col-label { font-size:10px; font-family:'DM Sans',sans-serif; color:var(--texto2); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+  .rel-col-valor { font-size:17px; font-weight:700; font-family:'DM Sans',sans-serif; color:var(--texto); letter-spacing:-.2px; }
   .tend-badge { border-radius:8px; padding:4px 8px; text-align:center; font-size:13px; font-weight:700; }
   .tend-verde { background:rgba(34,197,94,.15); color:#22C55E; }
   .tend-amarelo { background:rgba(245,158,11,.15); color:#F59E0B; }
@@ -2076,11 +2076,11 @@ if ('serviceWorker' in navigator) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
       <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
         <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Meta total</div>
-        <div style="font-size:20px;font-weight:800;color:var(--texto);font-family:'Syne',sans-serif;" id="rel-meta-total">—</div>
+        <div style="font-size:22px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;" id="rel-meta-total">—</div>
       </div>
       <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
         <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Real acumulado</div>
-        <div style="font-size:20px;font-weight:800;color:var(--verde);font-family:'Syne',sans-serif;" id="rel-real-total">—</div>
+        <div style="font-size:22px;font-weight:700;color:var(--verde);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;" id="rel-real-total">—</div>
       </div>
     </div>
 
@@ -4639,6 +4639,13 @@ function irPara(tela) {
   if (tela === 'dashboard') {
     atualizarDashboard();
     setTimeout(() => { renderizarClientes(); _resetScroll(); _atualizarBadgeNotif(); }, 120);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      el.scrollTop = 0;
+      el.querySelectorAll('*').forEach(child => { if (child.scrollTop > 0) child.scrollTop = 0; });
+    }, 150);
   }
   if (tela === 'clientes') { renderizarChipsMarca(); renderizarClientes(); setTimeout(_resetScroll, 50); }
   if (tela === 'esquecidos') renderizarEsquecidos();
@@ -8814,7 +8821,7 @@ function renderizarRelatorios() {
       <div style="padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(90deg,${accentColor}12 0%,transparent 70%);border-bottom:1px solid var(--borda);">
         <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
           <div style="width:10px;height:10px;border-radius:50%;background:${accentColor};box-shadow:0 0 8px ${accentColor}88;flex-shrink:0;"></div>
-          <span style="font-size:18px;font-weight:800;color:var(--texto);font-family:'Syne',sans-serif;letter-spacing:-.3px;">${meta.marca}</span>
+          <span style="font-size:18px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;letter-spacing:-.2px;">${meta.marca}</span>
           <span style="font-size:11px;color:var(--texto2);background:var(--bg3);border-radius:8px;padding:3px 9px;white-space:nowrap;border:1px solid var(--borda);">${labelPer} · ${skuLabel}</span>
         </div>
         <span id="rel-chevron-${meta.id}" style="color:var(--texto3);font-size:20px;transition:transform .2s;flex-shrink:0;margin-left:6px;">›</span>

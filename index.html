@@ -10280,10 +10280,16 @@ async function processarFotoDespesa(input) {
       if (res.data) document.getElementById('nova-desp-data').value = res.data;
       if (res.descricao && !document.getElementById('nova-desp-desc').value)
         document.getElementById('nova-desp-desc').value = res.descricao;
-      statusEl.textContent = '✅ Dados preenchidos! Confira e salve.';
+      if (!res.valor && !res.data && !res.descricao) {
+        statusEl.style.cssText = 'display:block;margin-top:8px;padding:10px 13px;border-radius:10px;font-size:12px;text-align:center;line-height:1.5;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);color:#FBB52C;';
+        statusEl.textContent = '⚠️ API respondeu mas não encontrou dados. Tente foto mais próxima e bem iluminada.';
+      } else {
+        statusEl.textContent = '✅ Dados preenchidos! Confira e salve.';
+      }
     } catch(err) {
-      statusEl.style.color = '#F59E0B';
-      statusEl.textContent = '⚠️ Não consegui ler a nota. Preencha o valor manualmente.';
+      statusEl.style.cssText = 'display:block;margin-top:8px;padding:10px 13px;border-radius:10px;font-size:12px;line-height:1.5;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);color:#F87171;';
+      statusEl.textContent = '❌ Erro: ' + (err.message || 'falha na API') + ' — Verifique se a chave está correta em Configurações.';
+      console.error('OCR erro:', err);
     }
   };
   reader.readAsDataURL(file);
@@ -10310,7 +10316,7 @@ Responda SOMENTE com JSON válido, sem nenhum texto antes ou depois:
       { text: prompt },
       { inline_data:{ mime_type: mimeType||'image/jpeg', data: base64 } }
     ]}],
-    generationConfig:{ temperature:0, maxOutputTokens:300, responseMimeType:'application/json' }
+    generationConfig:{ temperature:0, maxOutputTokens:300 }
   };
 
   const r = await fetch(

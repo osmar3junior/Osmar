@@ -530,6 +530,10 @@ if ('serviceWorker' in navigator) {
 
   /* SELETOR DE PERÍODO DA ROTA */
   .rota-periodo-seletor { display:flex; gap:6px; background:var(--bg3); border:1px solid var(--borda); border-radius:12px; padding:4px; margin-bottom:10px; }
+  /* Abas da Central de Relatórios */
+  .rel-tab { flex-shrink:0; background:var(--bg3); border:1px solid var(--borda); border-radius:10px; padding:8px 12px; color:var(--texto2); font-family:'DM Sans',sans-serif; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; transition:background .15s,color .15s,border-color .15s; }
+  .rel-tab.ativa { background:rgba(249,115,22,.14); border-color:rgba(249,115,22,.45); color:#F97316; }
+
   /* Toggle de ordenação (por data x por proximidade) */
   .rota-ordem-seletor { display:flex; align-items:center; gap:6px; margin-bottom:16px; }
   .rota-ordem-label { font-size:11px; color:var(--texto2); font-weight:600; white-space:nowrap; }
@@ -820,8 +824,8 @@ if ('serviceWorker' in navigator) {
       <div style="display:flex;align-items:center;gap:12px;">
         <div style="width:40px;height:40px;background:rgba(249,115,22,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">📊</div>
         <div style="text-align:left;">
-          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Relatórios · Meta · Tendência</div>
-          <div style="font-size:11px;color:var(--texto2);">Meta × Real × Lacuna × Fechamento</div>
+          <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Meus relatórios</div>
+          <div style="font-size:11px;color:var(--texto2);">Metas · Vendas · Comparativo · Ações</div>
         </div>
       </div>
       <div id="dash-meta-semaforo" style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:80px;"></div>
@@ -2037,43 +2041,43 @@ if ('serviceWorker' in navigator) {
 
 <div class="modal-overlay" id="modal-relatorios">
   <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:24px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <div class="modal-titulo" style="margin-bottom:0;">📊 Meta · Real · Tendência</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="modal-titulo" style="margin-bottom:0;">📊 Meus relatórios</div>
       <button onclick="fecharModal('modal-relatorios')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button onclick="fecharModal('modal-relatorios');setTimeout(()=>abrirRotaDeHoje(),200);" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#0D1F18,#1a3328);border:1.5px solid rgba(0,214,143,.35);border-radius:12px;padding:10px;cursor:pointer;">
-        <span style="font-size:18px;">🗺️</span>
-        <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--texto);">Rota de hoje</span>
-      </button>
-      <button onclick="fecharModal('modal-relatorios');setTimeout(()=>irPara('clientes'),200);" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#10192b,#16243f);border:1.5px solid rgba(56,113,189,.35);border-radius:12px;padding:10px;cursor:pointer;">
-        <span style="font-size:18px;">👥</span>
-        <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--texto);">Clientes</span>
-      </button>
+
+    <!-- ABAS -->
+    <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:2px;-webkit-overflow-scrolling:touch;">
+      <button class="rel-tab ativa" data-tab="metas" onclick="trocarAbaRelatorio('metas')">🎯 Metas</button>
+      <button class="rel-tab" data-tab="vendas" onclick="trocarAbaRelatorio('vendas')">💰 Vendas</button>
+      <button class="rel-tab" data-tab="comparativo" onclick="trocarAbaRelatorio('comparativo')">📈 Comparativo</button>
+      <button class="rel-tab" data-tab="acoes" onclick="trocarAbaRelatorio('acoes')">⚡ Ações</button>
     </div>
 
-    <!-- Resumo geral -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
-      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
-        <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Meta total</div>
-        <div style="font-size:22px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;" id="rel-meta-total">—</div>
+    <!-- ABA METAS -->
+    <div id="rel-aba-metas">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
+          <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Meta total</div>
+          <div style="font-size:22px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;" id="rel-meta-total">—</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
+          <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Real acumulado</div>
+          <div style="font-size:22px;font-weight:700;color:var(--verde);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;" id="rel-real-total">—</div>
+        </div>
       </div>
-      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
-        <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Real acumulado</div>
-        <div style="font-size:22px;font-weight:700;color:var(--verde);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;" id="rel-real-total">—</div>
-      </div>
+      <div id="rel-lista"></div>
     </div>
 
-    <div id="rel-lista"></div>
+    <!-- ABA VENDAS -->
+    <div id="rel-aba-vendas" style="display:none;"></div>
 
-    <div style="margin-top:8px;padding:10px 12px;background:var(--bg3);border-radius:10px;">
-      <div style="font-size:10px;color:var(--texto2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Legenda tendência</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:5px;"><div class="semaforo-dot dot-verde-meta"></div><span style="font-size:11px;color:var(--texto2);">≥ 100% no ritmo</span></div>
-        <div style="display:flex;align-items:center;gap:5px;"><div class="semaforo-dot dot-amarelo-meta"></div><span style="font-size:11px;color:var(--texto2);">80 – 99%</span></div>
-        <div style="display:flex;align-items:center;gap:5px;"><div class="semaforo-dot dot-vermelho-meta"></div><span style="font-size:11px;color:var(--texto2);">abaixo de 80%</span></div>
-      </div>
-    </div>
+    <!-- ABA COMPARATIVO -->
+    <div id="rel-aba-comparativo" style="display:none;"></div>
+
+    <!-- ABA AÇÕES -->
+    <div id="rel-aba-acoes" style="display:none;"></div>
+
   </div>
 </div>
 
@@ -3794,7 +3798,7 @@ async function fazerLogin() {
     irPara('dashboard');
     _sbAuth(email, senha);
     setTimeout(_checarOnboarding, 2500); // espera o pull da nuvem antes de decidir mostrar o assistente
-    setTimeout(() => { if (Notification.permission === 'granted') _salvarDadosNotifSW(); }, 3000);
+    setTimeout(() => { if (Notification.permission === 'granted') { _salvarDadosNotifSW(); _checarGatilhoMetaAtrasada(); } }, 3000);
   } else {
     // Cache foi limpo — tenta recuperar pelo Supabase
     toast('🔄 Recuperando dados da nuvem...');
@@ -8423,7 +8427,79 @@ async function _dispararNotificacaoLocal() {
     body: linhas.join('\n'),
     tag: 'carteira-daily',
     requireInteraction: false,
-    data: { url: './' }
+    data: { url: './', acao: 'rota' }
+  });
+}
+
+// ===== GATILHO: marca atrasada depois da metade do período =====
+// Dispara UMA vez por marca/período quando: passou da metade E está fora do ritmo.
+async function _checarGatilhoMetaAtrasada() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!usuarioAtual) return;
+  const metas = getMetasConfig();
+  if (!metas.length) return;
+
+  const chaveAvisos = 'cv_notif_avisos_' + usuarioAtual.email;
+  const avisos = getData(chaveAvisos) || {};
+  const atrasadas = [];
+
+  metas.forEach(meta => {
+    const real  = calcularRealMarca(meta);
+    const falta = meta.valor - real;
+    if (falta <= 0) return; // meta já batida
+
+    const { inicio, fim } = _periodoMeta(meta);
+    const agora = new Date();
+    const diasTotal    = Math.max(1, Math.round((fim - inicio) / 86400000));
+    const diasPassados = Math.max(0, Math.min(Math.round((agora - inicio) / 86400000), diasTotal));
+    const pctPeriodo   = Math.round((diasPassados / diasTotal) * 100);
+    if (pctPeriodo < 50) return; // ainda não passou da metade
+
+    const pctReal = meta.valor > 0 ? Math.round((real / meta.valor) * 100) : 0;
+    const ratio   = pctPeriodo > 0 ? pctReal / pctPeriodo : 1;
+    if (ratio >= 0.9) return; // está no ritmo
+
+    const periodoId = meta.mes || ((meta.dataInicio || '') + (meta.dataFim || ''));
+    const chave = meta.id + '_' + periodoId;
+    if (avisos[chave]) return; // já avisou neste período
+
+    atrasadas.push({ marca: meta.marca, chave });
+  });
+
+  if (!atrasadas.length) return;
+
+  // Notifica até 3 marcas numa única notificação e marca todas como avisadas.
+  const alvo = atrasadas.slice(0, 3);
+  const nomes = alvo.map(a => a.marca);
+  const titulo = nomes.length === 1 ? `⚠️ ${nomes[0]} está atrasada` : `⚠️ ${nomes.length} marcas atrasadas`;
+  const corpo  = nomes.length === 1
+    ? `Já passou da metade do período. Veja quais clientes podem te ajudar a bater a meta da ${nomes[0]}.`
+    : `${nomes.join(', ')} — veja quais clientes podem te ajudar a bater a meta.`;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    reg.showNotification(titulo, {
+      body: corpo,
+      tag: 'carteira-meta-atrasada',
+      requireInteraction: false,
+      data: { url: './', acao: 'acoes' }
+    });
+    alvo.forEach(a => { avisos[a.chave] = Date.now(); });
+    setData(chaveAvisos, avisos);
+  } catch(e) {}
+}
+
+// Notificação clicada → abre a aba certa
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data?.tipo === 'notifClick') {
+      if (e.data.acao === 'acoes') {
+        abrirRelatorios();
+        setTimeout(() => trocarAbaRelatorio('acoes'), 120);
+      } else if (e.data.acao === 'rota') {
+        if (typeof abrirRotaDeHoje === 'function') abrirRotaDeHoje();
+      }
+    }
   });
 }
 
@@ -8673,9 +8749,301 @@ function atualizarSemaforoDash() {
   }).join('');
 }
 
+let _relAbaAtiva = 'metas';
+let _relPeriodoVendas = 'mes';
+
 function abrirRelatorios() {
+  _relAbaAtiva = 'metas';
   renderizarRelatorios();
+  ['metas','vendas','comparativo','acoes'].forEach(t => {
+    const el = document.getElementById('rel-aba-' + t);
+    if (el) el.style.display = t === 'metas' ? 'block' : 'none';
+  });
+  document.querySelectorAll('.rel-tab').forEach(b => b.classList.toggle('ativa', b.dataset.tab === 'metas'));
   document.getElementById('modal-relatorios').classList.add('aberto');
+}
+
+function trocarAbaRelatorio(aba) {
+  _relAbaAtiva = aba;
+  ['metas','vendas','comparativo','acoes'].forEach(t => {
+    const el = document.getElementById('rel-aba-' + t);
+    if (el) el.style.display = t === aba ? 'block' : 'none';
+  });
+  document.querySelectorAll('.rel-tab').forEach(b => b.classList.toggle('ativa', b.dataset.tab === aba));
+  if (aba === 'vendas')      renderRelVendas();
+  if (aba === 'comparativo') renderRelComparativo();
+  if (aba === 'acoes')       renderRelAcoes();
+}
+
+// Coleta todas as vendas num intervalo (desde/ate em Date; null = sem limite)
+function _coletarVendas(desde, ate) {
+  const vendas = [];
+  getClientes().forEach(c => {
+    (c.historico || []).forEach(h => {
+      if (h.motivo !== 'fechou_pedido') return;
+      const d = new Date(h.data);
+      if (desde && d < desde) return;
+      if (ate && d > ate) return;
+      const val = Number(h.pedidoValor) || 0;
+      const qtd = Number(h.pedidoQtd) || 0;
+      if (val <= 0 && qtd <= 0) return;
+      let canal = null;
+      if (h.pedidos && h.pedidos.length) {
+        const cc = h.pedidos.find(p => p.canal);
+        if (cc) canal = cc.canal;
+      }
+      vendas.push({ cliente: c, nome: c.nome, loja: c.loja || '', data: h.data, valor: val, qtd, canal });
+    });
+  });
+  return vendas.sort((a, b) => new Date(b.data) - new Date(a.data));
+}
+
+function _somaVendas(desde, ate) {
+  return _coletarVendas(desde, ate).reduce((s, v) => s + v.valor, 0);
+}
+
+// ===== ABA VENDAS =====
+function setPeriodoVendas(p) { _relPeriodoVendas = p; renderRelVendas(); }
+
+function renderRelVendas() {
+  const cont = document.getElementById('rel-aba-vendas');
+  if (!cont) return;
+  const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  const hoje = new Date();
+  let desde;
+  if (_relPeriodoVendas === 'hoje')   { desde = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()); }
+  else if (_relPeriodoVendas === 'semana') { desde = new Date(hoje); desde.setDate(desde.getDate() - 7); }
+  else { desde = new Date(hoje.getFullYear(), hoje.getMonth(), 1); }
+
+  const vendas = _coletarVendas(desde, null);
+  const total = vendas.reduce((s, v) => s + v.valor, 0);
+  const nClientes = new Set(vendas.map(v => v.cliente.id)).size;
+  const ticket = vendas.length ? total / vendas.length : 0;
+  const fisico = vendas.filter(v => v.canal === 'visita');
+  const wpp = vendas.filter(v => v.canal === 'wpp');
+  const semCanal = vendas.filter(v => !v.canal);
+  const totFisico = fisico.reduce((s, v) => s + v.valor, 0);
+  const totWpp = wpp.reduce((s, v) => s + v.valor, 0);
+
+  const chip = (p, label) => `<button onclick="setPeriodoVendas('${p}')" class="rel-tab ${_relPeriodoVendas===p?'ativa':''}" style="flex:1;">${label}</button>`;
+
+  let html = `
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      ${chip('hoje','Hoje')}${chip('semana','7 dias')}${chip('mes','Este mês')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
+        <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Total vendido</div>
+        <div style="font-size:22px;font-weight:700;color:var(--verde);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;">${fmtR(total)}</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
+        <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Nº de vendas</div>
+        <div style="font-size:22px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;">${vendas.length}</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
+        <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Clientes</div>
+        <div style="font-size:22px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;">${nClientes}</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
+        <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Ticket médio</div>
+        <div style="font-size:22px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;">${fmtR(ticket)}</div>
+      </div>
+    </div>`;
+
+  if (fisico.length || wpp.length) {
+    const pctF = total > 0 ? Math.round((totFisico / total) * 100) : 0;
+    const pctW = total > 0 ? Math.round((totWpp / total) * 100) : 0;
+    html += `
+    <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:13px 14px;margin-bottom:14px;">
+      <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Por canal de venda</div>
+      <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:10px;background:var(--bg2);">
+        <div style="width:${pctF}%;background:#D97706;"></div>
+        <div style="width:${pctW}%;background:#22C55E;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <div><div style="font-size:11px;color:#FFC043;font-family:'DM Sans',sans-serif;font-weight:600;">📍 Presencial</div><div style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;font-weight:600;">${fmtR(totFisico)} · ${fisico.length}</div></div>
+        <div style="text-align:right;"><div style="font-size:11px;color:#4ade80;font-family:'DM Sans',sans-serif;font-weight:600;">💬 WhatsApp/e-mail</div><div style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;font-weight:600;">${fmtR(totWpp)} · ${wpp.length}</div></div>
+      </div>
+      ${semCanal.length ? `<div style="font-size:10px;color:var(--texto3);margin-top:8px;font-family:'DM Sans',sans-serif;">${semCanal.length} venda${semCanal.length>1?'s':''} sem canal informado</div>` : ''}
+    </div>`;
+  }
+
+  html += `<div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;font-family:'DM Sans',sans-serif;">Analítico — ${vendas.length} venda${vendas.length!==1?'s':''}</div>`;
+
+  if (!vendas.length) {
+    html += `<div style="text-align:center;padding:20px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Nenhuma venda no período.</div>`;
+  } else {
+    html += vendas.map(v => {
+      const dt = new Date(v.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      const canalIcon = v.canal === 'visita' ? '📍' : v.canal === 'wpp' ? '💬' : '';
+      return `<div onclick="abrirPedidoExistente('${v.cliente.id}','${v.data}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--borda);cursor:pointer;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${canalIcon} ${esc(v.nome)}</div>
+          <div style="font-size:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;margin-top:1px;">${esc(v.loja) || '—'} · ${dt}</div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--verde);font-family:'DM Sans',sans-serif;margin-left:10px;white-space:nowrap;">${fmtR(v.valor)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  cont.innerHTML = html;
+}
+
+// ===== ABA COMPARATIVO =====
+function renderRelComparativo() {
+  const cont = document.getElementById('rel-aba-comparativo');
+  if (!cont) return;
+  const hoje = new Date();
+  const Y = hoje.getFullYear(), M = hoje.getMonth(), D = hoje.getDate();
+
+  const inicioMes      = new Date(Y, M, 1);
+  const inicioMesAnt   = new Date(Y, M - 1, 1);
+  const fimMesAntMesmo = new Date(Y, M - 1, D, 23, 59, 59);
+
+  const q = Math.floor(M / 3);
+  const inicioTri    = new Date(Y, q * 3, 1);
+  const inicioTriAnt = new Date(Y, q * 3 - 3, 1);
+  const diasNoTri    = Math.round((hoje - inicioTri) / 86400000);
+  const fimTriAntMesmo = new Date(inicioTriAnt.getTime() + diasNoTri * 86400000);
+
+  const inicioAno    = new Date(Y, 0, 1);
+  const inicioAnoAnt = new Date(Y - 1, 0, 1);
+  const fimAnoAntMesmo = new Date(Y - 1, M, D, 23, 59, 59);
+
+  const card = (titulo, sub, atual, anterior) => {
+    const diff = anterior > 0 ? Math.round(((atual - anterior) / anterior) * 100) : (atual > 0 ? 100 : 0);
+    const cor = diff >= 0 ? '#00D68F' : '#EF4444';
+    const seta = diff >= 0 ? '↑' : '↓';
+    const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    return `<div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">${titulo}</span>
+        <span style="font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;color:${cor};background:${cor}1a;border-radius:8px;padding:3px 9px;">${seta} ${Math.abs(diff)}%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+        <div><div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;font-family:'DM Sans',sans-serif;margin-bottom:2px;">${sub[0]}</div><div style="font-size:18px;font-weight:700;color:${cor};font-family:'DM Sans',sans-serif;">${fmtR(atual)}</div></div>
+        <div style="text-align:right;"><div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;font-family:'DM Sans',sans-serif;margin-bottom:2px;">${sub[1]}</div><div style="font-size:15px;font-weight:600;color:var(--texto2);font-family:'DM Sans',sans-serif;">${fmtR(anterior)}</div></div>
+      </div>
+    </div>`;
+  };
+
+  const mAtual = _somaVendas(inicioMes, hoje);
+  const mAnt   = _somaVendas(inicioMesAnt, fimMesAntMesmo);
+  const tAtual = _somaVendas(inicioTri, hoje);
+  const tAnt   = _somaVendas(inicioTriAnt, fimTriAntMesmo);
+  const aAtual = _somaVendas(inicioAno, hoje);
+  const aAnt   = _somaVendas(inicioAnoAnt, fimAnoAntMesmo);
+
+  cont.innerHTML = `
+    <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;line-height:1.5;">Comparação até o mesmo dia do período anterior — base justa para medir crescimento.</div>
+    ${card('Mês x mês anterior', ['Este mês', 'Mês passado'], mAtual, mAnt)}
+    ${card('Trimestre x anterior', ['Este trimestre', 'Trim. anterior'], tAtual, tAnt)}
+    ${card('Ano x ano anterior', ['Este ano', 'Ano passado'], aAtual, aAnt)}`;
+}
+
+// ===== ABA AÇÕES =====
+function _comprouMarcaNoPeriodo(cliente, marcaNorm, inicio, fim) {
+  return (cliente.historico || []).some(h => {
+    if (h.motivo !== 'fechou_pedido') return false;
+    const d = new Date(h.data);
+    if (d < inicio || d > fim) return false;
+    if (h.pedidos && h.pedidos.length) return h.pedidos.some(p => (p.marca || '').trim().toLowerCase() === marcaNorm);
+    return (cliente.marcas || []).some(m => (m || '').trim().toLowerCase() === marcaNorm);
+  });
+}
+
+function renderRelAcoes() {
+  const cont = document.getElementById('rel-aba-acoes');
+  if (!cont) return;
+  const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  const metas = getMetasConfig();
+  const ativos = getClientesAtivos();
+  let html = '';
+
+  // --- BLOCO 1: Quem ajuda a bater a meta ---
+  const blocos = [];
+  metas.forEach(meta => {
+    const real = calcularRealMarca(meta);
+    const falta = meta.valor - real;
+    if (falta <= 0) return;
+    const marcaNorm = (meta.marca || '').trim().toLowerCase();
+    const { inicio, fim } = _periodoMeta(meta);
+
+    const candidatos = ativos
+      .filter(c => (c.marcas || []).some(m => (m || '').trim().toLowerCase() === marcaNorm))
+      .filter(c => !_comprouMarcaNoPeriodo(c, marcaNorm, inicio, fim))
+      .map(c => {
+        const pot = calcularPotencialCliente(c);
+        const pv = pot[meta.marca] || {};
+        const ult = getPedidosCliente(c).map(h => new Date(h.data)).sort((a, b) => b - a)[0];
+        const diasSem = ult ? Math.floor((new Date() - ult) / 86400000) : null;
+        return { c, potencial: pv.max || pv.avg || 0, diasSem };
+      })
+      .filter(x => x.potencial > 0)
+      .sort((a, b) => b.potencial - a.potencial)
+      .slice(0, 5);
+
+    if (candidatos.length) blocos.push({ meta, falta, candidatos });
+  });
+
+  if (blocos.length) {
+    html += `<div style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:'DM Sans',sans-serif;margin-bottom:10px;">🎯 Quem te ajuda a bater a meta</div>`;
+    blocos.forEach(({ meta, falta, candidatos }) => {
+      const skuL = _skuLabel(meta.sku);
+      const faltaTxt = (meta.sku === 'reais' || meta.sku === 'faturamento') ? fmtR(falta) : `${Math.round(falta).toLocaleString('pt-BR')} ${skuL}`;
+      html += `<div style="background:rgba(249,115,22,.05);border:1px solid rgba(249,115,22,.25);border-radius:14px;padding:13px 14px;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:#F97316;font-family:'DM Sans',sans-serif;margin-bottom:2px;">${esc(meta.marca)}</div>
+        <div style="font-size:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;margin-bottom:10px;">Faltam <strong style="color:var(--texto);">${faltaTxt}</strong> — estes clientes ainda não compraram:</div>
+        ${candidatos.map(({ c, potencial, diasSem }) => `
+          <div onclick="fecharModal('modal-relatorios');setTimeout(()=>abrirDetalhe('${c.id}','dashboard'),150)" style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--borda);cursor:pointer;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:var(--texto);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.nome)}</div>
+              <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;">${diasSem !== null ? `sem compra há ${diasSem} dias` : 'nunca comprou esta marca'}</div>
+            </div>
+            <div style="text-align:right;margin-left:10px;white-space:nowrap;">
+              <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;">potencial</div>
+              <div style="font-size:13px;font-weight:700;color:#F97316;font-family:'DM Sans',sans-serif;">${Math.round(potencial).toLocaleString('pt-BR')} ${skuL}</div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    });
+  }
+
+  // --- BLOCO 2: Clientes em queda ---
+  const hoje = new Date();
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const inicioMesAnt = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+  const fimMesAnt = new Date(hoje.getFullYear(), hoje.getMonth(), 0, 23, 59, 59);
+
+  const emQueda = ativos.map(c => {
+    const atual = (c.historico || []).filter(h => h.motivo === 'fechou_pedido' && new Date(h.data) >= inicioMes).reduce((s, h) => s + (Number(h.pedidoValor) || 0), 0);
+    const anterior = (c.historico || []).filter(h => h.motivo === 'fechou_pedido' && new Date(h.data) >= inicioMesAnt && new Date(h.data) <= fimMesAnt).reduce((s, h) => s + (Number(h.pedidoValor) || 0), 0);
+    return { c, atual, anterior };
+  }).filter(x => x.anterior > 0 && x.atual < x.anterior * 0.7)
+    .map(x => ({ ...x, queda: x.anterior - x.atual, pct: Math.round(((x.atual - x.anterior) / x.anterior) * 100) }))
+    .sort((a, b) => b.queda - a.queda)
+    .slice(0, 6);
+
+  if (emQueda.length) {
+    html += `<div style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:'DM Sans',sans-serif;margin:18px 0 10px;">📉 Clientes em queda</div>
+      <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:10px;">Compraram menos que o mês passado — vale uma visita.</div>`;
+    emQueda.forEach(({ c, atual, anterior, pct }) => {
+      html += `<div onclick="fecharModal('modal-relatorios');setTimeout(()=>abrirDetalhe('${c.id}','dashboard'),150)" style="display:flex;align-items:center;justify-content:space-between;padding:11px 12px;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;margin-bottom:8px;cursor:pointer;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.nome)}</div>
+          <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;">${fmtR(anterior)} → ${fmtR(atual)}</div>
+        </div>
+        <span style="font-size:13px;font-weight:700;color:#EF4444;font-family:'DM Sans',sans-serif;background:rgba(239,68,68,.1);border-radius:8px;padding:3px 9px;margin-left:10px;white-space:nowrap;">↓ ${Math.abs(pct)}%</span>
+      </div>`;
+    });
+  }
+
+  if (!html) {
+    html = `<div class="empty-state" style="padding:30px 16px;"><div class="empty-icon">✅</div><div class="empty-titulo">Tudo em dia!</div><div class="empty-desc">Nenhuma meta atrasada e nenhum cliente em queda no momento.</div></div>`;
+  }
+
+  cont.innerHTML = html;
 }
 
 function _detalheVendasMarca(meta) {
@@ -11104,6 +11472,14 @@ function ajustarAlturaListaMotivos() {
     setTimeout(verificarEnderecosPendentes, 3000);
     setTimeout(solicitarPermissaoNotificacao, 2000);
     setTimeout(verificarENotificarEsquecidos, 5000);
+    setTimeout(() => { if (('Notification' in window) && Notification.permission === 'granted') { _salvarDadosNotifSW(); _checarGatilhoMetaAtrasada(); } }, 4000);
+    // Deep-link de notificação (app aberto do zero via clique)
+    try {
+      const acaoParam = new URLSearchParams(location.search).get('acao');
+      if (acaoParam === 'acoes') setTimeout(() => { abrirRelatorios(); setTimeout(() => trocarAbaRelatorio('acoes'), 150); }, 600);
+      else if (acaoParam === 'rota') setTimeout(() => { if (typeof abrirRotaDeHoje === 'function') abrirRotaDeHoje(); }, 600);
+      if (acaoParam) history.replaceState(null, '', location.pathname);
+    } catch(e) {}
     // Restaura sessão Supabase e puxa dados mais recentes
     _sb.auth.getSession().then(({ data: { session: sbSession } }) => {
       if (sbSession?.user) {

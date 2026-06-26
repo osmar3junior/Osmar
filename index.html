@@ -10319,16 +10319,23 @@ Responda SOMENTE com JSON válido, sem nenhum texto antes ou depois:
     generationConfig:{ temperature:0, maxOutputTokens:300 }
   };
 
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
-  );
-  if (!r.ok) throw new Error('API '+r.status);
-  const data = await r.json();
-  const txt  = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  const m    = txt.match(/\{[\s\S]*?\}/);
-  if (!m) throw new Error('sem JSON');
-  return JSON.parse(m[0]);
+  const modelos = ['gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro'];
+  let lastErr = null;
+  for (const modelo of modelos) {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`,
+      { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
+    );
+    if (r.status === 429) { lastErr = new Error('Limite de uso atingido (429). Aguarde alguns segundos e tente novamente.'); continue; }
+    if (r.status === 403) { lastErr = new Error('Chave de API inválida ou sem permissão (403). Verifique em Configurações.'); break; }
+    if (!r.ok) { lastErr = new Error('Erro ' + r.status + ' na API.'); continue; }
+    const data = await r.json();
+    const txt  = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const m    = txt.match(/\{[\s\S]*?\}/);
+    if (!m) { lastErr = new Error('API respondeu mas sem JSON válido.'); continue; }
+    return JSON.parse(m[0]);
+  }
+  throw lastErr || new Error('Todos os modelos falharam.');
 }
 
 function salvarNovaDespesa() {

@@ -2049,7 +2049,7 @@ if ('serviceWorker' in navigator) {
       </button>
       <button onclick="fecharModal('modal-rota-wpp');setTimeout(()=>_wppRota('propicio'),200)" style="display:flex;align-items:center;gap:12px;background:rgba(167,139,250,.07);border:1.5px solid rgba(167,139,250,.3);border-radius:12px;padding:14px;cursor:pointer;text-align:left;">
         <span style="font-size:22px;">🎯</span>
-        <div><div style="font-size:14px;font-weight:700;color:var(--texto);">Mais Propícios</div><div style="font-size:11px;color:var(--texto3);">Clientes com maior probabilidade de comprar agora</div></div>
+        <div><div style="font-size:14px;font-weight:700;color:var(--texto);">Prontos para comprar</div><div style="font-size:11px;color:var(--texto3);">Clientes com maior probabilidade de comprar agora</div></div>
       </button>
     </div>
   </div>
@@ -5418,7 +5418,7 @@ function renderizarRotaPeriodo() {
     return;
   }
   montarRota(lista, _rotaPos ? _rotaPos.lat : null, _rotaPos ? _rotaPos.lng : null);
-  setTimeout(_animarBotoesOrdemRota, 600);
+  if (window._rotaAnimacaoPendente) { window._rotaAnimacaoPendente = false; setTimeout(_animarBotoesOrdemRota, 600); }
 }
 
 function _animarBotoesOrdemRota() {
@@ -5459,6 +5459,7 @@ function abrirRotaDeHoje() {
   document.getElementById('rota-hoje-acoes').style.display = 'none';
   document.getElementById('rota-hoje-lista').innerHTML = '';
   document.getElementById('rota-hoje-sub').textContent = 'Calculando rota otimizada...';
+  window._rotaAnimacaoPendente = true;
   document.getElementById('modal-rota-hoje').classList.add('aberto');
   atualizarBannerSemGps();
 

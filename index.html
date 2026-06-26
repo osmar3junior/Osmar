@@ -10319,19 +10319,28 @@ Responda SOMENTE com JSON válido, sem nenhum texto antes ou depois:
     generationConfig:{ temperature:0, maxOutputTokens:300 }
   };
 
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-    { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
-  );
-  if (r.status === 429) throw new Error('Limite de uso atingido. Aguarde 1 minuto e tente novamente.');
-  if (r.status === 403) throw new Error('Chave de API inválida (403). Verifique em Configurações.');
-  if (r.status === 404) throw new Error('Endpoint não encontrado (404). Verifique se a chave tem acesso ao Gemini.');
-  if (!r.ok) throw new Error('Erro ' + r.status + ' na API.');
-  const data = await r.json();
-  const txt  = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  const m    = txt.match(/\{[\s\S]*?\}/);
-  if (!m) throw new Error('API respondeu mas sem dados legíveis. Tente foto mais próxima.');
-  return JSON.parse(m[0]);
+  const tentativas = [
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+    'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent',
+  ];
+  let ultimoErro = null;
+  for (const url of tentativas) {
+    let r;
+    try { r = await fetch(`${url}?key=${apiKey}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }); }
+    catch(e) { ultimoErro = e; continue; }
+    if (r.status === 429) { ultimoErro = new Error('Limite de uso atingido. Aguarde 1 minuto e tente novamente.'); continue; }
+    if (r.status === 404) { ultimoErro = new Error('Modelo não encontrado (404).'); continue; }
+    if (r.status === 403) throw new Error('Chave sem permissão (403). Gere uma nova chave em aistudio.google.com.');
+    if (!r.ok) { ultimoErro = new Error('Erro ' + r.status); continue; }
+    const data = await r.json();
+    const txt  = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const m    = txt.match(/\{[\s\S]*?\}/);
+    if (!m) throw new Error('API respondeu mas sem dados legíveis. Tente foto mais próxima e bem iluminada.');
+    return JSON.parse(m[0]);
+  }
+  throw ultimoErro || new Error('Nenhum endpoint funcionou. Gere uma nova chave em aistudio.google.com.');
 }
 
 function salvarNovaDespesa() {

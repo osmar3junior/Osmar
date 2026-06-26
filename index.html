@@ -473,6 +473,8 @@ if ('serviceWorker' in navigator) {
   .btn-prospect-visita { background:linear-gradient(180deg,#D97706,#92400E);color:#fff;box-shadow:0 5px 0 #78350F,0 8px 12px rgba(0,0,0,.4);border-bottom:none; }
   .prospect-data-btn { flex:1;background:var(--bg3);border:1.5px solid var(--borda);border-radius:10px;padding:11px 6px;color:var(--texto2);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s,background .15s; }
   .prospect-data-btn:active { border-color:#FFC043;color:#FFC043;background:rgba(255,192,67,.1); }
+  .desp-key { background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:16px 8px;font-size:22px;font-weight:600;color:var(--texto);font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .1s,transform .08s;-webkit-tap-highlight-color:transparent; }
+  .desp-key:active { background:rgba(255,255,255,.1);transform:scale(.93); }
   .canal-pedido-btn { flex:1;border-radius:9px;border:1.5px solid var(--borda);background:var(--bg2);color:var(--texto3);font-size:11px;font-weight:700;padding:9px 4px;cursor:pointer;text-align:center;font-family:'Syne',sans-serif;line-height:1.4;transition:border-color .15s,background .15s,color .15s; }
   .canal-pedido-btn.sel-visit { border-color:#D97706;background:rgba(217,119,6,.12);color:#FFC043; }
   .canal-pedido-btn.sel-wpp   { border-color:#22C55E;background:rgba(34,197,94,.09);color:#4ade80; }
@@ -2361,47 +2363,55 @@ if ('serviceWorker' in navigator) {
 
 <!-- MODAL NOVA DESPESA -->
 <div class="modal-overlay" id="modal-nova-despesa">
-  <div class="modal-box" style="max-height:90vh;overflow-y:auto;padding-bottom:28px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-      <div class="modal-titulo" style="margin-bottom:0;" id="nova-desp-titulo">Nova despesa</div>
+  <div class="modal-box" style="padding:0;overflow:hidden;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;">
+      <div style="font-size:15px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;" id="nova-desp-titulo">Nova despesa</div>
       <button onclick="fecharModal('modal-nova-despesa')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
 
-    <div style="margin-bottom:16px;">
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📸 Nota fiscal</label>
-      <label for="desp-foto-input" style="display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(0,214,143,.07);border:1.5px dashed rgba(0,214,143,.4);border-radius:12px;padding:14px;cursor:pointer;color:var(--verde);font-size:13px;font-weight:700;font-family:'Syne',sans-serif;">
-        📷 Tirar foto ou selecionar imagem
-      </label>
-      <input type="file" id="desp-foto-input" accept="image/*" capture="environment" style="display:none;" onchange="processarFotoDespesa(this)">
-      <div id="desp-foto-preview" style="display:none;margin-top:10px;position:relative;">
-        <img id="desp-foto-img" src="" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;border:1px solid var(--borda);">
-        <button onclick="removerFotoDespesa()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.75);border:none;border-radius:50%;width:26px;height:26px;color:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;">✕</button>
-      </div>
-      <div id="desp-ocr-status" style="display:none;margin-top:8px;padding:10px 13px;border-radius:10px;font-size:12px;text-align:center;line-height:1.5;"></div>
-    </div>
-
-    <div class="campo-grupo">
-      <label class="campo-label">Valor (R$)</label>
-      <div style="position:relative;">
-        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--texto2);font-size:13px;font-weight:600;">R$</span>
-        <input type="text" inputmode="decimal" class="campo-input" id="nova-desp-valor" placeholder="0,00" style="padding-left:34px;" oninput="mascaraMoeda(this)">
+    <!-- Display do valor -->
+    <div style="background:var(--bg3);margin:0 14px;border-radius:14px;padding:18px 16px 14px;margin-bottom:12px;text-align:center;">
+      <div style="font-size:11px;font-weight:600;color:var(--texto3);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px;font-family:'DM Sans',sans-serif;">Valor</div>
+      <div style="display:flex;align-items:baseline;justify-content:center;gap:6px;">
+        <span style="font-size:18px;font-weight:600;color:var(--texto2);font-family:'DM Sans',sans-serif;">R$</span>
+        <span id="desp-display-valor" style="font-size:42px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;letter-spacing:-1px;min-width:80px;">0</span>
+        <span id="desp-display-cents" style="font-size:22px;font-weight:600;color:var(--texto2);font-family:'DM Sans',sans-serif;align-self:flex-end;padding-bottom:4px;">,00</span>
       </div>
     </div>
 
-    <div class="campo-grupo">
-      <label class="campo-label">Data</label>
-      <input type="date" class="campo-input" id="nova-desp-data">
+    <!-- Teclado numérico -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px;margin-bottom:12px;">
+      <button onclick="despTeclado('7')" class="desp-key">7</button>
+      <button onclick="despTeclado('8')" class="desp-key">8</button>
+      <button onclick="despTeclado('9')" class="desp-key">9</button>
+      <button onclick="despTeclado('4')" class="desp-key">4</button>
+      <button onclick="despTeclado('5')" class="desp-key">5</button>
+      <button onclick="despTeclado('6')" class="desp-key">6</button>
+      <button onclick="despTeclado('1')" class="desp-key">1</button>
+      <button onclick="despTeclado('2')" class="desp-key">2</button>
+      <button onclick="despTeclado('3')" class="desp-key">3</button>
+      <button onclick="despTeclado('00')" class="desp-key" style="color:var(--texto2);">00</button>
+      <button onclick="despTeclado('0')" class="desp-key">0</button>
+      <button onclick="despTeclado('del')" class="desp-key" style="color:#F87171;font-size:18px;">⌫</button>
     </div>
 
-    <div class="campo-grupo">
-      <label class="campo-label">Descrição <span style="color:var(--texto3);font-weight:400;text-transform:none;">(opcional)</span></label>
-      <input type="text" class="campo-input" id="nova-desp-desc" placeholder="Ex: Posto Shell, Restaurante Bom Prato...">
+    <!-- Data + Descrição compactos -->
+    <div style="display:flex;gap:8px;padding:0 14px;margin-bottom:14px;">
+      <input type="date" class="campo-input" id="nova-desp-data" style="flex:1;font-family:'DM Sans',sans-serif;font-size:13px;">
+      <input type="text" class="campo-input" id="nova-desp-desc" placeholder="Descrição (opcional)" style="flex:2;font-family:'DM Sans',sans-serif;font-size:13px;">
     </div>
 
+    <!-- Botão salvar -->
+    <div style="padding:0 14px 20px;">
+      <button class="btn-primario" onclick="salvarNovaDespesa()" style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;">Salvar despesa</button>
+    </div>
+
+    <input type="hidden" id="nova-desp-valor">
     <input type="hidden" id="nova-desp-cat">
     <input type="hidden" id="nova-desp-foto-data">
-
-    <button class="btn-primario" onclick="salvarNovaDespesa()">Salvar despesa</button>
+    <div id="desp-ocr-status" style="display:none;"></div>
   </div>
 </div>
 
@@ -10226,17 +10236,37 @@ function atualizarBadgeDespesas() {
   else           { badge.style.display='none'; }
 }
 
+let _despCentavos = 0;
+
+function _despAtualizarDisplay() {
+  const reais = Math.floor(_despCentavos / 100);
+  const cents = _despCentavos % 100;
+  document.getElementById('desp-display-valor').textContent = reais.toLocaleString('pt-BR');
+  document.getElementById('desp-display-cents').textContent = ',' + String(cents).padStart(2,'0');
+  document.getElementById('nova-desp-valor').value = (_despCentavos / 100).toFixed(2).replace('.',',');
+}
+
+function despTeclado(key) {
+  if (key === 'del') {
+    _despCentavos = Math.floor(_despCentavos / 10);
+  } else if (key === '00') {
+    if (_despCentavos > 0) _despCentavos = Math.min(_despCentavos * 100, 9999999);
+  } else {
+    const d = parseInt(key);
+    if (_despCentavos < 1000000) _despCentavos = _despCentavos * 10 + d;
+  }
+  _despAtualizarDisplay();
+}
+
 function abrirNovaDespesa(cat) {
   const info = DESP_CATS[cat] || DESP_CATS.outra;
   document.getElementById('nova-desp-titulo').textContent = info.icon + ' ' + info.label;
-  document.getElementById('nova-desp-cat').value   = cat;
-  document.getElementById('nova-desp-valor').value = '';
-  document.getElementById('nova-desp-data').value  = new Date().toISOString().slice(0,10);
-  document.getElementById('nova-desp-desc').value  = '';
+  document.getElementById('nova-desp-cat').value  = cat;
+  document.getElementById('nova-desp-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('nova-desp-desc').value = '';
   document.getElementById('nova-desp-foto-data').value = '';
-  document.getElementById('desp-foto-preview').style.display = 'none';
-  document.getElementById('desp-ocr-status').style.display  = 'none';
-  document.getElementById('desp-foto-input').value = '';
+  _despCentavos = 0;
+  _despAtualizarDisplay();
   document.getElementById('modal-nova-despesa').classList.add('aberto');
 }
 
@@ -10356,12 +10386,12 @@ Responda SOMENTE com JSON válido, sem nenhum texto antes ou depois:
 }
 
 function salvarNovaDespesa() {
-  const valor = valorParaFloat(document.getElementById('nova-desp-valor').value);
+  const valor = _despCentavos / 100;
   const data  = document.getElementById('nova-desp-data').value;
   const cat   = document.getElementById('nova-desp-cat').value;
   const desc  = document.getElementById('nova-desp-desc').value.trim();
 
-  if (!valor || valor <= 0) { toast('Informe o valor da despesa'); return; }
+  if (!valor || valor <= 0) { toast('Digite o valor da despesa'); return; }
   if (!data) { toast('Informe a data'); return; }
 
   const arr = getDespesas();

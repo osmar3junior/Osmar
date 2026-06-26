@@ -10290,24 +10290,31 @@ async function processarFotoDespesa(input) {
 }
 
 async function ocrNotaFiscal(base64, mimeType, apiKey) {
-  const prompt = `Analise esta nota fiscal ou recibo. Extraia apenas:
-1. Valor total pago (número decimal)
-2. Data (formato YYYY-MM-DD)
-3. Tipo do estabelecimento (texto curto em português)
-Responda SOMENTE em JSON válido, sem texto extra:
-{"valor":89.50,"data":"2026-06-21","descricao":"Posto de gasolina"}
-Se não encontrar um campo use null.`;
+  const prompt = `Você é um leitor especializado em documentos fiscais brasileiros (NF-e, NFC-e, cupom fiscal, nota fiscal de serviço, recibo).
+
+Analise a imagem e extraia exatamente:
+1. VALOR TOTAL: procure pelos campos "TOTAL", "VALOR TOTAL", "TOTAL A PAGAR", "TOTAL DO PEDIDO" ou o maior valor em destaque no documento. Retorne como número decimal (ex: 89.50).
+2. DATA DE EMISSÃO: procure "Data de Emissão", "Emissão", "Data", ou a data impressa. Formato YYYY-MM-DD.
+3. ESTABELECIMENTO: nome da empresa/loja/fornecedor emitente. Texto curto em português.
+
+Regras:
+- Se houver desconto, retorne o valor FINAL após desconto.
+- Ignore valores parciais, subtotais por item ou troco.
+- Se a imagem estiver ilegível ou não for um documento fiscal, retorne null em todos os campos.
+
+Responda SOMENTE com JSON válido, sem nenhum texto antes ou depois:
+{"valor":89.50,"data":"2026-06-21","descricao":"Supermercado Pão de Açúcar"}`;
 
   const body = {
     contents:[{ parts:[
       { text: prompt },
       { inline_data:{ mime_type: mimeType||'image/jpeg', data: base64 } }
     ]}],
-    generationConfig:{ temperature:0, maxOutputTokens:150 }
+    generationConfig:{ temperature:0, maxOutputTokens:300, responseMimeType:'application/json' }
   };
 
   const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
   );
   if (!r.ok) throw new Error('API '+r.status);

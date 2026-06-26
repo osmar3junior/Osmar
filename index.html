@@ -9335,9 +9335,9 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
           <input type="number" class="campo-input" id="pedido-quantidade-${i}" placeholder="0" min="0" style="font-size:14px;padding:10px 12px;${temMetaUnidade ? 'border-color:rgba(0,214,143,.35);' : ''}" oninput="atualizarProgressoPedido();calcPrecoMedioPedido(${i})">
         </div>` : ''}
       </div>
-      ${!somenteValor ? `<div id="preco-medio-box-${i}" style="display:none;align-items:center;justify-content:space-between;background:rgba(140,160,255,.07);border:1px solid rgba(140,160,255,.2);border-radius:9px;padding:9px 12px;margin-bottom:8px;">
-        <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--texto2);">Preço médio</span>
-        <span id="preco-medio-val-${i}" style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#C4D0FF;"></span>
+      ${!somenteValor ? `<div id="preco-medio-box-${i}" style="display:none;align-items:center;justify-content:space-between;background:rgba(124,142,240,.07);border:1px solid rgba(124,142,240,.2);border-radius:9px;padding:9px 12px;margin-bottom:8px;">
+        <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:#7C8EF0;">Preço médio</span>
+        <span id="preco-medio-val-${i}" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#7C8EF0;"></span>
       </div>` : ''}
       <div>
         <label class="campo-label">Unidade</label>

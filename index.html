@@ -2204,81 +2204,101 @@ if ('serviceWorker' in navigator) {
 <div class="modal-overlay" id="modal-guia-importacao">
   <div class="modal-box" style="max-height:90vh;overflow-y:auto;padding-bottom:28px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-      <div class="modal-titulo" style="margin-bottom:0;">📥 Como importar sua base</div>
+      <div class="modal-titulo" style="margin-bottom:0;">📥 Importar clientes</div>
       <button onclick="fecharModal('modal-guia-importacao')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
 
-    <div style="background:rgba(0,214,143,.07);border:1px solid rgba(0,214,143,.2);border-radius:12px;padding:12px 14px;margin-bottom:22px;">
-      <div style="font-size:13px;color:var(--verde);font-weight:700;">✅ Funciona com Excel, Google Sheets ou qualquer planilha</div>
-      <div style="font-size:12px;color:var(--texto2);margin-top:3px;">Você pode trazer clientes, marcas e até o histórico de pedidos de uma vez só.</div>
+    <div style="background:rgba(0,214,143,.07);border:1px solid rgba(0,214,143,.2);border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+      <div style="font-size:13px;color:var(--verde);font-weight:700;font-family:'DM Sans',sans-serif;">✅ Aceita Excel, Google Sheets ou qualquer planilha</div>
+      <div style="font-size:12px;color:var(--texto2);margin-top:3px;font-family:'DM Sans',sans-serif;">As colunas podem estar em qualquer ordem. O app reconhece pelo nome, não pela posição.</div>
     </div>
 
+    <!-- PASSO 1 -->
     <div class="guia-step">
       <div class="guia-step-num">1</div>
-      <div class="guia-step-text">
-        <strong style="color:var(--texto);">Baixe o modelo pronto</strong><br>
-        Toque no botão abaixo. Vai baixar um arquivo com as colunas certas e dois clientes de exemplo para você ver como preencher.
+      <div class="guia-step-text" style="font-family:'DM Sans',sans-serif;">
+        <strong style="color:var(--texto);">Baixe o modelo Excel pronto</strong><br>
+        Já vem com exemplos preenchidos — incluindo histórico de compras — para você ver como funciona.
       </div>
     </div>
-    <button onclick="baixarModeloCSV()" style="width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.45);border-radius:12px;padding:13px;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--verde);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:22px;">
-      ⬇️ Baixar modelo (.csv)
+    <button onclick="baixarModeloExcel()" style="width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.45);border-radius:12px;padding:13px;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:20px;">
+      ⬇️ Baixar modelo Excel (.xlsx)
     </button>
 
+    <!-- PASSO 2 -->
     <div class="guia-step">
       <div class="guia-step-num">2</div>
-      <div class="guia-step-text">
-        <strong style="color:var(--texto);">Abra no Excel ou Google Sheets</strong><br>
-        Apague os exemplos e preencha com seus clientes. Uma linha por pedido — se o cliente comprou 3 vezes, coloque 3 linhas com o mesmo nome.
+      <div class="guia-step-text" style="font-family:'DM Sans',sans-serif;">
+        <strong style="color:var(--texto);">Preencha com seus clientes</strong><br>
+        Apague os exemplos e coloque seus dados. Pode usar os nomes de coluna que já tem na sua planilha — o app entende variações.
       </div>
     </div>
 
-    <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px 14px;margin-bottom:22px;overflow-x:auto;">
-      <div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:8px;">Colunas disponíveis</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-        <div style="font-size:12px;"><span style="color:var(--vermelho);font-weight:700;">*</span> <span style="color:var(--texto);">nome</span> <span style="color:var(--texto3);">— nome do cliente</span></div>
-        <div style="font-size:12px;"><span style="color:var(--vermelho);font-weight:700;">*</span> <span style="color:var(--texto);">loja</span> <span style="color:var(--texto3);">— nome da loja</span></div>
-        <div style="font-size:12px;"><span style="color:var(--vermelho);font-weight:700;">*</span> <span style="color:var(--texto);">cidade</span> <span style="color:var(--texto3);">— cidade</span></div>
-        <div style="font-size:12px;"><span style="color:var(--vermelho);font-weight:700;">*</span> <span style="color:var(--texto);">uf</span> <span style="color:var(--texto3);">— estado (MG, SP…)</span></div>
-        <div style="font-size:12px;color:var(--texto2);">cnpj</div>
-        <div style="font-size:12px;color:var(--texto2);">telefone</div>
-        <div style="font-size:12px;color:var(--texto2);">marcas <span style="color:var(--texto3);">(ex: Lupo, Meet)</span></div>
-        <div style="font-size:12px;color:var(--texto2);">segmento <span style="color:var(--texto3);">(moda, farmacia…)</span></div>
-        <div style="font-size:12px;color:var(--texto2);">endereco</div>
-        <div style="font-size:12px;color:var(--texto2);">ciclo_dias <span style="color:var(--texto3);">(ex: 30)</span></div>
-        <div style="font-size:12px;color:var(--texto2);">pedido_data <span style="color:var(--texto3);">(AAAA-MM-DD)</span></div>
-        <div style="font-size:12px;color:var(--texto2);">pedido_marca</div>
-        <div style="font-size:12px;color:var(--texto2);">pedido_valor <span style="color:var(--texto3);">(ex: 8500)</span></div>
-        <div style="font-size:12px;color:var(--texto2);">lembrete</div>
+    <!-- Colunas aceitas -->
+    <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:13px 14px;margin-bottom:16px;">
+      <div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:10px;font-family:'DM Sans',sans-serif;">Colunas reconhecidas</div>
+
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--vermelho);margin-bottom:4px;font-family:'DM Sans',sans-serif;">⚠️ Obrigatório — pelo menos uma:</div>
+        <div style="font-size:12px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;">
+          <b>Nome do cliente</b> → <span style="color:var(--texto3);">Nome, Cliente, Contato, Responsável, Comprador</span><br>
+          <b>Razão social / loja</b> → <span style="color:var(--texto3);">Loja, Empresa, Razão Social, Estabelecimento</span>
+        </div>
       </div>
-      <div style="margin-top:8px;font-size:11px;color:var(--texto3);"><span style="color:var(--vermelho);">*</span> obrigatório</div>
+
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;color:#38BDF8;margin-bottom:4px;font-family:'DM Sans',sans-serif;">📍 Localização (recomendado para o mapa):</div>
+        <div style="font-size:12px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;">
+          <b>Endereço</b> → <span style="color:var(--texto3);">Endereço, Logradouro, Rua</span><br>
+          <b>Bairro</b> → <span style="color:var(--texto3);">Bairro</span><br>
+          <b>CEP</b> → <span style="color:var(--texto3);">CEP</span><br>
+          <b>Cidade</b> → <span style="color:var(--texto3);">Cidade, Município</span><br>
+          <b>UF</b> → <span style="color:var(--texto3);">UF, Estado</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--texto2);margin-bottom:4px;font-family:'DM Sans',sans-serif;">📋 Dados do cliente:</div>
+        <div style="font-size:12px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;">
+          <b>CNPJ</b> → <span style="color:var(--texto3);">CNPJ, CPF/CNPJ, Documento</span><br>
+          <b>Telefone</b> → <span style="color:var(--texto3);">Telefone, Celular, WhatsApp, Fone</span><br>
+          <b>Marcas</b> → <span style="color:var(--texto3);">Marcas, Representação (separe por vírgula: Lupo, Meet)</span><br>
+          <b>Segmento</b> → <span style="color:var(--texto3);">Segmento, Ramo, Atividade</span><br>
+          <b>Observação</b> → <span style="color:var(--texto3);">Obs, Observação, Lembrete, Nota</span>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#FFC043;margin-bottom:4px;font-family:'DM Sans',sans-serif;">📦 Histórico de compras (opcional):</div>
+        <div style="font-size:12px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;">
+          <b>Data do pedido</b> → <span style="color:var(--texto3);">Pedido_data, Última compra, Data_pedido <em>(formato: 2026-06-25)</em></span><br>
+          <b>Valor do pedido</b> → <span style="color:var(--texto3);">Pedido_valor, Valor_pedido <em>(ex: 8500)</em></span><br>
+          <b>Marca do pedido</b> → <span style="color:var(--texto3);">Pedido_marca, Marca_pedido</span>
+        </div>
+        <div style="margin-top:8px;background:rgba(255,192,67,.07);border:1px solid rgba(255,192,67,.2);border-radius:8px;padding:8px 10px;font-size:11px;color:#FFC043;line-height:1.5;font-family:'DM Sans',sans-serif;">
+          💡 Para lançar <b>mais de um pedido por cliente</b>, repita o cliente em várias linhas com datas diferentes. O app agrupa automaticamente pelo CNPJ ou nome+cidade.
+        </div>
+      </div>
     </div>
 
+    <!-- PASSO 3 -->
     <div class="guia-step">
       <div class="guia-step-num">3</div>
-      <div class="guia-step-text">
-        <strong style="color:var(--texto);">Salve como CSV</strong><br>
-        No Excel: <em>Arquivo → Salvar como → CSV UTF-8 (delimitado por vírgula)</em><br>
-        No Google Sheets: <em>Arquivo → Fazer download → Valores separados por vírgula (.csv)</em>
+      <div class="guia-step-text" style="font-family:'DM Sans',sans-serif;">
+        <strong style="color:var(--texto);">Importe direto — sem converter</strong><br>
+        Salve o arquivo normalmente (.xlsx) e toque em Importar. O app mostra uma prévia com quantos clientes são novos ou serão atualizados antes de confirmar.
       </div>
     </div>
 
-    <div class="guia-step">
-      <div class="guia-step-num">4</div>
-      <div class="guia-step-text">
-        <strong style="color:var(--texto);">Importe no app</strong><br>
-        Toque em "Importar arquivo", selecione o arquivo salvo. O app mostra uma prévia antes de confirmar — você vê quantos são novos e quantos serão atualizados.
-      </div>
-    </div>
-
-    <div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:12px 14px;margin-bottom:20px;">
-      <div style="font-size:12px;color:#FBB52C;line-height:1.6;">
-        💡 <strong>Dica:</strong> Se o cliente já existir no app (mesmo CNPJ ou mesmo nome+cidade), o app <strong>atualiza</strong> sem duplicar. Pode importar de novo sem medo.
+    <div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:11px 13px;margin-bottom:18px;">
+      <div style="font-size:12px;color:#FBB52C;line-height:1.6;font-family:'DM Sans',sans-serif;">
+        💡 Se o cliente já existir no app (mesmo CNPJ ou nome+cidade), ele é <strong>atualizado sem duplicar</strong>. Pode importar de novo sem medo.
       </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <button onclick="baixarModeloCSV()" style="background:var(--bg3);border:1.5px solid rgba(0,214,143,.35);border-radius:12px;padding:13px;color:var(--verde);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⬇️ Baixar modelo</button>
-      <label for="import-file-input-guia" style="background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:12px;padding:13px;color:#04231A;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-align:center;display:block;">📂 Importar arquivo</label>
+      <button onclick="baixarModeloExcel()" style="background:var(--bg3);border:1.5px solid rgba(0,214,143,.35);border-radius:12px;padding:13px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⬇️ Baixar modelo</button>
+      <label for="import-file-input-guia" style="background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:12px;padding:13px;color:#04231A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-align:center;display:block;">📂 Importar arquivo</label>
     </div>
     <input type="file" id="import-file-input-guia" accept=".csv,.xlsx,.xls" style="display:none;" onchange="processarArquivoImportacao(this);fecharModal('modal-guia-importacao')">
   </div>
@@ -9768,22 +9788,101 @@ function abrirGuiaImportacao() {
   document.getElementById('modal-guia-importacao').classList.add('aberto');
 }
 
-function baixarModeloCSV() {
-  const linhas = [
-    'nome,loja,cnpj,telefone,segmento,marcas,endereco,cidade,uf,ciclo_dias,lembrete,pedido_data,pedido_marca,pedido_valor',
-    // JOANA — 3 pedidos (repete as colunas de cliente na 1ª linha, deixa em branco nas seguintes)
-    '"JOANA FERREIRA","BY SEA","12.345.678/0001-90","(31) 99999-0000","moda","Lupo, Meet","Rua das Flores 123","BELO HORIZONTE","MG","21","Prefere manhã","2026-03-15","Lupo","8000"',
-    '"JOANA FERREIRA","","","","","","","","","","","2026-04-18","Lupo","9500"',
-    '"JOANA FERREIRA","","","","","","","","","","","2026-05-10","Meet","5000"',
-    // LEO — 1 pedido
-    '"LEO SOUZA","CUECAS BH","","(31) 98888-1111","moda","Meet","Av Brasil 456","BELO HORIZONTE","MG","30","","2026-05-21","Meet","5000"'
-  ].join('\n');
-  const blob = new Blob(['﻿' + linhas], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = 'modelo_carteira_viva.csv'; a.click();
-  URL.revokeObjectURL(url);
-  toast('Modelo baixado! Abra no Excel e preencha.');
+function baixarModeloCSV() { baixarModeloExcel(); }
+
+async function baixarModeloExcel() {
+  try {
+    toast('⏳ Gerando modelo...');
+    await _carregarSheetJS();
+
+    const cabecalho = [
+      'Nome do Cliente','Razão Social / Loja','CNPJ','Telefone','Segmento',
+      'Marcas','Endereço','Bairro','CEP','Cidade','UF',
+      'Observação','Pedido_data','Pedido_marca','Pedido_valor'
+    ];
+
+    const exemplos = [
+      ['JOANA FERREIRA','BY SEA MODAS','12.345.678/0001-90','(31) 99999-0000','moda',
+       'Lupo, Meet','Rua das Flores, 123','Centro','30130-110','BELO HORIZONTE','MG',
+       'Prefere visita de manhã','2026-03-15','Lupo',8000],
+      ['JOANA FERREIRA','','','','','','','','','','','','2026-04-18','Lupo',9500],
+      ['JOANA FERREIRA','','','','','','','','','','','','2026-05-10','Meet',5000],
+      ['LEO SOUZA','CUECAS BH','','(31) 98888-1111','moda',
+       'Meet','Av. Brasil, 456','Savassi','30140-002','BELO HORIZONTE','MG',
+       '','2026-05-21','Meet',5000],
+      ['MARIA GARCIA','BOUTIQUE GARCIA','98.765.432/0001-10','(11) 97777-2222','moda',
+       'Duloren','Rua Oscar Freire, 789','Jardins','01426-001','SÃO PAULO','SP',
+       'Cliente vip - ligar antes','2026-06-01','Duloren',12000],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([cabecalho, ...exemplos]);
+
+    // Larguras das colunas
+    ws['!cols'] = [
+      {wch:22},{wch:22},{wch:20},{wch:16},{wch:12},
+      {wch:16},{wch:26},{wch:14},{wch:12},{wch:18},{wch:6},
+      {wch:24},{wch:13},{wch:14},{wch:14}
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+
+    // Aba de instruções
+    const instrucoes = [
+      ['INSTRUÇÕES DE PREENCHIMENTO'],
+      [''],
+      ['COLUNA','O QUE COLOCAR','OBRIGATÓRIO?','EXEMPLOS'],
+      ['Nome do Cliente','Nome do dono ou comprador','SIM','JOANA FERREIRA'],
+      ['Razão Social / Loja','Nome da loja ou empresa','Recomendado','BY SEA MODAS'],
+      ['CNPJ','CNPJ ou CPF (com ou sem pontuação)','Não','12.345.678/0001-90'],
+      ['Telefone','Celular ou WhatsApp','Não','(31) 99999-0000'],
+      ['Segmento','Ramo de atividade','Não','moda, calcados, alimentos, farmacia'],
+      ['Marcas','Marcas que o cliente compra','Não','Lupo, Meet (separe por vírgula)'],
+      ['Endereço','Rua e número','Recomendado','Rua das Flores, 123'],
+      ['Bairro','Bairro','Não','Centro'],
+      ['CEP','CEP (ajuda a localizar no mapa)','Não','30130-110'],
+      ['Cidade','Cidade','Recomendado','BELO HORIZONTE'],
+      ['UF','Sigla do estado','Recomendado','MG'],
+      ['Observação','Anotação livre','Não','Prefere visita de manhã'],
+      [''],
+      ['HISTÓRICO DE COMPRAS (opcional)','','',''],
+      ['Pedido_data','Data do pedido','—','2026-06-25  (formato: AAAA-MM-DD)'],
+      ['Pedido_marca','Marca do pedido','—','Lupo'],
+      ['Pedido_valor','Valor em reais (só o número)','—','8500'],
+      [''],
+      ['DICA IMPORTANTE: Para lançar mais de um pedido por cliente,'],
+      ['repita o cliente em várias linhas com datas diferentes.'],
+      ['O app agrupa automaticamente pelo CNPJ ou nome+cidade.'],
+      [''],
+      ['DICA: Os nomes das colunas podem variar. O app também reconhece:'],
+      ['Nome, Cliente, Contato, Responsável → para Nome do Cliente'],
+      ['Empresa, Razão Social, Estabelecimento → para Loja'],
+      ['Telefone, Celular, WhatsApp, Fone → para Telefone'],
+      ['Endereço, Logradouro, Rua → para Endereço'],
+      ['Município, Localidade → para Cidade'],
+      ['Estado, Sigla → para UF'],
+    ];
+    const wsInst = XLSX.utils.aoa_to_sheet(instrucoes);
+    wsInst['!cols'] = [{wch:30},{wch:35},{wch:14},{wch:36}];
+    XLSX.utils.book_append_sheet(wb, wsInst, 'Instruções');
+
+    XLSX.writeFile(wb, 'modelo_carteira_viva.xlsx');
+    toast('✅ Modelo baixado! Abra no Excel, apague os exemplos e preencha.');
+  } catch(err) {
+    // fallback para CSV se SheetJS não carregar
+    const linhas = [
+      'Nome do Cliente,Razão Social / Loja,CNPJ,Telefone,Segmento,Marcas,Endereço,Bairro,CEP,Cidade,UF,Observação,Pedido_data,Pedido_marca,Pedido_valor',
+      '"JOANA FERREIRA","BY SEA MODAS","12.345.678/0001-90","(31) 99999-0000","moda","Lupo, Meet","Rua das Flores 123","Centro","30130-110","BELO HORIZONTE","MG","Prefere manhã","2026-03-15","Lupo","8000"',
+      '"JOANA FERREIRA","","","","","","","","","","","","2026-04-18","Lupo","9500"',
+      '"LEO SOUZA","CUECAS BH","","(31) 98888-1111","moda","Meet","Av Brasil 456","Savassi","30140-002","BELO HORIZONTE","MG","","2026-05-21","Meet","5000"'
+    ].join('\n');
+    const blob = new Blob(['﻿' + linhas], { type:'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'modelo_carteira_viva.csv'; a.click();
+    URL.revokeObjectURL(url);
+    toast('Modelo CSV baixado!');
+  }
 }
 
 async function _carregarSheetJS() {
@@ -9815,37 +9914,71 @@ function _parsearCSV(text) {
 }
 
 const _IMPORT_ALIAS = {
-  nome:        ['nome','name','cliente'],
-  loja:        ['loja','empresa','store','razao_social','razao social'],
-  cnpj:        ['cnpj','document','documento','cpf_cnpj'],
-  telefone:    ['telefone','phone','celular','tel','whatsapp'],
-  segmento:    ['segmento','segment','ramo','categoria'],
-  marcas:      ['marcas','brands','marca','representacoes'],
-  endereco:    ['endereco','endereco','address','logradouro','rua'],
-  cidade:      ['cidade','city','municipio','municipio'],
-  uf:          ['uf','estado','state'],
-  ciclo_dias:  ['ciclo_dias','ciclo','prazo','retorno_dias'],
-  lembrete:    ['lembrete','obs','observacao','observacao','nota'],
-  pedido_data: ['pedido_data','ultimo_pedido_data','ultima_compra','data_pedido','data_ultimo_pedido'],
-  pedido_marca:['pedido_marca','ultimo_pedido_marca','marca_pedido'],
-  pedido_valor:['pedido_valor','ultimo_pedido_valor','valor_pedido','valor_ultimo_pedido']
+  nome:        ['nome','name','cliente','contato','responsavel','comprador','proprietario','nome_do_cliente','nome_cliente','nome_contato','nome_do_contato','nome_fantasia','fantasia','apelido'],
+  loja:        ['loja','empresa','store','razao_social','razao_social_','razao','nome_empresa','nome_da_empresa','estabelecimento','denominacao','corporate_name','firma','nome_loja','nome_da_loja'],
+  cnpj:        ['cnpj','document','documento','cpf_cnpj','cnpj_cpf','inscricao','doc','numero_documento','num_doc','registro'],
+  telefone:    ['telefone','phone','celular','tel','whatsapp','fone','contato_telefone','telefone_celular','celular_whatsapp','numero_telefone','num_tel','phone_number'],
+  segmento:    ['segmento','segment','ramo','categoria','ramo_de_atividade','atividade','setor','tipo_de_negocio','tipo_negocio','area'],
+  marcas:      ['marcas','brands','marca','representacoes','representacao','linha','linhas','produto','produtos'],
+  endereco:    ['endereco','address','logradouro','rua','rua_numero','endereco_completo','endereco_comercial','end','logradouro_numero'],
+  bairro:      ['bairro','district','bairro_'],
+  cidade:      ['cidade','city','municipio','municipio_','localidade','municipio_uf','cidade_uf'],
+  uf:          ['uf','estado','state','sigla_estado','sigla_uf','estado_uf'],
+  cep:         ['cep','zip','zip_code','codigo_postal'],
+  ciclo_dias:  ['ciclo_dias','ciclo','prazo','retorno_dias','dias_retorno','periodicidade','frequencia_visita','intervalo'],
+  lembrete:    ['lembrete','obs','observacao','nota','anotacao','comentario','observacoes','notas','memo'],
+  pedido_data: ['pedido_data','ultimo_pedido_data','ultima_compra','data_pedido','data_ultimo_pedido','data_ultima_compra','dt_pedido','data_compra'],
+  pedido_marca:['pedido_marca','ultimo_pedido_marca','marca_pedido','marca_ultima_compra'],
+  pedido_valor:['pedido_valor','ultimo_pedido_valor','valor_pedido','valor_ultimo_pedido','valor_ultima_compra','vlr_pedido','valor_compra']
 };
+
+function _normalizarHeader(h) {
+  return (h||'').toString().toLowerCase().trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
+}
 
 function _resolverColunas(header) {
   const idx = {};
-  header.forEach((h, i) => {
-    const norm = (h||'').toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_');
+  const normas = header.map(h => _normalizarHeader(h));
+
+  // 1ª passagem: match exato pelos aliases
+  normas.forEach((norm, i) => {
     Object.entries(_IMPORT_ALIAS).forEach(([campo, aliases]) => {
-      if (aliases.includes(norm)) idx[campo] = i;
+      if (idx[campo] === undefined && aliases.includes(norm)) idx[campo] = i;
     });
   });
+
+  // 2ª passagem: fuzzy — se o header *contiver* a palavra-chave principal
+  const fuzzyMap = {
+    nome:     ['nome','cliente','contato','responsavel','fantasia'],
+    loja:     ['loja','empresa','razao','razao_social','estabelecimento'],
+    cnpj:     ['cnpj','cpf'],
+    telefone: ['telefone','celular','fone','whatsapp'],
+    endereco: ['endereco','logradouro','rua'],
+    cidade:   ['cidade','municipio'],
+    uf:       ['estado','uf'],
+    cep:      ['cep'],
+    segmento: ['segmento','ramo','atividade'],
+    marcas:   ['marca','representacao'],
+  };
+  normas.forEach((norm, i) => {
+    Object.entries(fuzzyMap).forEach(([campo, palavras]) => {
+      if (idx[campo] === undefined && palavras.some(p => norm.includes(p))) idx[campo] = i;
+    });
+  });
+
   return idx;
 }
 
 function _linhasParaClientes(rows) {
   const header = rows[0].map(h => (h||'').toString().toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_'));
   const col = _resolverColunas(header);
-  if (col.nome === undefined) { toast('❌ Coluna "nome" não encontrada. Baixe o modelo e tente novamente.'); return []; }
+  if (col.nome === undefined) {
+    const detectadas = Object.keys(col).join(', ') || 'nenhuma';
+    toast(`❌ Coluna de nome não encontrada. Colunas detectadas: ${detectadas}. Use cabeçalhos como: Nome, Cliente, Contato, Razão Social.`);
+    return [];
+  }
 
   // 1. Converte cada linha em objeto cru
   const rawRows = rows.slice(1).map(r => {
@@ -9859,7 +9992,8 @@ function _linhasParaClientes(rows) {
       telefone:    g('telefone'),
       segmento:    g('segmento') || 'geral',
       marcasStr:   g('marcas'),
-      endereco:    g('endereco'),
+      endereco:    [g('endereco'), g('bairro')].filter(Boolean).join(', '),
+      cep:         g('cep').replace(/\D/g,''),
       cidade:      g('cidade').toUpperCase(),
       uf:          g('uf').toUpperCase(),
       ciclo_dias:  parseInt(g('ciclo_dias')) || 30,
@@ -9907,8 +10041,10 @@ function _linhasParaClientes(rows) {
       criadoEm:   new Date().toISOString()
     };
 
-    if (endereco && cidade) {
-      c.enderecoPendente = `${endereco}, ${cidade}${uf ? ', '+uf : ''}, Brasil`;
+    const cep = pick('cep');
+    if (endereco || cidade) {
+      const partes = [endereco, cidade, uf, cep, 'Brasil'].filter(Boolean);
+      c.enderecoPendente = partes.join(', ');
     }
 
     // 4. Coleta TODOS os pedidos de todas as linhas do grupo

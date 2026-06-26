@@ -8585,7 +8585,7 @@ function _detalheVendasMarca(meta) {
     const qtdTxt = somenteValor ? `R$ ${fmtV(l.val)}` : `${l.qtd} ${_skuLabel(l.unidade)}`;
     const valTxt = somenteValor ? '' : `R$ ${fmtV(l.val)}`;
     const pmTxt  = (!somenteValor && l.qtd > 0 && l.val > 0)
-      ? `PM R$ ${fmtV(l.val / l.qtd)}/${_skuLabel(l.unidade)}`
+      ? `PM R$ ${(l.val / l.qtd).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}/${_skuLabel(l.unidade)}`
       : null;
     return `<div onclick="abrirPedidoExistente(this.dataset.cid,this.dataset.hdata)" data-cid="${l.id}" data-hdata="${l.data}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--borda);border-radius:10px;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent;" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background='transparent'">
       <div style="flex:1;min-width:0;">
@@ -8605,7 +8605,7 @@ function _detalheVendasMarca(meta) {
 
   const totalQtdTxt = somenteValor ? `R$ ${fmtV(totalQtd)}` : `${totalQtd} ${skuLabel}`;
   const pmGeral = (!somenteValor && totalQtd > 0 && totalVal > 0)
-    ? `PM geral R$ ${fmtV(totalVal / totalQtd)}/${skuLabel}`
+    ? `PM geral R$ ${(totalVal / totalQtd).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}/${skuLabel}`
     : null;
 
   return `<div style="border-top:1px solid var(--borda);padding:10px 0 0;">
@@ -8754,9 +8754,9 @@ function renderizarRelatorios() {
     const diasRestantes = _diasUteisRestantes(agora, fim);
     const falta         = meta.valor - real;
     const _buffer       = 1 + ((cfg.bufferMeta ?? 20) / 100);
-    const _taxa         = calcularTaxaConversao();
+    const _taxa         = calcularTaxaConversaoMarca(meta.marca);
     const mediaDiaria   = (diasRestantes > 0 && falta > 0) ? (falta / diasRestantes) * _buffer / _taxa : null;
-    const _taxaLabel    = _taxa < 1 ? ` <span style="font-size:10px;color:#7DD3FC;opacity:.75;">· conv. ${Math.round(_taxa*100)}%</span>` : '';
+    const _taxaLabel    = _taxa < 1 ? ` <span style="font-size:10px;color:#7DD3FC;opacity:.75;">· positiv. ${Math.round(_taxa*100)}%</span>` : '';
     const _bufferLabel  = cfg.bufferMeta > 0 ? ` <span style="font-size:10px;color:var(--verde);opacity:.7;">(+${cfg.bufferMeta}% margem)</span>` : '';
     const dataFimFmt    = fim.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
     const fmtMedia = v => {
@@ -9571,6 +9571,26 @@ function calcularTaxaConversao() {
     });
   });
   if (totalContatos < 5) return 1; // dados insuficientes → usa 100%
+  return Math.max(0.25, Math.min(1, totalFechou / totalContatos));
+}
+
+function calcularTaxaConversaoMarca(marca) {
+  const marcaNorm = (marca || '').trim().toLowerCase();
+  const clientes = getClientes().filter(c =>
+    (c.marcas || []).some(m => (m || '').trim().toLowerCase() === marcaNorm)
+  );
+  let totalContatos = 0, totalFechou = 0;
+  clientes.forEach(c => {
+    (c.historico || []).forEach(h => {
+      totalContatos++;
+      if (h.motivo !== 'fechou_pedido') return;
+      const temMarca = h.pedidos
+        ? h.pedidos.some(p => (p.marca || '').trim().toLowerCase() === marcaNorm)
+        : (c.marcas || []).some(m => (m || '').trim().toLowerCase() === marcaNorm);
+      if (temMarca) totalFechou++;
+    });
+  });
+  if (totalContatos < 5) return 1;
   return Math.max(0.25, Math.min(1, totalFechou / totalContatos));
 }
 

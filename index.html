@@ -5418,6 +5418,7 @@ function renderizarRotaPeriodo() {
     return;
   }
   montarRota(lista, _rotaPos ? _rotaPos.lat : null, _rotaPos ? _rotaPos.lng : null);
+  setTimeout(_animarBotoesOrdemRota, 600);
 }
 
 function _animarBotoesOrdemRota() {
@@ -5460,7 +5461,6 @@ function abrirRotaDeHoje() {
   document.getElementById('rota-hoje-sub').textContent = 'Calculando rota otimizada...';
   document.getElementById('modal-rota-hoje').classList.add('aberto');
   atualizarBannerSemGps();
-  _animarBotoesOrdemRota();
 
   if (comGPS.length === 0) {
     document.getElementById('rota-hoje-sub').textContent = clientesSemCoordenada().length > 0

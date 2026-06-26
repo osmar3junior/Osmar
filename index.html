@@ -1836,9 +1836,9 @@ if ('serviceWorker' in navigator) {
     <!-- Toggle de ordenação -->
     <div class="rota-ordem-seletor">
       <span class="rota-ordem-label">Ordenar:</span>
-      <button class="rota-ordem-btn" data-ordem="foco" id="btn-ordem-foco" onclick="trocarOrdemRota('foco')">⚡ Por FOCO</button>
+      <button class="rota-ordem-btn ativo" data-ordem="foco" id="btn-ordem-foco" onclick="trocarOrdemRota('foco')">⚡ Por FOCO</button>
       <button class="rota-ordem-btn" data-ordem="proximidade" onclick="trocarOrdemRota('proximidade')">📍 Por proximidade</button>
-      <button class="rota-ordem-btn ativo" data-ordem="data" onclick="trocarOrdemRota('data')">📅 Por data</button>
+      <button class="rota-ordem-btn" data-ordem="data" onclick="trocarOrdemRota('data')">📅 Por data</button>
     </div>
 
     <!-- Banner: clientes com endereço mas sem coordenada -->
@@ -5450,7 +5450,7 @@ function abrirRotaDeHoje() {
   _rotaClientesGPS = comGPS;
   _rotaPos = null;
   periodoRota = 'hoje';
-  ordemRota = 'data';
+  ordemRota = 'foco';
   _rotaSelecionados.clear();
   atualizarSeletorPeriodo();
   atualizarSeletorOrdem();

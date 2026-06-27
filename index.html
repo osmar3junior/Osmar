@@ -6805,7 +6805,7 @@ function abrirFiltrado(tipo) {
       const urgLabel = getUrgenciaLabel(diff);
       const urg = getUrgenciaCor(diff);
       const iconeCustom = c.dataRetornoCustom ? ' 📌' : '';
-      const ehHoje = diff === 0;
+      const ehHoje = diff !== null && diff <= 0; // hoje E vencidos mostram meta
 
       let prazoTexto = '';
       if (diff < 0) { const dv = Math.abs(diff); prazoTexto = `Vencido há ${dv} dia${dv>1?'s':''}`; }
@@ -6814,24 +6814,37 @@ function abrirFiltrado(tipo) {
 
       const motivoLabel = c.historico && c.historico.length > 0 ? getMotivoLabel(c.historico[0].motivo) : '';
 
-      // Bloco de marcas igual ao card da lista
       const pot = calcularPotencialCliente(c);
       const mC = _metaCache[c.id] || {};
       const marcas = (c.marcas && c.marcas.length) ? c.marcas : [];
       const marcasHtml = marcas.map(marca => {
         const d = pot[marca] || { avg:0, max:0, count:0, avgQtd:0, maxQtd:0, countQtd:0 };
-        const mM = mC[marca];
+        let mM = mC[marca];
         const cfgM = (_cfg.metas||[]).find(m => m.marca === marca);
         const exEm = cfgM?.exibirEm || 'reais';
         const skuA = cfgM ? _skuAbrev(cfgM.sku) : '';
         const pv = exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
+        // Fallback para vencidos sem cache: calcula meta da marca direto
+        if (!mM && ehHoje && cfgM && cfgM.valor > 0) {
+          const _diasR = _diasUteisRestantes(new Date(), _periodoMeta(cfgM).fim);
+          const _real  = calcularRealMarca(cfgM);
+          const _falta = Math.max(0, cfgM.valor - _real);
+          if (_diasR > 0 && _falta > 0) mM = { meta: Math.ceil(_falta / _diasR), sku: cfgM.sku };
+        }
         const metaSpan = (ehHoje && mM)
           ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:2px 6px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(mM.meta)}${skuA?' '+skuA:''}</span>`
           : '';
         const potSpan = pv.n > 0
           ? `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.8);">${fmtK(pv.avg)}${skuA?' '+skuA:''}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(pv.max)}${skuA?' '+skuA:''}</strong></span>`
           : '';
-        return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;margin-bottom:3px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${metaSpan}${potSpan?`<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potSpan}`:''}</div>`;
+        // Alerta de urgência
+        let urgTag = '';
+        if (ehHoje && mM && pv.max > 0) {
+          const r = mM.meta / pv.max;
+          if (r >= 1.5) urgTag = `<span style="background:rgba(239,68,68,.25);color:#FCA5A5;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">🔴 Difícil recuperar</span>`;
+          else if (r >= 1.0) urgTag = `<span style="background:rgba(251,191,36,.15);color:#FDE047;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">⚠️ Acima do histórico</span>`;
+        }
+        return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:3px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${metaSpan}${urgTag}${potSpan?`<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potSpan}`:''}</div>`;
       }).join('');
 
       return `
@@ -6992,7 +7005,16 @@ function renderizarClientes(filtro = '') {
                   : _cm.cicloIdeal + 1;
                 if (_diasSem >= _cm.cicloIdeal) focoTag = `<span class="foco-badge">FOCO</span>`;
               }
-              return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap;margin-bottom:2px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${focoTag}${metaCompact}${potCompact ? `<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potCompact}` : ''}</div>`;
+              // Alerta de urgência: meta diária supera o histórico máximo do cliente
+              let urgenciaTag = '';
+              if (ehHoje && _mCliente && _pv.max > 0) {
+                const ratio = _mCliente.meta / _pv.max;
+                if (ratio >= 1.5)
+                  urgenciaTag = `<span style="background:rgba(239,68,68,.25);color:#FCA5A5;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">🔴 Difícil recuperar</span>`;
+                else if (ratio >= 1.0)
+                  urgenciaTag = `<span style="background:rgba(251,191,36,.15);color:#FDE047;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">⚠️ Acima do histórico</span>`;
+              }
+              return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:2px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${focoTag}${metaCompact}${urgenciaTag}${potCompact ? `<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potCompact}` : ''}</div>`;
               });
               return `<div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">${itens.join('')}</div>`;
             })()}

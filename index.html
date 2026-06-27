@@ -8751,6 +8751,7 @@ function atualizarSemaforoDash() {
 
 let _relAbaAtiva = 'metas';
 let _relPeriodoVendas = 'mes';
+let _relMarcaComp = null; // null = geral
 
 function abrirRelatorios() {
   _relAbaAtiva = 'metas';
@@ -8908,6 +8909,8 @@ function renderRelVendas() {
 }
 
 // ===== ABA COMPARATIVO =====
+function setMarcaComp(marca) { _relMarcaComp = marca; renderRelComparativo(); }
+
 function renderRelComparativo() {
   const cont = document.getElementById('rel-aba-comparativo');
   if (!cont) return;
@@ -8919,14 +8922,16 @@ function renderRelComparativo() {
   const fimMesAntMesmo = new Date(Y, M - 1, D, 23, 59, 59);
 
   const q = Math.floor(M / 3);
-  const inicioTri    = new Date(Y, q * 3, 1);
-  const inicioTriAnt = new Date(Y, q * 3 - 3, 1);
-  const diasNoTri    = Math.round((hoje - inicioTri) / 86400000);
+  const inicioTri     = new Date(Y, q * 3, 1);
+  const inicioTriAnt  = new Date(Y, q * 3 - 3, 1);
+  const diasNoTri     = Math.round((hoje - inicioTri) / 86400000);
   const fimTriAntMesmo = new Date(inicioTriAnt.getTime() + diasNoTri * 86400000);
 
-  const inicioAno    = new Date(Y, 0, 1);
-  const inicioAnoAnt = new Date(Y - 1, 0, 1);
+  const inicioAno     = new Date(Y, 0, 1);
+  const inicioAnoAnt  = new Date(Y - 1, 0, 1);
   const fimAnoAntMesmo = new Date(Y - 1, M, D, 23, 59, 59);
+
+  const soma = (de, ate) => _somaVendasMarca(de, ate, _relMarcaComp);
 
   const card = (titulo, sub, atual, anterior) => {
     const diff = anterior > 0 ? Math.round(((atual - anterior) / anterior) * 100) : (atual > 0 ? 100 : 0);
@@ -8945,18 +8950,26 @@ function renderRelComparativo() {
     </div>`;
   };
 
-  const mAtual = _somaVendas(inicioMes, hoje);
-  const mAnt   = _somaVendas(inicioMesAnt, fimMesAntMesmo);
-  const tAtual = _somaVendas(inicioTri, hoje);
-  const tAnt   = _somaVendas(inicioTriAnt, fimTriAntMesmo);
-  const aAtual = _somaVendas(inicioAno, hoje);
-  const aAnt   = _somaVendas(inicioAnoAnt, fimAnoAntMesmo);
+  // Chips de marca
+  const marcas = (getConfig().marcas || []).filter(Boolean);
+  const chipStyle = (m) => {
+    const ativa = m === null ? _relMarcaComp === null : _relMarcaComp === m;
+    return ativa
+      ? `background:rgba(249,115,22,.18);border:1px solid rgba(249,115,22,.45);color:#F97316;`
+      : `background:var(--bg3);border:1px solid var(--borda);color:var(--texto2);`;
+  };
+  const chipClick = (m) => m === null ? `setMarcaComp(null)` : `setMarcaComp('${m}')`;
+  const chips = [`<button onclick="${chipClick(null)}" style="flex-shrink:0;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;${chipStyle(null)}">Geral</button>`];
+  marcas.forEach(m => chips.push(`<button onclick="${chipClick(m)}" style="flex-shrink:0;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;${chipStyle(m)}">${esc(m)}</button>`));
+
+  const tituloFiltro = _relMarcaComp ? `Comparativo — ${esc(_relMarcaComp)}` : 'Comparativo — Geral';
 
   cont.innerHTML = `
-    <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;line-height:1.5;">Comparação até o mesmo dia do período anterior — base justa para medir crescimento.</div>
-    ${card('Mês x mês anterior', ['Este mês', 'Mês passado'], mAtual, mAnt)}
-    ${card('Trimestre x anterior', ['Este trimestre', 'Trim. anterior'], tAtual, tAnt)}
-    ${card('Ano x ano anterior', ['Este ano', 'Ano passado'], aAtual, aAnt)}`;
+    <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;-webkit-overflow-scrolling:touch;">${chips.join('')}</div>
+    <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;line-height:1.5;">${tituloFiltro} · comparação até o mesmo dia do período anterior.</div>
+    ${card('Mês x mês anterior',       ['Este mês',        'Mês passado'],    soma(inicioMes, hoje),    soma(inicioMesAnt, fimMesAntMesmo))}
+    ${card('Trimestre x anterior',     ['Este trimestre',  'Trim. anterior'], soma(inicioTri, hoje),    soma(inicioTriAnt, fimTriAntMesmo))}
+    ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAntMesmo))}`;
 }
 
 // ===== ABA AÇÕES =====

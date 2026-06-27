@@ -8751,7 +8751,8 @@ function atualizarSemaforoDash() {
 
 let _relAbaAtiva = 'metas';
 let _relPeriodoVendas = 'mes';
-let _relMarcaComp = null; // null = geral
+let _relMarcaVendas = null; // null = geral
+let _relMarcaComp = null;   // null = geral
 
 function abrirRelatorios() {
   _relAbaAtiva = 'metas';
@@ -8822,6 +8823,7 @@ function _somaVendasMarca(desde, ate, marca) {
 
 // ===== ABA VENDAS =====
 function setPeriodoVendas(p) { _relPeriodoVendas = p; renderRelVendas(); }
+function setMarcaVendas(m)  { _relMarcaVendas  = m; renderRelVendas(); }
 
 function renderRelVendas() {
   const cont = document.getElementById('rel-aba-vendas');
@@ -8833,7 +8835,14 @@ function renderRelVendas() {
   else if (_relPeriodoVendas === 'semana') { desde = new Date(hoje); desde.setDate(desde.getDate() - 7); }
   else { desde = new Date(hoje.getFullYear(), hoje.getMonth(), 1); }
 
-  const vendas = _coletarVendas(desde, null);
+  // Coleta vendas filtradas por marca
+  const marcaNorm = _relMarcaVendas ? _relMarcaVendas.trim().toLowerCase() : null;
+  let todasVendas = _coletarVendas(desde, null);
+  const vendas = !marcaNorm ? todasVendas : todasVendas.filter(v => {
+    if (v.pedidos && v.pedidos.length) return v.pedidos.some(p => (p.marca||'').trim().toLowerCase() === marcaNorm);
+    return (v.cliente.marcas||[]).some(m => (m||'').trim().toLowerCase() === marcaNorm);
+  });
+
   const total = vendas.reduce((s, v) => s + v.valor, 0);
   const nClientes = new Set(vendas.map(v => v.cliente.id)).size;
   const ticket = vendas.length ? total / vendas.length : 0;
@@ -8843,13 +8852,30 @@ function renderRelVendas() {
   const totFisico = fisico.reduce((s, v) => s + v.valor, 0);
   const totWpp = wpp.reduce((s, v) => s + v.valor, 0);
 
-  const chip = (p, label) => `<button onclick="setPeriodoVendas('${p}')" class="rel-tab ${_relPeriodoVendas===p?'ativa':''}" style="flex:1;">${label}</button>`;
+  // Chips de período
+  const chipP = (p, label) => `<button onclick="setPeriodoVendas('${p}')" class="rel-tab ${_relPeriodoVendas===p?'ativa':''}" style="flex:1;">${label}</button>`;
+
+  // Chips de marca
+  const marcas = (getConfig().marcas || []).filter(Boolean);
+  const chipM = (m, label) => {
+    const ativa = m === null ? _relMarcaVendas === null : _relMarcaVendas === m;
+    const st = ativa ? `background:rgba(249,115,22,.18);border:1px solid rgba(249,115,22,.45);color:#F97316;` : `background:var(--bg3);border:1px solid var(--borda);color:var(--texto2);`;
+    const fn = m === null ? `setMarcaVendas(null)` : `setMarcaVendas('${m}')`;
+    return `<button onclick="${fn}" style="flex-shrink:0;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;${st}">${label}</button>`;
+  };
 
   let html = `
-    <div style="display:flex;gap:6px;margin-bottom:16px;">
-      ${chip('hoje','Hoje')}${chip('semana','7 dias')}${chip('mes','Este mês')}
-    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      ${chipP('hoje','Hoje')}${chipP('semana','7 dias')}${chipP('mes','Este mês')}
+    </div>`;
 
+  if (marcas.length > 1) {
+    html += `<div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;-webkit-overflow-scrolling:touch;">
+      ${chipM(null,'Geral')}${marcas.map(m => chipM(m, esc(m))).join('')}
+    </div>`;
+  } else { html += `<div style="margin-bottom:14px;"></div>`; }
+
+  html += `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
       <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
         <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Total vendido</div>
@@ -8905,7 +8931,106 @@ function renderRelVendas() {
     }).join('');
   }
 
+  // Botão e-mail
+  html += `<button onclick="enviarRelVendasEmail()" style="width:100%;margin-top:16px;background:var(--bg3);border:1.5px solid rgba(56,189,248,.35);border-radius:12px;padding:12px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✉️ Enviar por e-mail</button>`;
+
   cont.innerHTML = html;
+}
+
+// ===== E-MAIL RELATÓRIOS =====
+function _abrirEmail(assunto, corpo) {
+  const destino = getConfig().emailRep || '';
+  window.open(`mailto:${destino}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
+}
+
+function enviarRelVendasEmail() {
+  const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  const hoje = new Date();
+  let desde;
+  if (_relPeriodoVendas === 'hoje')        { desde = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()); }
+  else if (_relPeriodoVendas === 'semana') { desde = new Date(hoje); desde.setDate(desde.getDate()-7); }
+  else                                     { desde = new Date(hoje.getFullYear(), hoje.getMonth(), 1); }
+
+  const periodoLabel = _relPeriodoVendas === 'hoje' ? 'Hoje' : _relPeriodoVendas === 'semana' ? 'Últimos 7 dias' : 'Este mês';
+  const marcaLabel   = _relMarcaVendas || 'Geral';
+  const marcaNorm    = _relMarcaVendas ? _relMarcaVendas.trim().toLowerCase() : null;
+
+  let todasVendas = _coletarVendas(desde, null);
+  const vendas = !marcaNorm ? todasVendas : todasVendas.filter(v =>
+    v.pedidos?.some(p => (p.marca||'').trim().toLowerCase() === marcaNorm) ||
+    (v.cliente.marcas||[]).some(m => (m||'').trim().toLowerCase() === marcaNorm)
+  );
+
+  const total    = vendas.reduce((s,v) => s+v.valor, 0);
+  const nCli     = new Set(vendas.map(v=>v.cliente.id)).size;
+  const ticket   = vendas.length ? total/vendas.length : 0;
+  const fisico   = vendas.filter(v=>v.canal==='visita').reduce((s,v)=>s+v.valor,0);
+  const wppVal   = vendas.filter(v=>v.canal==='wpp').reduce((s,v)=>s+v.valor,0);
+
+  const rep   = getConfig().emailRep ? '' : (usuarioAtual?.nome || 'Representante');
+  const dtFmt = hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  let corpo = `RELATÓRIO DE VENDAS — ${periodoLabel.toUpperCase()} — ${marcaLabel.toUpperCase()}\n`;
+  corpo += `Gerado em ${dtFmt} | Carteira Viva\n`;
+  corpo += `${'─'.repeat(40)}\n\n`;
+  corpo += `RESUMO\n`;
+  corpo += `Total vendido:  ${fmtR(total)}\n`;
+  corpo += `Nº de vendas:   ${vendas.length}\n`;
+  corpo += `Clientes:       ${nCli}\n`;
+  corpo += `Ticket médio:   ${fmtR(ticket)}\n`;
+  if (fisico > 0 || wppVal > 0) {
+    corpo += `Presencial:     ${fmtR(fisico)}\n`;
+    corpo += `WhatsApp/Email: ${fmtR(wppVal)}\n`;
+  }
+  corpo += `\n${'─'.repeat(40)}\n`;
+  corpo += `ANALÍTICO\n\n`;
+  vendas.forEach(v => {
+    const dt = new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const canal = v.canal==='visita'?'[Presencial]':v.canal==='wpp'?'[WhatsApp]':'';
+    corpo += `${dt} | ${v.nome}${v.loja?' — '+v.loja:''} | ${fmtR(v.valor)} ${canal}\n`;
+  });
+  corpo += `\n${'─'.repeat(40)}\nCarteira Viva — seu copiloto na estrada`;
+
+  _abrirEmail(`Relatório de Vendas — ${periodoLabel} — ${marcaLabel}`, corpo);
+}
+
+function enviarRelComparativoEmail() {
+  const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  const pct  = (a, b) => b > 0 ? (Math.round(((a-b)/b)*100) >= 0 ? '+' : '') + Math.round(((a-b)/b)*100) + '%' : (a>0?'+100%':'0%');
+  const hoje = new Date();
+  const Y = hoje.getFullYear(), M = hoje.getMonth(), D = hoje.getDate();
+  const soma = (de, ate) => _somaVendasMarca(de, ate, _relMarcaComp);
+  const marcaLabel = _relMarcaComp || 'Geral';
+  const dtFmt = hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  const inicioMes=new Date(Y,M,1), inicioMesAnt=new Date(Y,M-1,1), fimMesAnt=new Date(Y,M-1,D,23,59,59);
+  const q=Math.floor(M/3), inicioTri=new Date(Y,q*3,1), inicioTriAnt=new Date(Y,q*3-3,1);
+  const diasTri=Math.round((hoje-inicioTri)/86400000), fimTriAnt=new Date(inicioTriAnt.getTime()+diasTri*86400000);
+  const inicioAno=new Date(Y,0,1), inicioAnoAnt=new Date(Y-1,0,1), fimAnoAnt=new Date(Y-1,M,D,23,59,59);
+
+  const mA=soma(inicioMes,hoje), mB=soma(inicioMesAnt,fimMesAnt);
+  const tA=soma(inicioTri,hoje), tB=soma(inicioTriAnt,fimTriAnt);
+  const aA=soma(inicioAno,hoje), aB=soma(inicioAnoAnt,fimAnoAnt);
+
+  let corpo = `RELATÓRIO COMPARATIVO — ${marcaLabel.toUpperCase()}\n`;
+  corpo += `Gerado em ${dtFmt} | Carteira Viva\n`;
+  corpo += `(comparação até o mesmo dia do período anterior)\n`;
+  corpo += `${'─'.repeat(40)}\n\n`;
+  corpo += `MÊS X MÊS ANTERIOR\n`;
+  corpo += `Este mês:    ${fmtR(mA)}\n`;
+  corpo += `Mês passado: ${fmtR(mB)}\n`;
+  corpo += `Variação:    ${pct(mA,mB)}\n\n`;
+  corpo += `TRIMESTRE X ANTERIOR\n`;
+  corpo += `Este trim.:  ${fmtR(tA)}\n`;
+  corpo += `Trim. ant.:  ${fmtR(tB)}\n`;
+  corpo += `Variação:    ${pct(tA,tB)}\n\n`;
+  corpo += `ANO X ANO ANTERIOR\n`;
+  corpo += `Este ano:    ${fmtR(aA)}\n`;
+  corpo += `Ano passado: ${fmtR(aB)}\n`;
+  corpo += `Variação:    ${pct(aA,aB)}\n`;
+  corpo += `\n${'─'.repeat(40)}\nCarteira Viva — seu copiloto na estrada`;
+
+  _abrirEmail(`Relatório Comparativo — ${marcaLabel}`, corpo);
 }
 
 // ===== ABA COMPARATIVO =====
@@ -8969,7 +9094,8 @@ function renderRelComparativo() {
     <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;line-height:1.5;">${tituloFiltro} · comparação até o mesmo dia do período anterior.</div>
     ${card('Mês x mês anterior',       ['Este mês',        'Mês passado'],    soma(inicioMes, hoje),    soma(inicioMesAnt, fimMesAntMesmo))}
     ${card('Trimestre x anterior',     ['Este trimestre',  'Trim. anterior'], soma(inicioTri, hoje),    soma(inicioTriAnt, fimTriAntMesmo))}
-    ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAntMesmo))}`;
+    ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAntMesmo))}
+    <button onclick="enviarRelComparativoEmail()" style="width:100%;margin-top:4px;background:var(--bg3);border:1.5px solid rgba(56,189,248,.35);border-radius:12px;padding:12px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✉️ Enviar por e-mail</button>`;
 }
 
 // ===== ABA AÇÕES =====

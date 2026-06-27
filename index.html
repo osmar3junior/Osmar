@@ -6938,7 +6938,8 @@ function renderizarClientes(filtro = '') {
             ${(() => {
               const marcas = c.marcas || [];
               if (!marcas.length) return '';
-              const ehHoje = getDiffDiasCliente(c) === 0;
+              const _diffC = getDiffDiasCliente(c);
+              const ehHoje = (_diffC !== null && _diffC <= 0) || isEsquecido(c);
               const pot = calcularPotencialCliente(c);
               const itens = marcas.map(marca => {
                 const d = pot[marca] || { avg:0, max:0, count:0 };
@@ -6950,7 +6951,20 @@ function renderizarClientes(filtro = '') {
                 const potStr = d.count > 0
                   ? `<span style="color:rgba(255,255,255,.5);">méd</span> <strong style="color:rgba(255,255,255,.8);">${fmtK(d.avg)}</strong> <span style="color:rgba(255,255,255,.3);">·</span> <span style="color:rgba(255,255,255,.5);">máx</span> <strong style="color:#00D68F;">${fmtK(d.max)}</strong>`
                   : `<span style="color:rgba(255,255,255,.3);font-style:italic;">sem pedidos</span>`;
-                const _mCliente = _metaHojeCache[c.id] && _metaHojeCache[c.id][marca];
+                let _mCliente = _metaHojeCache[c.id] && _metaHojeCache[c.id][marca];
+              // Para esquecidos sem cache, calcula a meta da marca diretamente
+              if (!_mCliente && ehHoje && isEsquecido(c)) {
+                const _cmEsq = (getConfig().metas || []).find(m => m.marca === marca);
+                if (_cmEsq && _cmEsq.valor > 0) {
+                  const _hoje = new Date();
+                  const _diasR = _diasUteisRestantes(_hoje, _periodoMeta(_cmEsq).fim);
+                  const _realEsq = calcularRealMarca(_cmEsq);
+                  const _faltaEsq = Math.max(0, _cmEsq.valor - _realEsq);
+                  if (_diasR > 0 && _faltaEsq > 0) {
+                    _mCliente = { meta: Math.ceil(_faltaEsq / _diasR), sku: _cmEsq.sku };
+                  }
+                }
+              }
               const skuSigla = _mCliente && _mCliente.sku !== 'reais' ? _skuAbrev(_mCliente.sku) : '';
               const metaCompact = ehHoje && _mCliente
                 ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:2px 6px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(_mCliente.meta)}${skuSigla ? ' '+skuSigla : ''}</span>`

@@ -393,6 +393,12 @@ if ('serviceWorker' in navigator) {
   .forma-card-2 .forma-num { background:rgba(56,189,248,.2); color:#38BDF8; }
   .forma-card-3 .forma-num { background:rgba(167,139,250,.2); color:#A78BFA; }
   .forma-card-4 .forma-num { background:rgba(251,191,36,.18); color:#FBBF24; }
+  @keyframes piscaBordaCampo {
+    0%,100% { border-color:var(--borda); box-shadow:none; }
+    50%      { border-color:#00D68F; box-shadow:0 0 0 2px rgba(0,214,143,.2); }
+  }
+  .campo-pisca-7 { animation:piscaBordaCampo 1.4s ease-in-out 7; }
+  .campo-pisca-3 { animation:piscaBordaCampo 1.4s ease-in-out 3; }
   @keyframes amberGlow {
     0%,100% { text-shadow:0 0 0px rgba(255,192,67,0); color:#FFC043; }
     50%      { text-shadow:0 0 14px rgba(255,192,67,.9), 0 0 28px rgba(255,192,67,.4); color:#FFD97A; }
@@ -1679,7 +1685,10 @@ if ('serviceWorker' in navigator) {
     <!-- PAINEL INLINE PROSPECÇÃO — aparece quando rep seleciona "Em prospecção" -->
     <div id="nc-prospect-inline" style="display:none;margin-top:12px;background:rgba(255,192,67,.05);border:1.5px solid rgba(255,192,67,.3);border-radius:12px;padding:13px;">
       <div style="font-size:11px;font-weight:700;color:#FFC043;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">📍 Como foi essa visita?</div>
-      <button type="button" onclick="ncFechouVirou()" style="width:100%;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:11px;padding:13px;color:#04231A;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:0 4px 14px var(--verde-glow);">✅ Fechou! Virou cliente →</button>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button type="button" onclick="ncFechouVirou()" style="flex:2;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:11px;padding:13px;color:#04231A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px var(--verde-glow);">✅ Fechou! Virou cliente →</button>
+        <button type="button" onclick="ncDescartarProspecto()" style="flex:1;background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.4);border-radius:11px;padding:13px;color:#F87171;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🗑 Descartar</button>
+      </div>
       <textarea id="nc-prospect-obs" placeholder="Como foi? Objeções, contato, contexto... (opcional)" style="width:100%;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:10px 12px;color:var(--texto);font-size:12px;resize:none;height:72px;margin-bottom:12px;font-family:'DM Sans',sans-serif;box-sizing:border-box;"></textarea>
       <div style="font-size:10px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Quando voltar?</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -1955,6 +1964,7 @@ if ('serviceWorker' in navigator) {
     </div>
     <div style="font-size:10px;color:var(--texto3);margin-bottom:5px;margin-top:2px;">📅 Ou escolha uma data personalizada de retorno</div>
     <input type="date" id="prospect-data-custom" class="campo-input" style="margin-bottom:12px;">
+    <button onclick="excluirProspecto()" style="width:100%;background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.35);border-radius:12px;padding:12px;color:#F87171;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px;">🗑 Excluir prospecção</button>
     <div class="modal-btns">
       <button class="btn-secundario" onclick="fecharModal('modal-prospect-visita')">Cancelar</button>
       <button class="btn-primario" style="flex:2;" onclick="salvarRetornoProspectoCustom()">📅 Confirmar data</button>
@@ -5646,6 +5656,25 @@ function ncFechouVirou() {
   setNcTipo('cliente');
 }
 
+function ncDescartarProspecto() {
+  fecharModal('modal-novo-cliente');
+  toast('Prospecção descartada.');
+}
+
+function excluirProspecto() {
+  if (!clienteAtualId) return;
+  if (!confirm('Excluir este prospecto do app? Esta ação não pode ser desfeita.')) return;
+  const clientes = getClientes();
+  const novos = clientes.filter(c => c.id !== clienteAtualId);
+  salvarClientes(novos);
+  fecharModal('modal-prospect-visita');
+  atualizarBadgeProspectos();
+  renderizarClientes();
+  atualizarDashboard();
+  irPara('dashboard');
+  toast('Prospecto excluído.');
+}
+
 function ncSetRetorno(dias, btn) {
   window._ncProspectDias = dias;
   window._ncProspectDataCustom = null;
@@ -6432,6 +6461,7 @@ function confirmarSugestaoNc(idx) {
     const cidade = addr.city || addr.town || addr.village || addr.municipality || '';
     if (cidade) cidadeEl.value = cidade;
   }
+  _piscarCamposVazios();
 }
 
 // ===== BUSCA POR CNPJ (BrasilAPI) =====
@@ -6505,7 +6535,7 @@ async function buscarCnpjNc() {
     const seg = sugerirSegmentoPorCnae(d.cnae_fiscal_descricao);
     if (seg) document.getElementById('nc-segmento').value = seg;
     status.innerHTML = `<span style="color:var(--verde);">✅ ${d.razao_social || 'Empresa encontrada'} — confira os campos preenchidos.</span>`;
-    // Geocodifica automaticamente para gerar o alfinete no mapa
+    _piscarCamposVazios();
     if (endereco) geocodificarEnderecoCnpj(d, endereco);
   } catch (e) {
     status.innerHTML = `<span style="color:var(--amarelo);">⚠️ Falha na consulta. Tente de novo ou use outra forma.</span>`;
@@ -6731,6 +6761,26 @@ function detectarLocalizacaoNc() {
   }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
+function _piscarCamposVazios() {
+  // Campos obrigatórios/recomendados que piscam se vazios após escolher localização
+  const campos7 = ['nc-nome','nc-loja','nc-cidade','nc-telefone'];
+  const campos3 = ['nc-email'];
+  const piscar = (ids, cls) => {
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el || el.value.trim()) return;
+      el.classList.remove('campo-pisca-7','campo-pisca-3');
+      void el.offsetWidth; // reinicia animação
+      el.classList.add(cls);
+      el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+    });
+  };
+  setTimeout(() => {
+    piscar(campos7, 'campo-pisca-7');
+    piscar(campos3, 'campo-pisca-3');
+  }, 400); // aguarda o rep ver o feedback da localização antes de piscar
+}
+
 function aplicarLocalizacaoNc() {
   if (!localizacaoDetectadaNc) return;
   document.getElementById('nc-lat').value = localizacaoDetectadaNc.lat;
@@ -6743,6 +6793,7 @@ function aplicarLocalizacaoNc() {
   const st = document.getElementById('nc-end-status');
   st.style.display = 'block';
   st.innerHTML = `<span style="color:var(--verde);">✅ Localização aplicada.</span>`;
+  _piscarCamposVazios();
 }
 
 function abrirMapaParaNovoCliente() {
@@ -8028,6 +8079,7 @@ function abrirModalNovoCliente() {
     }
     window._mapaLat = null; window._mapaLng = null;
     window._mapaEndereco = null; window._mapaCidade = null;
+    _piscarCamposVazios();
   } else if (gpsStatus) {
     gpsStatus.style.display = 'block';
     detectarLocalizacaoNc();

@@ -403,8 +403,12 @@ if ('serviceWorker' in navigator) {
     0%,100% { text-shadow:0 0 0px rgba(255,192,67,0); color:#FFC043; }
     50%      { text-shadow:0 0 14px rgba(255,192,67,.9), 0 0 28px rgba(255,192,67,.4); color:#FFD97A; }
   }
-  .formas-titulo-pisca { animation:amberGlow 1.8s ease-in-out 5; }
   .foco-btn-glow { animation:amberGlow 1.4s ease-in-out 5; }
+  @keyframes pulsaFormas {
+    0%,100% { transform:scale(1);   opacity:1; }
+    50%      { transform:scale(1.03); opacity:.85; }
+  }
+  .formas-titulo-pisca { animation:pulsaFormas 1.1s ease-in-out 5; transform-origin:center; }
 
   /* PISCAR BOTÃO VALIDAR (4ª forma de endereço) — chama atenção só quando há texto não validado */
   @keyframes piscaValidar {
@@ -1608,7 +1612,7 @@ if ('serviceWorker' in navigator) {
     <div class="campo-grupo">
       <div id="formas-titulo" class="formas-titulo-pisca" style="text-align:center;margin-bottom:14px;padding:10px 12px;background:rgba(255,255,255,.04);border-radius:12px;border:1px solid rgba(255,255,255,.08);">
         <div style="font-size:11px;color:var(--texto3);margin-bottom:3px;">📍 LOCALIZAÇÃO DO CLIENTE</div>
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#FFC043;letter-spacing:.3px;line-height:1.4;">ESCOLHA UMA DAS 4 FORMAS<br>PARA CADASTRAR O SEU CLIENTE</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:var(--texto);letter-spacing:0;line-height:1.5;">Escolha uma das 4 formas para cadastrar o seu cliente</div>
       </div>
 
       <!-- 1ª FORMA: CNPJ -->

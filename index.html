@@ -9027,7 +9027,7 @@ function renderRelVendas() {
   }
 
   // Botão e-mail
-  html += `<button onclick="enviarRelVendasEmail()" style="width:100%;margin-top:16px;background:var(--bg3);border:1.5px solid rgba(56,189,248,.35);border-radius:12px;padding:12px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✉️ Enviar por e-mail</button>`;
+  html += `<button onclick="abrirRelVendasHtml()" style="width:100%;margin-top:16px;background:var(--bg3);border:1.5px solid rgba(0,214,143,.4);border-radius:12px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📄 Ver relatório completo</button>`;
 
   cont.innerHTML = html;
 }
@@ -9036,6 +9036,152 @@ function renderRelVendas() {
 function _abrirEmail(assunto, corpo) {
   const destino = getConfig().emailRep || '';
   window.open(`mailto:${destino}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
+}
+
+function _gerarHtmlRelatorio(titulo, corTopo, secoes) {
+  const rep = usuarioAtual?.nome || '';
+  const dt  = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const secoesHtml = secoes.map(s => {
+    if (s.tipo === 'stats') {
+      const items = s.dados.map(d => `<div class="stat"><div class="stat-label">${d.label}</div><div class="stat-val" style="color:${d.cor||'#111'}">${d.val}</div></div>`).join('');
+      return `<div class="section"><div class="section-title">${s.titulo}</div><div class="stats-grid">${items}</div></div>`;
+    }
+    if (s.tipo === 'tabela') {
+      const thead = s.cols.map(c=>`<th>${c}</th>`).join('');
+      const tbody = s.linhas.map(l=>`<tr>${l.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+      return `<div class="section"><div class="section-title">${s.titulo}</div><div class="table-wrap"><table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table></div></div>`;
+    }
+    if (s.tipo === 'comp') {
+      const cards = s.dados.map(d => {
+        const pos = d.diff >= 0;
+        return `<div class="comp-card"><div class="comp-titulo">${d.titulo}</div><div class="comp-row"><div><div class="comp-sub">${d.sub[0]}</div><div class="comp-val" style="color:${pos?'#059669':'#dc2626'}">${d.atual}</div></div><div><div class="comp-sub">${d.sub[1]}</div><div class="comp-val2">${d.anterior}</div></div><span class="comp-badge" style="background:${pos?'#d1fae5':'#fee2e2'};color:${pos?'#059669':'#dc2626'}">${pos?'↑':'↓'} ${Math.abs(d.diff)}%</span></div></div>`;
+      }).join('');
+      return `<div class="section"><div class="section-title">${s.titulo}</div>${cards}</div>`;
+    }
+    return '';
+  }).join('');
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${titulo}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;background:#f4f4f5;color:#111;font-size:14px}
+.header{background:${corTopo};color:#fff;padding:20px 16px 16px}
+.header h1{font-size:18px;font-weight:700;margin-bottom:4px}
+.header p{font-size:12px;opacity:.8}
+.btn-excel{display:block;margin:12px 16px;background:#059669;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
+.section{background:#fff;margin:10px 12px;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.section-title{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:#f9fafb;border-radius:8px;padding:10px 12px}
+.stat-label{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.stat-val{font-size:18px;font-weight:700}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f3f4f6;padding:8px 10px;text-align:left;font-weight:700;color:#374151;border-bottom:2px solid #e5e7eb}
+td{padding:8px 10px;border-bottom:1px solid #f3f4f6;color:#374151}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fafb}
+.comp-card{background:#f9fafb;border-radius:10px;padding:12px;margin-bottom:8px}
+.comp-titulo{font-size:13px;font-weight:700;color:#111;margin-bottom:8px}
+.comp-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.comp-sub{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.comp-val{font-size:18px;font-weight:700}.comp-val2{font-size:14px;font-weight:600;color:#6b7280;text-align:right}
+.comp-badge{font-size:12px;font-weight:700;border-radius:8px;padding:4px 10px;white-space:nowrap}
+.footer{text-align:center;padding:20px;font-size:11px;color:#9ca3af}
+</style></head><body>
+<div class="header"><h1>${titulo}</h1><p>${rep ? rep+' · ' : ''}Gerado em ${dt} · Carteira Viva</p></div>
+<a href="#" class="btn-excel" onclick="baixarExcel();return false">⬇️ Baixar Excel</a>
+${secoesHtml}
+<div class="footer">Carteira Viva — seu copiloto na estrada</div>
+<script>
+function baixarExcel(){
+  const rows=[],ths=document.querySelectorAll('th');
+  document.querySelectorAll('table').forEach(t=>{
+    const cols=[...t.querySelectorAll('th')].map(th=>th.textContent);
+    rows.push(cols.join('\\t'));
+    t.querySelectorAll('tbody tr').forEach(tr=>{rows.push([...tr.querySelectorAll('td')].map(td=>td.textContent).join('\\t'));});
+    rows.push('');
+  });
+  const blob=new Blob(['\\uFEFF'+rows.join('\\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='relatorio_carteira_viva.csv';a.click();
+}
+<\/script></body></html>`;
+}
+
+function abrirRelVendasHtml() {
+  const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  const hoje = new Date();
+  let desde;
+  if (_relPeriodoVendas === 'hoje')        { desde = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()); }
+  else if (_relPeriodoVendas === 'semana') { desde = new Date(hoje); desde.setDate(desde.getDate()-7); }
+  else                                     { desde = new Date(hoje.getFullYear(), hoje.getMonth(), 1); }
+  const periodoLabel = _relPeriodoVendas==='hoje'?'Hoje':_relPeriodoVendas==='semana'?'Últimos 7 dias':'Este mês';
+  const marcaLabel = _relMarcaVendas || 'Geral';
+  const marcaNorm  = _relMarcaVendas ? _relMarcaVendas.trim().toLowerCase() : null;
+  let todas = _coletarVendas(desde, null);
+  const vendas = !marcaNorm ? todas : todas.filter(v =>
+    v.pedidos?.some(p=>(p.marca||'').trim().toLowerCase()===marcaNorm) ||
+    (v.cliente.marcas||[]).some(m=>(m||'').trim().toLowerCase()===marcaNorm)
+  );
+  const total   = vendas.reduce((s,v)=>s+v.valor,0);
+  const nCli    = new Set(vendas.map(v=>v.cliente.id)).size;
+  const ticket  = vendas.length ? total/vendas.length : 0;
+  const fisico  = vendas.filter(v=>v.canal==='visita').reduce((s,v)=>s+v.valor,0);
+  const wppV    = vendas.filter(v=>v.canal==='wpp').reduce((s,v)=>s+v.valor,0);
+
+  const html = _gerarHtmlRelatorio(
+    `Vendas — ${periodoLabel} · ${marcaLabel}`, '#111827',
+    [
+      { tipo:'stats', titulo:'Resumo', dados:[
+        {label:'Total vendido', val:fmtR(total), cor:'#059669'},
+        {label:'Nº de vendas',  val:vendas.length},
+        {label:'Clientes',      val:nCli},
+        {label:'Ticket médio',  val:fmtR(ticket)},
+        {label:'Presencial',    val:fmtR(fisico), cor:'#d97706'},
+        {label:'WhatsApp/e-mail', val:fmtR(wppV), cor:'#16a34a'},
+      ]},
+      { tipo:'tabela', titulo:`Analítico — ${vendas.length} vendas`,
+        cols:['Data','Cliente','Loja','Cidade','Valor','Canal'],
+        linhas: vendas.map(v=>[
+          new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),
+          v.nome, v.loja||'—', v.cliente.cidade||'—', fmtR(v.valor),
+          v.canal==='visita'?'Presencial':v.canal==='wpp'?'WhatsApp':'—'
+        ])
+      }
+    ]
+  );
+  const w = window.open('','_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+  else toast('Permita pop-ups para ver o relatório.');
+}
+
+function abrirRelComparativoHtml() {
+  const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  const pctN = (a,b) => b>0 ? Math.round(((a-b)/b)*100) : (a>0?100:0);
+  const hoje = new Date();
+  const Y=hoje.getFullYear(), M=hoje.getMonth(), D=hoje.getDate();
+  const soma = (de,ate) => _somaVendasMarca(de,ate,_relMarcaComp);
+  const marcaLabel = _relMarcaComp||'Geral';
+  const inicioMes=new Date(Y,M,1), inicioMesAnt=new Date(Y,M-1,1), fimMesAnt=new Date(Y,M-1,D,23,59,59);
+  const q=Math.floor(M/3), inicioTri=new Date(Y,q*3,1), inicioTriAnt=new Date(Y,q*3-3,1);
+  const diasTri=Math.round((hoje-inicioTri)/86400000), fimTriAnt=new Date(inicioTriAnt.getTime()+diasTri*86400000);
+  const inicioAno=new Date(Y,0,1), inicioAnoAnt=new Date(Y-1,0,1), fimAnoAnt=new Date(Y-1,M,D,23,59,59);
+  const mA=soma(inicioMes,hoje), mB=soma(inicioMesAnt,fimMesAnt);
+  const tA=soma(inicioTri,hoje), tB=soma(inicioTriAnt,fimTriAnt);
+  const aA=soma(inicioAno,hoje), aB=soma(inicioAnoAnt,fimAnoAnt);
+
+  const html = _gerarHtmlRelatorio(
+    `Comparativo — ${marcaLabel}`, '#1e3a5f',
+    [{ tipo:'comp', titulo:'Desempenho por período', dados:[
+      {titulo:'Mês x mês anterior',     sub:['Este mês','Mês passado'],    atual:fmtR(mA), anterior:fmtR(mB), diff:pctN(mA,mB)},
+      {titulo:'Trimestre x anterior',   sub:['Este trim.','Trim. anterior'],atual:fmtR(tA), anterior:fmtR(tB), diff:pctN(tA,tB)},
+      {titulo:'Ano x ano anterior',     sub:['Este ano','Ano passado'],    atual:fmtR(aA), anterior:fmtR(aB), diff:pctN(aA,aB)},
+    ]}]
+  );
+  const w = window.open('','_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+  else toast('Permita pop-ups para ver o relatório.');
 }
 
 function enviarRelVendasEmail() {
@@ -9271,18 +9417,9 @@ async function exportarRelatorioExcel() {
 
     const nomeArq = `CartViva_${(marcaFiltro||'Geral').replace(/\s/g,'_')}_${labelPer.replace(/\s/g,'_')}.xlsx`;
 
-    // Tenta Web Share API (abre WhatsApp, e-mail, Drive, etc. no celular)
-    const wbArr = XLSX.write(wb, { bookType:'xlsx', type:'array' });
-    const blob  = new Blob([wbArr], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const file  = new File([blob], nomeArq, { type: blob.type });
-
-    if (navigator.canShare && navigator.canShare({ files:[file] })) {
-      await navigator.share({ files:[file], title: nomeArq, text: `Relatório Carteira Viva — ${labelPer}` });
-    } else {
-      // Fallback: download direto
-      XLSX.writeFile(wb, nomeArq);
-      toast('✅ Excel baixado!');
-    }
+    // Download direto — arquivo vai para a pasta Downloads do celular/PC
+    XLSX.writeFile(wb, nomeArq);
+    toast('✅ Excel baixado! Verifique sua pasta Downloads.');
 
   } catch(err) {
     if (err.name !== 'AbortError') {
@@ -9353,7 +9490,7 @@ function renderRelComparativo() {
     ${card('Mês x mês anterior',       ['Este mês',        'Mês passado'],    soma(inicioMes, hoje),    soma(inicioMesAnt, fimMesAntMesmo))}
     ${card('Trimestre x anterior',     ['Este trimestre',  'Trim. anterior'], soma(inicioTri, hoje),    soma(inicioTriAnt, fimTriAntMesmo))}
     ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAntMesmo))}
-    <button onclick="enviarRelComparativoEmail()" style="width:100%;margin-top:4px;background:var(--bg3);border:1.5px solid rgba(56,189,248,.35);border-radius:12px;padding:12px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✉️ Enviar por e-mail</button>
+    <button onclick="abrirRelComparativoHtml()" style="width:100%;margin-top:4px;background:var(--bg3);border:1.5px solid rgba(0,214,143,.4);border-radius:12px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📄 Ver relatório completo</button>
     <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-top:10px;">
       <div style="font-size:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">📊 Exportar relatório analítico</div>
       <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:10px;line-height:1.5;">Gera um Excel com todos os pedidos — cliente, loja, SKU, valor, canal — no período escolhido.</div>

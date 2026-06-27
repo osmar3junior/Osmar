@@ -543,6 +543,8 @@ if ('serviceWorker' in navigator) {
   /* Abas da Central de Relatórios */
   .rel-tab { flex-shrink:0; background:var(--bg3); border:1px solid var(--borda); border-radius:10px; padding:8px 12px; color:var(--texto2); font-family:'DM Sans',sans-serif; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; transition:background .15s,color .15s,border-color .15s; }
   .rel-tab.ativa { background:rgba(249,115,22,.14); border-color:rgba(249,115,22,.45); color:#F97316; }
+  .comp-exp-chip { flex:1; background:var(--bg2); border:1px solid var(--borda); border-radius:8px; padding:7px 4px; color:var(--texto2); font-family:'DM Sans',sans-serif; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; transition:background .15s,color .15s,border-color .15s; }
+  .comp-exp-chip.ativo { background:rgba(0,214,143,.12); border-color:rgba(0,214,143,.4); color:var(--verde); }
 
   /* Toggle de ordenação (por data x por proximidade) */
   .rota-ordem-seletor { display:flex; align-items:center; gap:6px; margin-bottom:16px; }
@@ -8845,6 +8847,7 @@ let _relAbaAtiva = 'metas';
 let _relPeriodoVendas = 'mes';
 let _relMarcaVendas = null; // null = geral
 let _relMarcaComp = null;   // null = geral
+let _relExpPeriodo = 'mes'; // mes | tri | ano
 
 function abrirRelatorios() {
   _relAbaAtiva = 'metas';
@@ -9126,6 +9129,166 @@ function enviarRelComparativoEmail() {
 }
 
 // ===== ABA COMPARATIVO =====
+function setExpPeriodo(p) {
+  _relExpPeriodo = p;
+  document.querySelectorAll('.comp-exp-chip').forEach(b => b.classList.toggle('ativo', b.dataset.p === p));
+}
+
+async function exportarRelatorioExcel() {
+  try {
+    toast('⏳ Gerando Excel...');
+    await _carregarSheetJS();
+
+    const hoje = new Date();
+    const Y = hoje.getFullYear(), M = hoje.getMonth(), D = hoje.getDate();
+    const fmtR = v => Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2});
+    const fmtD = d => new Date(d).toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
+    const marcaFiltro = _relMarcaComp || null;
+    const marcaNorm  = marcaFiltro ? marcaFiltro.trim().toLowerCase() : null;
+
+    // Define intervalo conforme período
+    let desde, ate = hoje, labelPer;
+    if (_relExpPeriodo === 'tri') {
+      const q = Math.floor(M / 3);
+      desde = new Date(Y, q * 3, 1);
+      labelPer = `T${q + 1} ${Y}`;
+    } else if (_relExpPeriodo === 'ano') {
+      desde = new Date(Y, 0, 1);
+      labelPer = `Ano ${Y}`;
+    } else {
+      desde = new Date(Y, M, 1);
+      labelPer = new Date(Y, M, 1).toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+      labelPer = labelPer.charAt(0).toUpperCase() + labelPer.slice(1);
+    }
+
+    // Coleta todas as vendas detalhadas do período
+    const linhas = [];
+    getClientes().forEach(c => {
+      (c.historico || []).forEach(h => {
+        if (h.motivo !== 'fechou_pedido') return;
+        const d = new Date(h.data);
+        if (d < desde || d > ate) return;
+
+        if (h.pedidos && h.pedidos.length) {
+          h.pedidos.forEach(p => {
+            if (marcaNorm && (p.marca||'').trim().toLowerCase() !== marcaNorm) return;
+            linhas.push({
+              data: fmtD(h.data),
+              cliente: c.nome,
+              loja: c.loja || '',
+              cidade: c.cidade || '',
+              marca: p.marca || '',
+              sku: _skuLabel(p.unidade || ''),
+              quantidade: p.qtd || 0,
+              valor: p.valor || 0,
+              canal: p.canal === 'visita' ? 'Presencial' : p.canal === 'wpp' ? 'WhatsApp/e-mail' : 'Não informado'
+            });
+          });
+        } else {
+          if (marcaNorm) return; // legado sem detalhe por marca — só mostra no geral
+          linhas.push({
+            data: fmtD(h.data),
+            cliente: c.nome,
+            loja: c.loja || '',
+            cidade: c.cidade || '',
+            marca: (c.marcas||[])[0] || '',
+            sku: _skuLabel(h.pedidoUnidade || ''),
+            quantidade: h.pedidoQtd || 0,
+            valor: h.pedidoValor || 0,
+            canal: 'Não informado'
+          });
+        }
+      });
+    });
+
+    linhas.sort((a, b) => a.data.localeCompare(b.data));
+
+    // ===== ABA 1: ANALÍTICO =====
+    const cabAnalit = ['Data','Cliente','Loja','Cidade','Marca','SKU','Quantidade','Valor (R$)','Canal'];
+    const dadosAnalit = linhas.map(l => [
+      l.data, l.cliente, l.loja, l.cidade, l.marca,
+      l.sku, l.quantidade,
+      Number(l.valor.toFixed(2)),
+      l.canal
+    ]);
+
+    const wsAnalit = XLSX.utils.aoa_to_sheet([cabAnalit, ...dadosAnalit]);
+    wsAnalit['!cols'] = [{wch:12},{wch:22},{wch:22},{wch:16},{wch:12},{wch:10},{wch:12},{wch:14},{wch:18}];
+
+    // ===== ABA 2: RESUMO POR CLIENTE =====
+    const porCliente = {};
+    linhas.forEach(l => {
+      const k = l.cliente + '|' + l.loja;
+      if (!porCliente[k]) porCliente[k] = { cliente:l.cliente, loja:l.loja, cidade:l.cidade, total:0, pedidos:0, marcas:new Set() };
+      porCliente[k].total   += l.valor;
+      porCliente[k].pedidos += 1;
+      if (l.marca) porCliente[k].marcas.add(l.marca);
+    });
+    const resumoRows = Object.values(porCliente)
+      .sort((a, b) => b.total - a.total)
+      .map((r, i) => [i+1, r.cliente, r.loja, r.cidade, [...r.marcas].join(', '), r.pedidos, Number(r.total.toFixed(2))]);
+
+    const cabResumo = ['#','Cliente','Loja','Cidade','Marcas','Nº Pedidos','Total (R$)'];
+    const wsResumo = XLSX.utils.aoa_to_sheet([cabResumo, ...resumoRows]);
+    wsResumo['!cols'] = [{wch:4},{wch:22},{wch:22},{wch:16},{wch:18},{wch:12},{wch:14}];
+
+    // ===== ABA 3: RESUMO GERAL =====
+    const totalGeral = linhas.reduce((s, l) => s + l.valor, 0);
+    const nClientes  = new Set(linhas.map(l => l.cliente)).size;
+    const ticket     = linhas.length ? totalGeral / linhas.length : 0;
+    const presencial = linhas.filter(l => l.canal === 'Presencial').reduce((s, l) => s + l.valor, 0);
+    const wppVal     = linhas.filter(l => l.canal.includes('WhatsApp')).reduce((s, l) => s + l.valor, 0);
+    const rep = usuarioAtual?.nome || '';
+    const hoje2 = fmtD(hoje.toISOString());
+
+    const dadosGeral = [
+      ['Relatório de Vendas — Carteira Viva'],
+      [''],
+      ['Representante', rep],
+      ['Período', labelPer],
+      ['Marca', marcaFiltro || 'Todas'],
+      ['Gerado em', hoje2],
+      [''],
+      ['RESUMO'],
+      ['Total vendido (R$)', Number(totalGeral.toFixed(2))],
+      ['Nº de pedidos',      linhas.length],
+      ['Clientes atendidos', nClientes],
+      ['Ticket médio (R$)',  Number(ticket.toFixed(2))],
+      [''],
+      ['POR CANAL'],
+      ['Presencial (R$)',       Number(presencial.toFixed(2))],
+      ['WhatsApp/e-mail (R$)', Number(wppVal.toFixed(2))],
+    ];
+
+    const wsGeral = XLSX.utils.aoa_to_sheet(dadosGeral);
+    wsGeral['!cols'] = [{wch:22},{wch:20}];
+
+    // Monta workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsGeral,   'Resumo Geral');
+    XLSX.utils.book_append_sheet(wb, wsResumo,  'Por Cliente');
+    XLSX.utils.book_append_sheet(wb, wsAnalit,  'Analítico');
+
+    const nomeArq = `CartViva_${(marcaFiltro||'Geral').replace(/\s/g,'_')}_${labelPer.replace(/\s/g,'_')}.xlsx`;
+
+    // Tenta Web Share API (abre WhatsApp, e-mail, Drive, etc. no celular)
+    const wbArr = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+    const blob  = new Blob([wbArr], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const file  = new File([blob], nomeArq, { type: blob.type });
+
+    if (navigator.canShare && navigator.canShare({ files:[file] })) {
+      await navigator.share({ files:[file], title: nomeArq, text: `Relatório Carteira Viva — ${labelPer}` });
+    } else {
+      // Fallback: download direto
+      XLSX.writeFile(wb, nomeArq);
+      toast('✅ Excel baixado!');
+    }
+
+  } catch(err) {
+    if (err.name !== 'AbortError') toast('Erro ao gerar Excel: ' + (err.message || err));
+  }
+}
+
 function setMarcaComp(marca) { _relMarcaComp = marca; renderRelComparativo(); }
 
 function renderRelComparativo() {
@@ -9187,7 +9350,17 @@ function renderRelComparativo() {
     ${card('Mês x mês anterior',       ['Este mês',        'Mês passado'],    soma(inicioMes, hoje),    soma(inicioMesAnt, fimMesAntMesmo))}
     ${card('Trimestre x anterior',     ['Este trimestre',  'Trim. anterior'], soma(inicioTri, hoje),    soma(inicioTriAnt, fimTriAntMesmo))}
     ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAntMesmo))}
-    <button onclick="enviarRelComparativoEmail()" style="width:100%;margin-top:4px;background:var(--bg3);border:1.5px solid rgba(56,189,248,.35);border-radius:12px;padding:12px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✉️ Enviar por e-mail</button>`;
+    <button onclick="enviarRelComparativoEmail()" style="width:100%;margin-top:4px;background:var(--bg3);border:1.5px solid rgba(56,189,248,.35);border-radius:12px;padding:12px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✉️ Enviar por e-mail</button>
+    <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-top:10px;">
+      <div style="font-size:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">📊 Exportar relatório analítico</div>
+      <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:10px;line-height:1.5;">Gera um Excel com todos os pedidos — cliente, loja, SKU, valor, canal — no período escolhido.</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;" id="comp-exp-periodo">
+        <button onclick="setExpPeriodo('mes')"  class="comp-exp-chip ativo" data-p="mes">Mês atual</button>
+        <button onclick="setExpPeriodo('tri')"  class="comp-exp-chip" data-p="tri">Trimestre</button>
+        <button onclick="setExpPeriodo('ano')"  class="comp-exp-chip" data-p="ano">Ano</button>
+      </div>
+      <button onclick="exportarRelatorioExcel()" style="width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.4);border-radius:11px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⬇️ Exportar Excel (.xlsx)</button>
+    </div>`;
 }
 
 // ===== ABA AÇÕES =====

@@ -2102,6 +2102,20 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- MODAL DRILL-DOWN COMPARATIVO -->
+<div class="modal-overlay" id="modal-drilldown" style="z-index:320;">
+  <div class="modal-box" style="max-height:92vh;overflow-y:auto;padding-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div>
+        <div class="modal-titulo" style="margin-bottom:0;" id="drilldown-titulo">—</div>
+        <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:2px;" id="drilldown-sub"></div>
+      </div>
+      <button onclick="fecharModal('modal-drilldown')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div id="drilldown-conteudo"></div>
+  </div>
+</div>
+
 <!-- MODAL ARQUIVO -->
 <div class="modal-overlay" id="modal-arquivo">
   <div class="modal-box" style="max-height:85vh;overflow-y:auto;padding-bottom:24px;">
@@ -9788,6 +9802,148 @@ async function exportarRelatorioExcel() {
 
 function setMarcaComp(marca) { _relMarcaComp = marca; renderRelComparativo(); }
 
+function abrirDrilldown(tipo) {
+  const hoje = new Date();
+  const Y = hoje.getFullYear(), M = hoje.getMonth(), D = hoje.getDate();
+  const marca = _relMarcaComp;
+  const marcaNorm = marca ? marca.trim().toLowerCase() : null;
+
+  // Define períodos atual e anterior
+  let deA, ateA, deB, ateB, tituloP, subA, subB;
+  if (tipo === 'mes') {
+    deA = new Date(Y,M,1); ateA = hoje;
+    deB = new Date(Y,M-1,1); ateB = new Date(Y,M-1,D,23,59,59);
+    tituloP = 'Mês x mês anterior'; subA = 'Este mês'; subB = 'Mês passado';
+  } else if (tipo === 'tri') {
+    const q = Math.floor(M/3);
+    deA = new Date(Y,q*3,1); ateA = hoje;
+    deB = new Date(Y,q*3-3,1);
+    const diasQ = Math.round((hoje-deA)/86400000);
+    ateB = new Date(deB.getTime()+diasQ*86400000);
+    tituloP = 'Trimestre x anterior'; subA = 'Este trimestre'; subB = 'Trim. anterior';
+  } else {
+    deA = new Date(Y,0,1); ateA = hoje;
+    deB = new Date(Y-1,0,1); ateB = new Date(Y-1,M,D,23,59,59);
+    tituloP = 'Ano x ano anterior'; subA = `${Y}`; subB = `${Y-1}`;
+  }
+
+  // Coleta vendas dos dois períodos
+  const coletarPeriodo = (de, ate) => {
+    const linhas = [];
+    getClientes().forEach(c => {
+      (c.historico||[]).forEach(h => {
+        if (h.motivo !== 'fechou_pedido') return;
+        const d = new Date(h.data);
+        if (d < de || d > ate) return;
+        if (h.pedidos && h.pedidos.length) {
+          h.pedidos.forEach(p => {
+            if (marcaNorm && (p.marca||'').trim().toLowerCase() !== marcaNorm) return;
+            linhas.push({ cliente:c, valor:Number(p.valor)||0, qtd:Number(p.qtd)||0, unidade:p.unidade||'' });
+          });
+        } else {
+          if (marcaNorm) return;
+          linhas.push({ cliente:c, valor:Number(h.pedidoValor)||0, qtd:Number(h.pedidoQtd)||0, unidade:h.pedidoUnidade||'' });
+        }
+      });
+    });
+    return linhas;
+  };
+
+  const lA = coletarPeriodo(deA, ateA);
+  const lB = coletarPeriodo(deB, ateB);
+
+  const soma    = l => l.reduce((s,x)=>s+x.valor,0);
+  const somaQtd = l => l.reduce((s,x)=>s+x.qtd,0);
+  const clientes = l => new Set(l.map(x=>x.cliente.id)).size;
+  const contatos = (de, ate) => {
+    let tot=0, pos=0;
+    const clAtivos = getClientesAtivos();
+    clAtivos.forEach(c => {
+      if (marcaNorm && !(c.marcas||[]).some(m=>(m||'').trim().toLowerCase()===marcaNorm)) return;
+      (c.historico||[]).forEach(h => {
+        const d=new Date(h.data);
+        if (d<de||d>ate) return;
+        tot++;
+        if (h.motivo==='fechou_pedido') pos++;
+      });
+    });
+    return { tot, pos, pct: tot>0?Math.round((pos/tot)*100):0 };
+  };
+
+  const vA=soma(lA), vB=soma(lB);
+  const qA=somaQtd(lA), qB=somaQtd(lB);
+  const pmA=qA>0?vA/qA:0, pmB=qB>0?vB/qB:0;
+  const cA=clientes(lA), cB=clientes(lB);
+  const posA=contatos(deA,ateA), posB=contatos(deB,ateB);
+
+  const fmtR = v => 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  const fmtN = v => Number.isInteger(v)?v.toLocaleString('pt-BR'):v.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  const diff = (a,b) => b>0?Math.round(((a-b)/b)*100):(a>0?100:0);
+  const badgeDiff = (a,b,fmt) => {
+    const d=diff(a,b); const cor=d>=0?'#00D68F':'#EF4444'; const s=d>=0?'↑':'↓';
+    return `<div style="text-align:right;"><div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;">${fmt(b)}</div><span style="font-size:12px;font-weight:700;color:${cor};background:${cor}1a;border-radius:6px;padding:2px 7px;">${s} ${Math.abs(d)}%</span></div>`;
+  };
+  const linhaStat = (label,valA,valB,fmtFn,extra='') => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--borda);">
+      <div><div style="font-size:13px;font-weight:600;color:var(--texto);font-family:'DM Sans',sans-serif;">${label}</div>${extra?`<div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:1px;">${extra}</div>`:''}</div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="text-align:right;"><div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.3px;">${subA}</div><div style="font-size:15px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">${fmtFn(valA)}</div></div>
+        ${badgeDiff(valA,valB,fmtFn)}
+      </div>
+    </div>`;
+
+  // Top 20 por período
+  const porClienteA = {}, porClienteB = {};
+  lA.forEach(x => { const k=x.cliente.id; if(!porClienteA[k]) porClienteA[k]={c:x.cliente,v:0}; porClienteA[k].v+=x.valor; });
+  lB.forEach(x => { const k=x.cliente.id; if(!porClienteB[k]) porClienteB[k]={c:x.cliente,v:0}; porClienteB[k].v+=x.valor; });
+  const top20 = Object.entries(porClienteA).sort((a,b)=>b[1].v-a[1].v).slice(0,20).map(([id,obj],i)=>{
+    const vAnt = porClienteB[id]?.v||0;
+    const d = diff(obj.v,vAnt);
+    const cor = d>0?'#00D68F':d<0?'#EF4444':'#888';
+    const s = d>0?'↑':d<0?'↓':'=';
+    const badge = vAnt===0
+      ? `<span style="font-size:10px;background:rgba(167,139,250,.15);color:#A78BFA;border-radius:5px;padding:2px 6px;">novo</span>`
+      : `<span style="font-size:11px;font-weight:700;color:${cor};">${s} ${Math.abs(d)}%</span>`;
+    return `<div onclick="fecharModal('modal-drilldown');setTimeout(()=>abrirDetalhe('${id}','dashboard'),200)" style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--borda);cursor:pointer;">
+      <div style="flex:1;min-width:0;">
+        <span style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-right:6px;">${i+1}.</span>
+        <span style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(obj.c.nome)}</span>
+        ${obj.c.cidade?`<div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-left:14px;">${esc(obj.c.cidade)}</div>`:''}
+      </div>
+      <div style="text-align:right;margin-left:10px;flex-shrink:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--verde);font-family:'DM Sans',sans-serif;">${fmtR(obj.v)}</div>
+        ${badge}
+      </div>
+    </div>`;
+  }).join('');
+
+  const skuLabel = marca ? (_skuLabel((getConfig().metas||[]).find(m=>m.marca===marca)?.sku||'peças')) : 'pçs';
+
+  document.getElementById('drilldown-titulo').textContent = `📊 ${marca||'Geral'} — ${tituloP}`;
+  document.getElementById('drilldown-sub').textContent = 'Comparação até o mesmo dia do período anterior';
+  document.getElementById('drilldown-conteudo').innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:'DM Sans',sans-serif;margin-bottom:4px;">Resumo do período</div>
+      ${linhaStat('Valor vendido',vA,vB,fmtR)}
+      ${qA>0||qB>0?linhaStat(`Quantidade (${skuLabel})`,qA,qB,fmtN):''}
+      ${qA>0||qB>0?linhaStat('Preço médio / '+skuLabel,pmA,pmB,fmtR,'valor total ÷ qtd vendida'):''}
+      ${linhaStat('Clientes c/ venda',cA,cB,v=>String(v))}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;">
+        <div><div style="font-size:13px;font-weight:600;color:var(--texto);font-family:'DM Sans',sans-serif;">Positivação</div><div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:1px;">visitas que fecharam pedido</div></div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div style="text-align:right;"><div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.3px;">${subA}</div><div style="font-size:15px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">${posA.pct}%</div></div>
+          ${badgeDiff(posA.pct,posB.pct,v=>v+'%')}
+        </div>
+      </div>
+    </div>
+    ${top20?`
+    <div style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:'DM Sans',sans-serif;margin-bottom:8px;">🏆 Top 20 — ${subA}</div>
+    <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:12px 14px;">${top20}</div>`
+    :'<div style="text-align:center;padding:20px;font-size:13px;color:var(--texto3);font-family:\'DM Sans\',sans-serif;">Nenhuma venda no período.</div>'}`;
+
+  document.getElementById('modal-drilldown').classList.add('aberto');
+}
+
 function renderRelComparativo() {
   const cont = document.getElementById('rel-aba-comparativo');
   if (!cont) return;
@@ -9810,20 +9966,25 @@ function renderRelComparativo() {
 
   const soma = (de, ate) => _somaVendasMarca(de, ate, _relMarcaComp);
 
-  const card = (titulo, sub, atual, anterior) => {
+  const card = (titulo, sub, atual, anterior, tipoPeriodo) => {
     const diff = anterior > 0 ? Math.round(((atual - anterior) / anterior) * 100) : (atual > 0 ? 100 : 0);
     const cor = diff >= 0 ? '#00D68F' : '#EF4444';
     const seta = diff >= 0 ? '↑' : '↓';
     const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-    return `<div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+    const clique = tipoPeriodo ? `onclick="abrirDrilldown('${tipoPeriodo}')" style="cursor:pointer;"` : '';
+    return `<div ${clique} style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px 16px;margin-bottom:10px;${tipoPeriodo?'cursor:pointer;':''}" >
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <span style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">${titulo}</span>
-        <span style="font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;color:${cor};background:${cor}1a;border-radius:8px;padding:3px 9px;">${seta} ${Math.abs(diff)}%</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;color:${cor};background:${cor}1a;border-radius:8px;padding:3px 9px;">${seta} ${Math.abs(diff)}%</span>
+          ${tipoPeriodo ? `<span style="font-size:14px;color:var(--texto3);">›</span>` : ''}
+        </div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;">
         <div><div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;font-family:'DM Sans',sans-serif;margin-bottom:2px;">${sub[0]}</div><div style="font-size:18px;font-weight:700;color:${cor};font-family:'DM Sans',sans-serif;">${fmtR(atual)}</div></div>
         <div style="text-align:right;"><div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;font-family:'DM Sans',sans-serif;margin-bottom:2px;">${sub[1]}</div><div style="font-size:15px;font-weight:600;color:var(--texto2);font-family:'DM Sans',sans-serif;">${fmtR(anterior)}</div></div>
       </div>
+      ${tipoPeriodo ? `<div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:8px;text-align:center;">Toque para ver SKU, PM, positivação e top 20 ›</div>` : ''}
     </div>`;
   };
 
@@ -9844,9 +10005,9 @@ function renderRelComparativo() {
   cont.innerHTML = `
     <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;-webkit-overflow-scrolling:touch;">${chips.join('')}</div>
     <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;line-height:1.5;">${tituloFiltro} · comparação até o mesmo dia do período anterior.</div>
-    ${card('Mês x mês anterior',       ['Este mês',        'Mês passado'],    soma(inicioMes, hoje),    soma(inicioMesAnt, fimMesAntMesmo))}
-    ${card('Trimestre x anterior',     ['Este trimestre',  'Trim. anterior'], soma(inicioTri, hoje),    soma(inicioTriAnt, fimTriAntMesmo))}
-    ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAntMesmo))}
+    ${card('Mês x mês anterior',       ['Este mês',        'Mês passado'],    soma(inicioMes, hoje),    soma(inicioMesAnt, fimMesAntMesmo),   'mes')}
+    ${card('Trimestre x anterior',     ['Este trimestre',  'Trim. anterior'], soma(inicioTri, hoje),    soma(inicioTriAnt, fimTriAntMesmo),   'tri')}
+    ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAntMesmo),   'ano')}
     <button onclick="abrirRelComparativoHtml()" style="width:100%;margin-top:4px;background:var(--bg3);border:1.5px solid rgba(0,214,143,.4);border-radius:12px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📄 Ver relatório completo</button>
     <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-top:10px;">
       <div style="font-size:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">📊 Exportar relatório analítico</div>

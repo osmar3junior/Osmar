@@ -399,6 +399,11 @@ if ('serviceWorker' in navigator) {
   }
   .campo-pisca-7 { animation:piscaBordaCampo 1.4s ease-in-out 7; }
   .campo-pisca-3 { animation:piscaBordaCampo 1.4s ease-in-out 3; }
+  @keyframes spinEmoji { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+  @keyframes pulsaTexto { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .estrada-spinner { display:inline-block; animation:spinEmoji 1s linear infinite; }
+  .estrada-buscando-txt { animation:pulsaTexto 1.2s ease-in-out infinite; }
+  .estrada-btn-ativo { background:rgba(251,191,36,.35) !important; border-color:#FBBF24 !important; color:#FBBF24 !important; }
   @keyframes amberGlow {
     0%,100% { text-shadow:0 0 0px rgba(255,192,67,0); color:#FFC043; }
     50%      { text-shadow:0 0 14px rgba(255,192,67,.9), 0 0 28px rgba(255,192,67,.4); color:#FFD97A; }
@@ -2139,7 +2144,11 @@ if ('serviceWorker' in navigator) {
 
     <!-- Busca ao vivo: postos e estacionamentos -->
     <div id="estrada-proximos" style="display:none;margin-top:12px;">
-      <div id="estrada-proximos-loading" style="display:none;text-align:center;padding:20px;font-size:13px;color:var(--texto2);font-family:'DM Sans',sans-serif;">📡 Buscando próximos...</div>
+      <div id="estrada-proximos-loading" style="display:none;text-align:center;padding:24px 16px;">
+        <div id="estrada-loading-emoji" class="estrada-spinner" style="font-size:32px;margin-bottom:10px;">⛽</div>
+        <div class="estrada-buscando-txt" style="font-size:13px;font-weight:700;color:var(--texto2);font-family:'DM Sans',sans-serif;">Buscando...</div>
+        <div id="estrada-loading-sub" style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:4px;"></div>
+      </div>
       <div id="estrada-proximos-lista"></div>
     </div>
 
@@ -3132,6 +3141,12 @@ async function buscarProximosAoVivo(tipo, raioParam) {
   const listaDiv = document.getElementById('estrada-proximos-lista');
   const listaCont = document.getElementById('estrada-lista');
 
+  // Configura spinner conforme tipo
+  const emojiSpinner = document.getElementById('estrada-loading-emoji');
+  const subSpinner   = document.getElementById('estrada-loading-sub');
+  if (emojiSpinner) emojiSpinner.textContent = tipo === 'fuel' ? '⛽' : '🅿️';
+  if (subSpinner)   subSpinner.textContent   = raioParam >= 10000 ? `Raio de ${raioParam/1000}km — pode demorar alguns segundos` : `Raio de ${(raioParam||800)/1000 < 1 ? (raioParam||800)+'m' : (raioParam||3000)/1000+'km'}`;
+
   proxDiv.style.display = 'block';
   loadDiv.style.display = 'block';
   listaDiv.innerHTML = '';
@@ -3451,8 +3466,8 @@ function renderizarEstrada() {
     // Sempre mostra o botão de busca ao vivo no topo
     const btnStyle = `flex:1;border-radius:10px;padding:10px 6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:rgba(251,191,36,.1);border:1.5px solid rgba(251,191,36,.35);color:#FBBF24;`;
     const btnBusca = `<div style="display:flex;gap:8px;margin-bottom:12px;">
-      <button onclick="buscarProximosAoVivo('fuel',3000)" style="${btnStyle}">📍 Cidade<br><span style="font-size:10px;opacity:.7;">até 3 km</span></button>
-      <button onclick="buscarProximosAoVivo('fuel',50000)" style="${btnStyle}">🛣️ Na estrada<br><span style="font-size:10px;opacity:.7;">até 50 km</span></button>
+      <button id="btn-posto-3k"  onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('estrada-btn-ativo'));this.classList.add('estrada-btn-ativo');buscarProximosAoVivo('fuel',3000)" style="${btnStyle}">📍 Cidade<br><span style="font-size:10px;opacity:.7;">até 3 km</span></button>
+      <button id="btn-posto-50k" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('estrada-btn-ativo'));this.classList.add('estrada-btn-ativo');buscarProximosAoVivo('fuel',50000)" style="${btnStyle}">🛣️ Na estrada<br><span style="font-size:10px;opacity:.7;">até 50 km</span></button>
     </div>`;
     if (itens.length === 0) {
       cont.innerHTML = btnBusca + `<div class="empty-state" style="padding:20px 16px;"><div class="empty-icon">⛽</div><div class="empty-titulo">Nenhum posto salvo</div><div class="empty-desc">Busque ao vivo ou toque em "+ Adicionar posto".</div></div>`;

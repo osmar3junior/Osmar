@@ -2152,6 +2152,25 @@ if ('serviceWorker' in navigator) {
       <div id="estrada-proximos-lista"></div>
     </div>
 
+    <!-- BUSCA GPS DE HOTÉIS -->
+    <div id="hotel-gps-wrap" style="display:none;margin-top:12px;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button id="btn-hotel-50k" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('estrada-btn-ativo'));this.classList.add('estrada-btn-ativo');buscarHoteisProximos(50000)" style="flex:1;border-radius:10px;padding:11px 6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.35);color:#38BDF8;">🛏️ Próximos<br><span style="font-size:10px;opacity:.7;">até 50 km</span></button>
+        <button id="btn-hotel-100k" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('estrada-btn-ativo'));this.classList.add('estrada-btn-ativo');buscarHoteisProximos(100000)" style="flex:1;border-radius:10px;padding:11px 6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.35);color:#38BDF8;">🔭 Mais distantes<br><span style="font-size:10px;opacity:.7;">até 100 km</span></button>
+      </div>
+      <div id="hotel-gps-loading" style="display:none;text-align:center;padding:24px 16px;">
+        <div class="estrada-spinner" style="font-size:32px;margin-bottom:10px;">🛏️</div>
+        <div class="estrada-buscando-txt" style="font-size:13px;font-weight:700;color:var(--texto2);font-family:'DM Sans',sans-serif;">Buscando hotéis...</div>
+        <div id="hotel-gps-sub" style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:4px;"></div>
+      </div>
+      <div id="hotel-gps-lista"></div>
+      <div style="margin:14px 0;display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;height:1px;background:var(--borda);"></div>
+        <span style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;white-space:nowrap;">ou busque por cidade</span>
+        <div style="flex:1;height:1px;background:var(--borda);"></div>
+      </div>
+    </div>
+
     <!-- BUSCA ONLINE DE HOTEL -->
     <div class="hotel-busca-wrap" id="hotel-busca-wrap">
       <div class="hotel-busca-titulo">🔎 Buscar hotel para cadastrar</div>
@@ -3243,6 +3262,8 @@ function atualizarAbaEstrada() {
   const ehEstac    = abaEstrada === 'estacionar';
   const ehPosto    = abaEstrada === 'postos';
   document.getElementById('hotel-busca-wrap').style.display = ehHotel ? 'block' : 'none';
+  document.getElementById('hotel-gps-wrap').style.display   = ehHotel ? 'block' : 'none';
+  if (!ehHotel) { document.getElementById('hotel-gps-loading').style.display='none'; document.getElementById('hotel-gps-lista').innerHTML=''; }
   document.getElementById('estrada-proximos').style.display = 'none';
   document.getElementById('estrada-proximos-lista').innerHTML = '';
   const addBtn = document.getElementById('estrada-add-btn');
@@ -3629,6 +3650,103 @@ function usarLocalizacaoLog(prefix) {
 
 // ----- Abrir cadastro -----
 function abrirCadEstrada() { abaEstrada === 'hoteis' ? abrirCadHotel() : abrirCadPosto(); }
+
+async function buscarHoteisProximos(raio) {
+  const loadDiv  = document.getElementById('hotel-gps-loading');
+  const listaDiv = document.getElementById('hotel-gps-lista');
+  const subDiv   = document.getElementById('hotel-gps-sub');
+
+  loadDiv.style.display = 'block';
+  listaDiv.innerHTML = '';
+  if (subDiv) subDiv.textContent = `Raio de ${raio/1000}km — aguarde...`;
+
+  if (!navigator.geolocation) {
+    loadDiv.style.display = 'none';
+    listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">GPS não disponível neste dispositivo.</div>`;
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    const timeout = raio >= 80000 ? 25 : 15;
+    const tipos = ['hotel','pousada','hostel','motel','guest_house'];
+    const filtro = tipos.map(t => `node["tourism"="${t}"](around:${raio},${lat},${lng});way["tourism"="${t}"](around:${raio},${lat},${lng});`).join('');
+    const query = `[out:json][timeout:${timeout}];(${filtro});out center;`;
+
+    try {
+      const resp = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query));
+      if (!resp.ok) throw new Error('Overpass ' + resp.status);
+      const data = await resp.json();
+      const elementos = data.elements || [];
+      loadDiv.style.display = 'none';
+
+      if (!elementos.length) {
+        const raioMaior = raio < 100000;
+        listaDiv.innerHTML = `<div style="text-align:center;padding:20px;font-family:'DM Sans',sans-serif;">
+          <div style="font-size:28px;margin-bottom:8px;">🛏️</div>
+          <div style="font-size:13px;color:var(--texto2);">Nenhum hotel encontrado num raio de ${raio/1000}km.</div>
+          ${raioMaior ? `<button onclick="document.getElementById('btn-hotel-100k').click()" style="margin-top:12px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 16px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔭 Ampliar para 100km</button>` : ''}
+        </div>`;
+        return;
+      }
+
+      const tipoLabel = { hotel:'Hotel', pousada:'Pousada', hostel:'Hostel', motel:'Motel', guest_house:'Casa de hóspedes' };
+
+      const resultados = elementos.map(el => {
+        const elLat = el.lat || el.center?.lat;
+        const elLng = el.lon || el.center?.lon;
+        const dist  = elLat ? _distKm(lat, lng, elLat, elLng) : null;
+        const tipo  = el.tags?.tourism || 'hotel';
+        const nome  = el.tags?.name || tipoLabel[tipo] || 'Hotel';
+        const stars = Number(el.tags?.stars || el.tags?.['hotel:stars'] || 0);
+        const end   = el.tags?.['addr:street']
+          ? `${el.tags['addr:street']}${el.tags['addr:housenumber'] ? ', '+el.tags['addr:housenumber'] : ''}`
+          : '';
+        const cidade = el.tags?.['addr:city'] || el.tags?.['addr:municipality'] || '';
+        return { nome, tipo, stars, end, cidade, dist, elLat, elLng };
+      }).filter(r => r.dist !== null).sort((a,b) => a.dist - b.dist).slice(0, 20);
+
+      listaDiv.innerHTML = resultados.map((r, idx) => {
+        const distTxt  = r.dist < 1 ? Math.round(r.dist*1000)+'m' : r.dist.toFixed(1)+'km';
+        const starsHtml = r.stars > 0 ? `<span style="color:#FBBF24;font-size:11px;">${'★'.repeat(r.stars)}</span>` : '';
+        const tipoBadge = `<span style="font-size:10px;font-weight:700;color:#7DD3FC;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:5px;padding:1px 6px;">${tipoLabel[r.tipo]||'Hotel'}</span>`;
+        const navWaze = `https://waze.com/ul?ll=${r.elLat},${r.elLng}&navigate=yes`;
+        const navMaps = `https://www.google.com/maps/dir/?api=1&destination=${r.elLat},${r.elLng}`;
+        return `<div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+          <div style="margin-bottom:8px;">
+            <div style="font-size:14px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;margin-bottom:3px;">${esc(r.nome)}</div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              ${tipoBadge}${starsHtml}
+              <span style="font-size:11px;font-weight:700;color:var(--texto2);font-family:'DM Sans',sans-serif;">📍 ${distTxt}</span>
+              ${r.cidade ? `<span style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;">${esc(r.cidade)}</span>` : ''}
+            </div>
+            ${r.end ? `<div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:3px;">${esc(r.end)}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;">
+            <a href="${navWaze}" target="_blank" style="flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:9px;padding:8px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;">🚗 Waze</a>
+            <a href="${navMaps}" target="_blank" style="flex:1;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:9px;padding:8px;color:#FBBF24;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;">🗺️ Maps</a>
+            <button onclick='salvarHotelDaGps(${JSON.stringify({nome:r.nome,cidade:r.cidade,end:r.end,lat:String(r.elLat),lng:String(r.elLng),stars:r.stars}).replace(/'/g,"\\'")})'  style="flex:1;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);border-radius:9px;padding:8px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button>
+          </div>
+        </div>`;
+      }).join('');
+
+    } catch(e) {
+      loadDiv.style.display = 'none';
+      listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Sem conexão ou serviço indisponível. Tente novamente.</div>`;
+    }
+  }, () => {
+    loadDiv.style.display = 'none';
+    listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Permita o acesso à localização para buscar próximos.</div>`;
+  }, { enableHighAccuracy: true, timeout: 8000 });
+}
+
+function salvarHotelDaGps(dados) {
+  abrirCadHotel({
+    id: '', nome: dados.nome, cidade: dados.cidade,
+    endereco: dados.end, lat: dados.lat, lng: dados.lng,
+    estrelas: dados.stars || 0
+  });
+}
 
 function abrirCadHotel(h) {
   document.getElementById('cad-hotel-titulo').textContent = h ? '✏️ Editar hotel' : '🛏️ Adicionar hotel';

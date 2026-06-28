@@ -9897,23 +9897,44 @@ function abrirDrilldown(tipo) {
   lA.forEach(x => { const k=x.cliente.id; if(!porClienteA[k]) porClienteA[k]={c:x.cliente,v:0}; porClienteA[k].v+=x.valor; });
   lB.forEach(x => { const k=x.cliente.id; if(!porClienteB[k]) porClienteB[k]={c:x.cliente,v:0}; porClienteB[k].v+=x.valor; });
   const top20 = Object.entries(porClienteA).sort((a,b)=>b[1].v-a[1].v).slice(0,20).map(([id,obj],i)=>{
-    const vAnt = porClienteB[id]?.v||0;
-    const d = diff(obj.v,vAnt);
-    const cor = d>0?'#00D68F':d<0?'#EF4444':'#888';
-    const s = d>0?'↑':d<0?'↓':'=';
-    const badge = vAnt===0
-      ? `<span style="font-size:10px;background:rgba(167,139,250,.15);color:#A78BFA;border-radius:5px;padding:2px 6px;">novo</span>`
-      : `<span style="font-size:11px;font-weight:700;color:${cor};">${s} ${Math.abs(d)}%</span>`;
-    return `<div onclick="fecharModal('modal-drilldown');setTimeout(()=>abrirDetalhe('${id}','dashboard'),200)" style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--borda);cursor:pointer;">
+    const vAnt = porClienteB[id]?.v || 0;
+    const d    = diff(obj.v, vAnt);
+    const isNovo   = vAnt === 0;
+    const cresceu  = !isNovo && d > 0;
+    const caiu     = !isNovo && d < 0;
+    const estavel  = !isNovo && d === 0;
+
+    const corSeta  = cresceu ? '#00D68F' : caiu ? '#EF4444' : '#888';
+    const seta     = cresceu ? '▲' : caiu ? '▼' : '—';
+    const pctTxt   = `${Math.abs(d)}%`;
+
+    const indicador = isNovo
+      ? `<span style="font-size:10px;font-weight:700;background:rgba(167,139,250,.15);color:#A78BFA;border-radius:6px;padding:2px 7px;">✦ novo</span>`
+      : `<div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+           <span style="font-size:16px;color:${corSeta};line-height:1;font-weight:900;">${seta}</span>
+           <span style="font-size:13px;font-weight:800;color:${corSeta};font-family:'DM Sans',sans-serif;">${pctTxt}</span>
+         </div>`;
+
+    const bgCard = caiu
+      ? 'background:rgba(239,68,68,.04);border-left:3px solid rgba(239,68,68,.4);'
+      : cresceu
+      ? 'background:rgba(0,214,143,.04);border-left:3px solid rgba(0,214,143,.35);'
+      : '';
+
+    return `<div onclick="fecharModal('modal-drilldown');setTimeout(()=>abrirDetalhe('${id}','dashboard'),200)"
+      style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--borda);cursor:pointer;border-radius:8px;margin-bottom:2px;${bgCard}">
       <div style="flex:1;min-width:0;">
-        <span style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-right:6px;">${i+1}.</span>
-        <span style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(obj.c.nome)}</span>
-        ${obj.c.cidade?`<div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-left:14px;">${esc(obj.c.cidade)}</div>`:''}
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;flex-shrink:0;">${i+1}.</span>
+          <span style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(obj.c.nome)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:2px;margin-left:20px;">
+          <span style="font-size:12px;font-weight:700;color:var(--verde);font-family:'DM Sans',sans-serif;">${fmtR(obj.v)}</span>
+          ${!isNovo ? `<span style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;">ant: ${fmtR(vAnt)}</span>` : ''}
+          ${obj.c.cidade ? `<span style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;">· ${esc(obj.c.cidade)}</span>` : ''}
+        </div>
       </div>
-      <div style="text-align:right;margin-left:10px;flex-shrink:0;">
-        <div style="font-size:13px;font-weight:700;color:var(--verde);font-family:'DM Sans',sans-serif;">${fmtR(obj.v)}</div>
-        ${badge}
-      </div>
+      <div style="margin-left:12px;flex-shrink:0;">${indicador}</div>
     </div>`;
   }).join('');
 
@@ -9971,21 +9992,20 @@ function renderRelComparativo() {
     const cor = diff >= 0 ? '#00D68F' : '#EF4444';
     const seta = diff >= 0 ? '↑' : '↓';
     const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-    const clique = tipoPeriodo ? `onclick="abrirDrilldown('${tipoPeriodo}')" style="cursor:pointer;"` : '';
-    return `<div ${clique} style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px 16px;margin-bottom:10px;${tipoPeriodo?'cursor:pointer;':''}" >
+    return `<button ${tipoPeriodo?`onclick="abrirDrilldown('${tipoPeriodo}')"`:''} style="width:100%;text-align:left;background:var(--bg3);border:1.5px solid ${tipoPeriodo?cor+'44':'var(--borda)'};border-left:${tipoPeriodo?`4px solid ${cor}`:'1.5px solid var(--borda)'};border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:${tipoPeriodo?'pointer':'default'};display:block;-webkit-tap-highlight-color:transparent;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <span style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">${titulo}</span>
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;color:${cor};background:${cor}1a;border-radius:8px;padding:3px 9px;">${seta} ${Math.abs(diff)}%</span>
-          ${tipoPeriodo ? `<span style="font-size:14px;color:var(--texto3);">›</span>` : ''}
+          ${tipoPeriodo ? `<span style="font-size:18px;color:${cor};opacity:.7;line-height:1;">›</span>` : ''}
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:${tipoPeriodo?'8px':'0'};">
         <div><div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;font-family:'DM Sans',sans-serif;margin-bottom:2px;">${sub[0]}</div><div style="font-size:18px;font-weight:700;color:${cor};font-family:'DM Sans',sans-serif;">${fmtR(atual)}</div></div>
         <div style="text-align:right;"><div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;font-family:'DM Sans',sans-serif;margin-bottom:2px;">${sub[1]}</div><div style="font-size:15px;font-weight:600;color:var(--texto2);font-family:'DM Sans',sans-serif;">${fmtR(anterior)}</div></div>
       </div>
-      ${tipoPeriodo ? `<div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:8px;text-align:center;">Toque para ver SKU, PM, positivação e top 20 ›</div>` : ''}
-    </div>`;
+      ${tipoPeriodo ? `<div style="display:flex;align-items:center;gap:4px;"><div style="flex:1;height:1px;background:${cor}33;"></div><span style="font-size:10px;color:${cor};opacity:.7;font-family:'DM Sans',sans-serif;white-space:nowrap;">ver SKU · PM · positivação · top 20</span><div style="flex:1;height:1px;background:${cor}33;"></div></div>` : ''}
+    </button>`;
   };
 
   // Chips de marca

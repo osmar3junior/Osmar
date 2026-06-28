@@ -3714,14 +3714,16 @@ async function buscarHoteisProximos(raio) {
         const tipoBadge = `<span style="font-size:10px;font-weight:700;color:#7DD3FC;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:5px;padding:1px 6px;">${tipoLabel[r.tipo]||'Hotel'}</span>`;
         const navWaze   = `https://waze.com/ul?ll=${r.elLat},${r.elLng}&navigate=yes`;
         const navMaps   = `https://www.google.com/maps/dir/?api=1&destination=${r.elLat},${r.elLng}`;
-        const telLimpo  = r.tel.replace(/\D/g,'');
-        const temTel    = telLimpo.length >= 8;
-        const btnStyle  = `border-radius:8px;padding:8px 6px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-align:center;`;
+        // Suporta múltiplos telefones separados por ; ou /
+        const tels = r.tel.split(/[;\/]/).map(t => t.replace(/\D/g,'')).filter(t => t.length >= 8);
+        const temTel = tels.length > 0;
+        const telPrimario = tels[0] || '';
+        const btnStyle = `border-radius:8px;padding:8px 6px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-align:center;`;
 
         // Botões de data
         const dataBtns = `
           <div style="margin-bottom:8px;">
-            <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Escolha a data para contato</div>
+            <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Escolha a data para estadia</div>
             <div style="display:flex;gap:5px;">
               <button id="hdata-${idx}-hoje"   onclick="setHotelDataGps(${idx},'hoje')"   style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">Hoje</button>
               <button id="hdata-${idx}-amanha"  onclick="setHotelDataGps(${idx},'amanha')" style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">Amanhã</button>
@@ -3734,8 +3736,8 @@ async function buscarHoteisProximos(raio) {
         const buscaGoogle = `https://www.google.com/search?q=${encodeURIComponent(r.nome+' '+(r.cidade||'')+' telefone')}`;
         const contatoBtns = temTel ? `
           <div style="display:flex;gap:5px;margin-bottom:6px;">
-            <a href="tel:${telLimpo}" style="${btnStyle}flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:#38BDF8;text-decoration:none;display:block;">📞 Ligar</a>
-            <button onclick="abrirWppHotel(${idx},'${telLimpo}','${nomeEsc(r)}')" style="${btnStyle}flex:1;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;">💬 WhatsApp</button>
+            <a href="tel:${telPrimario}" style="${btnStyle}flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:#38BDF8;text-decoration:none;display:block;">📞 Ligar</a>
+            <button onclick="abrirWppHotel(${idx},'${telPrimario}','${nomeEsc(r)}')" style="${btnStyle}flex:1;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;">💬 WhatsApp</button>
             <button onclick="copiarMsgHotel(${idx},'${nomeEsc(r)}')" style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📋 Copiar</button>
           </div>` : `
           <div style="display:flex;gap:5px;margin-bottom:6px;">
@@ -3751,7 +3753,7 @@ async function buscarHoteisProximos(raio) {
               ${tipoBadge}${starsHtml}
               <span style="font-size:11px;font-weight:700;color:var(--texto2);font-family:'DM Sans',sans-serif;">📍 ${distTxt}</span>
               ${r.cidade ? `<span style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;">${esc(r.cidade)}</span>` : ''}
-              ${temTel ? `<span style="font-size:10px;color:var(--verde);background:rgba(0,214,143,.1);border-radius:5px;padding:1px 6px;">📞 ${r.tel}</span>` : ''}
+              ${temTel ? tels.map(t=>`<a href="tel:${t}" style="font-size:10px;color:var(--verde);background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.2);border-radius:5px;padding:2px 7px;text-decoration:none;white-space:nowrap;">📞 ${t.length===11?`(${t.slice(0,2)}) ${t.slice(2,7)}-${t.slice(7)}`:`(${t.slice(0,2)}) ${t.slice(2,6)}-${t.slice(6)}`}</a>`).join('') : ''}
             </div>
             ${r.end ? `<div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:3px;">${esc(r.end)}</div>` : ''}
           </div>
@@ -3762,7 +3764,7 @@ async function buscarHoteisProximos(raio) {
           <div style="display:flex;gap:5px;margin-top:2px;">
             <a href="${navWaze}" target="_blank" style="${btnStyle}flex:1;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);color:#38BDF8;text-decoration:none;display:block;">🚗 Waze</a>
             <a href="${navMaps}" target="_blank" style="${btnStyle}flex:1;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);color:#FBBF24;text-decoration:none;display:block;">🗺️ Maps</a>
-            <button onclick='salvarHotelDaGps(${JSON.stringify({nome:r.nome,cidade:r.cidade,end:r.end,lat:String(r.elLat),lng:String(r.elLng),stars:r.stars}).replace(/'/g,"\\'")})' style="${btnStyle}flex:1;background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.2);color:var(--verde);">💾 Salvar</button>
+            <button onclick='salvarHotelDaGps(${JSON.stringify({nome:r.nome,cidade:r.cidade,end:r.end,lat:String(r.elLat),lng:String(r.elLng),stars:r.stars}).replace(/'/g,"\\'")})' style="${btnStyle}flex:1;background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.2);color:var(--verde);">💾 Salvar hotel</button>
           </div>
         </div>`;
       }).join('');

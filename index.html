@@ -2132,9 +2132,16 @@ if ('serviceWorker' in navigator) {
     <div class="rota-periodo-seletor">
       <button class="rota-periodo-btn ativo" data-estrada="hoteis" onclick="trocarAbaEstrada('hoteis')">🛏️ Hotéis</button>
       <button class="rota-periodo-btn" data-estrada="postos" onclick="trocarAbaEstrada('postos')">⛽ Postos</button>
+      <button class="rota-periodo-btn" data-estrada="estacionar" onclick="trocarAbaEstrada('estacionar')">🅿️ Estacionar</button>
     </div>
 
     <div id="estrada-lista"></div>
+
+    <!-- Busca ao vivo: postos e estacionamentos -->
+    <div id="estrada-proximos" style="display:none;margin-top:12px;">
+      <div id="estrada-proximos-loading" style="display:none;text-align:center;padding:20px;font-size:13px;color:var(--texto2);font-family:'DM Sans',sans-serif;">📡 Buscando próximos...</div>
+      <div id="estrada-proximos-lista"></div>
+    </div>
 
     <!-- BUSCA ONLINE DE HOTEL -->
     <div class="hotel-busca-wrap" id="hotel-busca-wrap">
@@ -3113,6 +3120,95 @@ function salvarLogistica(obj) {
   if (usuarioAtual) setData('cv_logistica_' + usuarioAtual.email, obj);
 }
 
+function _distKm(lat1, lng1, lat2, lng2) {
+  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function buscarProximosAoVivo(tipo, raioParam) {
+  const proxDiv  = document.getElementById('estrada-proximos');
+  const loadDiv  = document.getElementById('estrada-proximos-loading');
+  const listaDiv = document.getElementById('estrada-proximos-lista');
+  const listaCont = document.getElementById('estrada-lista');
+
+  proxDiv.style.display = 'block';
+  loadDiv.style.display = 'block';
+  listaDiv.innerHTML = '';
+  if (tipo === 'parking') listaCont.innerHTML = '';
+
+  if (!navigator.geolocation) {
+    loadDiv.style.display = 'none';
+    listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">GPS não disponível neste dispositivo.</div>`;
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    const raio = raioParam || (tipo === 'parking' ? 800 : 3000);
+    const naEstrada = raio >= 10000;
+    const limite = naEstrada ? 25 : 15;
+    const timeout = naEstrada ? 20 : 10;
+    const amenity = tipo === 'fuel' ? 'fuel' : 'parking';
+    const query = `[out:json][timeout:${timeout}];(node["amenity"="${amenity}"](around:${raio},${lat},${lng});way["amenity"="${amenity}"](around:${raio},${lat},${lng}););out center;`;
+
+    try {
+      const resp = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query));
+      if (!resp.ok) throw new Error('Overpass ' + resp.status);
+      const data = await resp.json();
+      const elementos = data.elements || [];
+      loadDiv.style.display = 'none';
+
+      if (!elementos.length) {
+        listaDiv.innerHTML = `<div style="text-align:center;padding:20px;font-family:'DM Sans',sans-serif;"><div style="font-size:28px;margin-bottom:8px;">${tipo==='fuel'?'⛽':'🅿️'}</div><div style="font-size:13px;color:var(--texto2);">Nenhum ${tipo==='fuel'?'posto':'estacionamento'} encontrado num raio de ${raio/1000}km.</div></div>`;
+        return;
+      }
+
+      const resultados = elementos.map(el => {
+        const elLat = el.lat || el.center?.lat;
+        const elLng = el.lon || el.center?.lon;
+        const dist  = elLat ? _distKm(lat, lng, elLat, elLng) : null;
+        const nome  = el.tags?.name || el.tags?.brand || (tipo==='fuel'?'Posto de combustível':'Estacionamento');
+        const marca = el.tags?.brand || '';
+        const end   = el.tags?.['addr:street'] ? `${el.tags['addr:street']}${el.tags['addr:housenumber']?' '+el.tags['addr:housenumber']:''}` : '';
+        const gratis = el.tags?.fee === 'no' ? true : false;
+        return { nome, marca, end, dist, elLat, elLng, gratis };
+      }).filter(r => r.dist !== null).sort((a,b) => a.dist - b.dist).slice(0, limite);
+
+      const icon = tipo === 'fuel' ? '⛽' : '🅿️';
+      listaDiv.innerHTML = resultados.map(r => {
+        const distTxt = r.dist < 1 ? Math.round(r.dist*1000)+'m' : r.dist.toFixed(1)+'km';
+        const navUrl  = `https://waze.com/ul?ll=${r.elLat},${r.elLng}&navigate=yes`;
+        const gmUrl   = `https://www.google.com/maps/dir/?api=1&destination=${r.elLat},${r.elLng}`;
+        const gratuito = r.gratis ? `<span style="background:rgba(0,214,143,.12);color:var(--verde);border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;">Grátis</span>` : '';
+        return `<div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${icon} ${esc(r.nome)}</div>
+              ${r.end?`<div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:2px;">${esc(r.end)}</div>`:''}
+              <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                <span style="font-size:11px;font-weight:700;color:var(--texto2);font-family:'DM Sans',sans-serif;">${distTxt}</span>
+                ${gratuito}
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <a href="${navUrl}" target="_blank" onclick="event.stopPropagation()" style="flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:9px;padding:8px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;">🚗 Waze</a>
+            <a href="${gmUrl}" target="_blank" onclick="event.stopPropagation()" style="flex:1;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:9px;padding:8px;color:#FBBF24;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;">🗺️ Maps</a>
+          </div>
+        </div>`;
+      }).join('');
+
+    } catch(e) {
+      loadDiv.style.display = 'none';
+      listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Sem conexão ou serviço indisponível. Tente novamente.</div>`;
+    }
+  }, () => {
+    loadDiv.style.display = 'none';
+    listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Permita o acesso à localização para buscar próximos.</div>`;
+  }, { enableHighAccuracy: true, timeout: 8000 });
+}
+
 function abrirNaEstrada() {
   abaEstrada = 'hoteis';
   document.getElementById('estrada-busca').value = '';
@@ -3128,13 +3224,24 @@ function abrirNaEstrada() {
 }
 function atualizarAbaEstrada() {
   document.querySelectorAll('#modal-na-estrada .rota-periodo-btn').forEach(b => b.classList.toggle('ativo', b.dataset.estrada === abaEstrada));
-  const ehHotel = abaEstrada === 'hoteis';
+  const ehHotel    = abaEstrada === 'hoteis';
+  const ehEstac    = abaEstrada === 'estacionar';
+  const ehPosto    = abaEstrada === 'postos';
   document.getElementById('hotel-busca-wrap').style.display = ehHotel ? 'block' : 'none';
+  document.getElementById('estrada-proximos').style.display = 'none';
+  document.getElementById('estrada-proximos-lista').innerHTML = '';
   const addBtn = document.getElementById('estrada-add-btn');
-  addBtn.style.display = ehHotel ? 'none' : 'block';
-  addBtn.textContent = '+ Adicionar posto';
+  addBtn.style.display = ehPosto ? 'block' : 'none';
+  addBtn.textContent   = '+ Adicionar posto';
+  const buscaWrap = document.getElementById('estrada-busca').parentElement;
+  buscaWrap.style.display = ehEstac ? 'none' : 'flex';
 }
-function trocarAbaEstrada(t) { abaEstrada = t; atualizarAbaEstrada(); renderizarEstrada(); }
+function trocarAbaEstrada(t) {
+  abaEstrada = t;
+  atualizarAbaEstrada();
+  if (t === 'estacionar') { buscarProximosAoVivo('parking'); return; }
+  renderizarEstrada();
+}
 
 const UF_MAP = {
   'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA','Ceará':'CE',
@@ -3340,10 +3447,22 @@ function renderizarEstrada() {
   const cont = document.getElementById('estrada-lista');
   let itens = abaEstrada === 'hoteis' ? log.hoteis : log.postos;
   if (termo) itens = itens.filter(i => (i.nome || '').toLowerCase().includes(termo) || (i.cidade || '').toLowerCase().includes(termo));
+  if (abaEstrada === 'postos') {
+    // Sempre mostra o botão de busca ao vivo no topo
+    const btnStyle = `flex:1;border-radius:10px;padding:10px 6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:rgba(251,191,36,.1);border:1.5px solid rgba(251,191,36,.35);color:#FBBF24;`;
+    const btnBusca = `<div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button onclick="buscarProximosAoVivo('fuel',3000)" style="${btnStyle}">📍 Cidade<br><span style="font-size:10px;opacity:.7;">até 3 km</span></button>
+      <button onclick="buscarProximosAoVivo('fuel',50000)" style="${btnStyle}">🛣️ Na estrada<br><span style="font-size:10px;opacity:.7;">até 50 km</span></button>
+    </div>`;
+    if (itens.length === 0) {
+      cont.innerHTML = btnBusca + `<div class="empty-state" style="padding:20px 16px;"><div class="empty-icon">⛽</div><div class="empty-titulo">Nenhum posto salvo</div><div class="empty-desc">Busque ao vivo ou toque em "+ Adicionar posto".</div></div>`;
+      return;
+    }
+    cont.innerHTML = btnBusca + itens.map(_cardPosto).join('');
+    return;
+  }
   if (itens.length === 0) {
-    const v = abaEstrada === 'hoteis'
-      ? { e:'🛏️', t:'Nenhum hotel ainda', d:'Toque em "Adicionar hotel" para montar sua lista.' }
-      : { e:'⛽', t:'Nenhum posto ainda', d:'Toque em "Adicionar posto" para montar sua lista.' };
+    const v = { e:'🛏️', t:'Nenhum hotel ainda', d:'Toque em "Adicionar hotel" para montar sua lista.' };
     cont.innerHTML = `<div class="empty-state" style="padding:28px 16px;"><div class="empty-icon">${v.e}</div><div class="empty-titulo">${v.t}</div><div class="empty-desc">${v.d}</div></div>`;
     return;
   }

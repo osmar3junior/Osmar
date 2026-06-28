@@ -9398,7 +9398,16 @@ function renderRelVendas() {
   }
 
   // Botão e-mail
-  html += `<button onclick="abrirRelVendasHtml()" style="width:100%;margin-top:16px;background:var(--bg3);border:1.5px solid rgba(0,214,143,.4);border-radius:12px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📄 Ver relatório completo</button>`;
+  html += `<div id="rel-vendas-envio" style="margin-top:16px;">
+    <button onclick="toggleEnvioVendas()" style="width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.4);border-radius:12px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📤 Enviar relatório detalhado</button>
+    <div id="envio-vendas-opcoes" style="display:none;margin-top:8px;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
+      <div style="font-size:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;margin-bottom:10px;text-align:center;">Para onde enviar o relatório?</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="enviarRelVendasWhatsapp()" style="flex:1;background:rgba(34,197,94,.1);border:1.5px solid rgba(34,197,94,.35);border-radius:10px;padding:12px 8px;color:#4ade80;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">💬 WhatsApp</button>
+        <button onclick="enviarRelVendasEmailRep()" style="flex:1;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.35);border-radius:10px;padding:12px 8px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📧 E-mail</button>
+      </div>
+    </div>
+  </div>`;
 
   cont.innerHTML = html;
 }
@@ -9478,6 +9487,76 @@ function baixarExcel(){
   a.download='relatorio_carteira_viva.csv';a.click();
 }
 <\/script></body></html>`;
+}
+
+function toggleEnvioVendas() {
+  const el = document.getElementById('envio-vendas-opcoes');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function _montarTextoRelVendas() {
+  const fmtR = v => 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  const hoje = new Date();
+  let desde;
+  if (_relPeriodoVendas === 'hoje')        { desde = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()); }
+  else if (_relPeriodoVendas === 'semana') { desde = new Date(hoje); desde.setDate(desde.getDate()-7); }
+  else                                     { desde = new Date(hoje.getFullYear(), hoje.getMonth(), 1); }
+  const periodoLabel = _relPeriodoVendas==='hoje'?'Hoje':_relPeriodoVendas==='semana'?'Últimos 7 dias':'Este mês';
+  const marcaLabel = _relMarcaVendas || 'Geral';
+  const marcaNorm  = _relMarcaVendas ? _relMarcaVendas.trim().toLowerCase() : null;
+  let todas = _coletarVendas(desde, null);
+  const vendas = !marcaNorm ? todas : todas.filter(v =>
+    v.pedidos?.some(p=>(p.marca||'').trim().toLowerCase()===marcaNorm) ||
+    (v.cliente.marcas||[]).some(m=>(m||'').trim().toLowerCase()===marcaNorm)
+  );
+  const total  = vendas.reduce((s,v)=>s+v.valor,0);
+  const nCli   = new Set(vendas.map(v=>v.cliente.id)).size;
+  const ticket = vendas.length ? total/vendas.length : 0;
+  const fisico = vendas.filter(v=>v.canal==='visita').reduce((s,v)=>s+v.valor,0);
+  const wppV   = vendas.filter(v=>v.canal==='wpp').reduce((s,v)=>s+v.valor,0);
+  const dt = hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const rep = usuarioAtual?.nome || '';
+
+  let txt = `📊 *RELATÓRIO DE VENDAS — ${periodoLabel.toUpperCase()} — ${marcaLabel.toUpperCase()}*\n`;
+  txt += `_${rep ? rep + ' · ' : ''}Gerado em ${dt} · Carteira Viva_\n`;
+  txt += `${'─'.repeat(32)}\n\n`;
+  txt += `💰 *Total vendido:* ${fmtR(total)}\n`;
+  txt += `📦 *Nº de vendas:* ${vendas.length}\n`;
+  txt += `👥 *Clientes:* ${nCli}\n`;
+  txt += `🎯 *Ticket médio:* ${fmtR(ticket)}\n`;
+  if (fisico > 0 || wppV > 0) {
+    txt += `\n📍 Presencial: ${fmtR(fisico)}\n`;
+    txt += `💬 WhatsApp/e-mail: ${fmtR(wppV)}\n`;
+  }
+  txt += `\n${'─'.repeat(32)}\n*Analítico*\n\n`;
+  vendas.forEach(v => {
+    const d = new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const canal = v.canal==='visita'?'📍':v.canal==='wpp'?'💬':'';
+    txt += `${canal} ${d} | *${v.nome}*${v.loja?' — '+v.loja:''} | ${fmtR(v.valor)}\n`;
+  });
+  txt += `\n_Carteira Viva — seu copiloto na estrada_ 🚗`;
+  return txt;
+}
+
+function enviarRelVendasWhatsapp() {
+  const cfg = getConfig();
+  const wpp = (cfg.wppRep || '').replace(/\D/g,'');
+  const txt = _montarTextoRelVendas();
+  const url = wpp
+    ? `https://wa.me/55${wpp}?text=${encodeURIComponent(txt)}`
+    : `https://wa.me/?text=${encodeURIComponent(txt)}`;
+  window.open(url, '_blank');
+  document.getElementById('envio-vendas-opcoes').style.display = 'none';
+}
+
+function enviarRelVendasEmailRep() {
+  const cfg = getConfig();
+  const dest = cfg.emailRep || '';
+  const txt = _montarTextoRelVendas().replace(/\*/g,'').replace(/_/g,'');
+  const periodoLabel = _relPeriodoVendas==='hoje'?'Hoje':_relPeriodoVendas==='semana'?'7 dias':'Este mês';
+  const marcaLabel = _relMarcaVendas || 'Geral';
+  window.open(`mailto:${dest}?subject=${encodeURIComponent('Relatório de Vendas — '+periodoLabel+' — '+marcaLabel)}&body=${encodeURIComponent(txt)}`);
+  document.getElementById('envio-vendas-opcoes').style.display = 'none';
 }
 
 function abrirRelVendasHtml() {
@@ -10028,16 +10107,32 @@ function renderRelComparativo() {
     ${card('Mês x mês anterior',       ['Este mês',        'Mês passado'],    soma(inicioMes, hoje),    soma(inicioMesAnt, fimMesAntMesmo),   'mes')}
     ${card('Trimestre x anterior',     ['Este trimestre',  'Trim. anterior'], soma(inicioTri, hoje),    soma(inicioTriAnt, fimTriAntMesmo),   'tri')}
     ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAntMesmo),   'ano')}
-    <button onclick="abrirRelComparativoHtml()" style="width:100%;margin-top:4px;background:var(--bg3);border:1.5px solid rgba(0,214,143,.4);border-radius:12px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📄 Ver relatório completo</button>
     <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-top:10px;">
-      <div style="font-size:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">📊 Exportar relatório analítico</div>
-      <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:10px;line-height:1.5;">Gera um Excel com todos os pedidos — cliente, loja, SKU, valor, canal — no período escolhido.</div>
-      <div style="display:flex;gap:6px;margin-bottom:10px;" id="comp-exp-periodo">
+      <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;margin-bottom:4px;">⬇️ Exportar Excel analítico</div>
+      <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:12px;line-height:1.5;">3 abas: Resumo Geral · Por Cliente · Analítico (pedido a pedido com SKU, valor e canal).</div>
+
+      <div style="font-size:10px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">1. Escolha a marca</div>
+      <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;">
+        ${(() => {
+          const marcas = (getConfig().marcas||[]).filter(Boolean);
+          const chipM = (m, label) => {
+            const ativa = m === null ? _relMarcaComp === null : _relMarcaComp === m;
+            const st = ativa ? 'background:rgba(0,214,143,.18);border-color:rgba(0,214,143,.5);color:var(--verde);' : 'background:var(--bg2);border-color:var(--borda);color:var(--texto2);';
+            const fn = m === null ? `setMarcaComp(null)` : `setMarcaComp('${m}')`;
+            return `<button onclick="${fn};renderRelComparativo()" style="flex-shrink:0;border-radius:8px;border:1px solid;padding:5px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;${st}">${label}</button>`;
+          };
+          return chipM(null,'Todas') + marcas.map(m=>chipM(m,m)).join('');
+        })()}
+      </div>
+
+      <div style="font-size:10px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">2. Escolha o período</div>
+      <div style="display:flex;gap:6px;margin-bottom:14px;" id="comp-exp-periodo">
         <button onclick="setExpPeriodo('mes')"  class="comp-exp-chip ativo" data-p="mes">Mês atual</button>
         <button onclick="setExpPeriodo('tri')"  class="comp-exp-chip" data-p="tri">Trimestre</button>
         <button onclick="setExpPeriodo('ano')"  class="comp-exp-chip" data-p="ano">Ano</button>
       </div>
-      <button onclick="exportarRelatorioExcel()" style="width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.4);border-radius:11px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⬇️ Exportar Excel (.xlsx)</button>
+
+      <button onclick="exportarRelatorioExcel()" style="width:100%;background:rgba(0,214,143,.12);border:1.5px solid rgba(0,214,143,.5);border-radius:11px;padding:13px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">⬇️ Gerar e baixar Excel</button>
     </div>`;
 }
 

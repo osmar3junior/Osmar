@@ -6098,7 +6098,7 @@ function renderizarProspectos() {
       <div style="font-size:11px;color:rgba(255,192,67,.8);margin-bottom:6px;">🏷️ ${esc(marcas)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <span style="font-size:10px;color:var(--texto3);">${ult?'Última visita: '+ult:'Sem visitas registradas'}</span>
-        ${(c.endereco||c.lat)?`<button ontouchstart="event.stopPropagation();_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}');event.preventDefault()" onclick="event.stopPropagation();_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}')" style="background:linear-gradient(180deg,#33CCFF,#0EA5D6);border:none;border-radius:10px;padding:10px 16px;color:#fff;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:0 3px 0 #0875A8;min-height:44px;min-width:70px;">⊙ Rota</button>`:''}
+        ${(c.endereco||c.lat)?`<button onclick="event.stopPropagation();_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}')" style="background:linear-gradient(180deg,#33CCFF,#0EA5D6);border:none;border-radius:10px;padding:10px 18px;color:#fff;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:0 4px 0 #0875A8;min-height:44px;-webkit-tap-highlight-color:transparent;">⊙ Rota</button>`:''}
       </div>
     </div>`;
   }).join('');

@@ -9135,8 +9135,29 @@ function salvarMarcaUnica(i) {
       btn.style.background = 'rgba(0,214,143,.1)';
     }, 800);
   }
-  if (val) { input.value = val; toast('✅ ' + val + ' salva!'); }
-  else toast('Marca removida');
+  if (val) {
+    input.value = val;
+    // Cria meta automaticamente se ainda não existe para esta marca
+    const metaExiste = (cfg.metas || []).some(m => m.marca === val);
+    if (!metaExiste) {
+      if (!cfg.metas) cfg.metas = [];
+      cfg.metas.unshift({
+        id: 'm_' + Date.now(),
+        marca: val,
+        sku: (cfg.skus && cfg.skus[0]) || 'peças',
+        tipoPeriodo: 'mes',
+        mes: new Date().toISOString().slice(0, 7),
+        dataInicio: '', dataFim: '',
+        valor: 0, comissao: 0, cicloIdeal: 30
+      });
+      salvarConfigData(cfg);
+      toast('✅ ' + val + ' salva! Preencha a meta abaixo.');
+    } else {
+      toast('✅ ' + val + ' atualizada!');
+    }
+  } else {
+    toast('Marca removida');
+  }
   _renderMarcasGrid();
   renderizarMetasConfig(getConfig());
 }

@@ -824,6 +824,18 @@ if ('serviceWorker' in navigator) {
       </div>
     </button>
 
+    <!-- BOTÃO GERENTE VIRTUAL -->
+    <button onclick="abrirGerenteVirtual()" style="width:100%;background:linear-gradient(135deg,#1e0a4a,#2d1470);border:1.5px solid rgba(124,58,237,.45);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(124,58,237,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🤖</div>
+        <div style="text-align:left;">
+          <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Gestor IA</div>
+          <div style="font-size:11px;color:#A78BFA;">Seu consultor inteligente · Marcas · Ações</div>
+        </div>
+      </div>
+      <div style="color:#7C3AED;font-size:20px;">›</div>
+    </button>
+
     <!-- BOTÃO FINALIZAR DIA -->
     <button onclick="abrirFinalizarDia()" style="width:100%;background:linear-gradient(135deg,#10192b,#16243f);border:1.5px solid rgba(56,113,189,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:12px;">
@@ -1489,7 +1501,12 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
 
-    <input type="hidden" id="cfg-gemini-key">
+    <div class="config-secao" style="background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(79,70,229,.04));border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:16px;">
+      <div class="config-secao-titulo">🤖 Gestor IA</div>
+      <div class="config-secao-sub">Ative seu consultor inteligente: o Gestor IA analisa suas marcas, sua carteira e sugere ações para você bater a meta. Cole sua chave gratuita do Google Gemini. <span onclick="abrirGuiaApi()" style="color:#A78BFA;cursor:pointer;font-weight:600;">Ver passo a passo →</span></div>
+      <input type="text" class="campo-input" id="cfg-gemini-key" placeholder="AIza..." style="margin-top:8px;font-family:monospace;font-size:13px;letter-spacing:.5px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <div style="font-size:11px;color:var(--texto3);margin-top:8px;line-height:1.5;">🔒 Sua chave fica só no seu aparelho. É gratuita e leva 3 minutos para obter.</div>
+    </div>
 
     <div class="config-secao">
       <div class="config-secao-titulo">🚀 Tela de boas-vindas</div>
@@ -2098,6 +2115,78 @@ if ('serviceWorker' in navigator) {
 
     <!-- ABA AÇÕES -->
     <div id="rel-aba-acoes" style="display:none;"></div>
+
+  </div>
+</div>
+
+<!-- MODAL GERENTE VIRTUAL -->
+<div class="modal-overlay" id="modal-gerente" style="z-index:330;">
+  <div class="modal-box" style="max-height:92vh;overflow-y:auto;padding-bottom:28px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:38px;height:38px;background:linear-gradient(135deg,#7C3AED,#4F46E5);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🤖</div>
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">Gestor IA</div>
+          <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;" id="gerente-data-label"></div>
+        </div>
+      </div>
+      <button onclick="fecharModal('modal-gerente')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+
+    <!-- Loading -->
+    <div id="gerente-loading" style="display:none;text-align:center;padding:40px 20px;">
+      <div style="font-size:40px;margin-bottom:14px;animation:spinEmoji 2s linear infinite;display:inline-block;">🤖</div>
+      <div class="estrada-buscando-txt" style="font-size:14px;font-weight:700;color:var(--texto2);font-family:'DM Sans',sans-serif;">Analisando sua carteira...</div>
+      <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:6px;">Pode levar alguns segundos</div>
+    </div>
+
+    <!-- Resultado -->
+    <div id="gerente-resultado" style="display:none;">
+
+      <!-- Seção 1: Visão da Marca -->
+      <div style="background:rgba(124,58,237,.07);border:1.5px solid rgba(124,58,237,.3);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:16px;">🏷️</span>
+          <span style="font-size:12px;font-weight:700;color:#A78BFA;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;">Visão das marcas</span>
+        </div>
+        <div id="gerente-marca-texto" style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.7;white-space:pre-wrap;"></div>
+      </div>
+
+      <!-- Seção 2: Visão do Negócio -->
+      <div style="background:rgba(16,185,129,.06);border:1.5px solid rgba(16,185,129,.28);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:16px;">💼</span>
+          <span style="font-size:12px;font-weight:700;color:#34D399;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;">Visão do seu negócio</span>
+        </div>
+        <div id="gerente-negocio-texto" style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.7;white-space:pre-wrap;"></div>
+      </div>
+
+      <!-- Seção 3: Ações -->
+      <div style="background:rgba(249,115,22,.06);border:1.5px solid rgba(249,115,22,.3);border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:16px;">⚡</span>
+          <span style="font-size:12px;font-weight:700;color:#F97316;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;">3 ações para esta semana</span>
+        </div>
+        <div id="gerente-acoes-texto" style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;white-space:pre-wrap;"></div>
+      </div>
+
+      <!-- Botões de compartilhamento -->
+      <div style="display:flex;gap:8px;">
+        <button onclick="compartilharGerenteWpp()" style="flex:2;background:rgba(34,197,94,.12);border:1.5px solid rgba(34,197,94,.4);border-radius:12px;padding:13px;color:#4ade80;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">💬 Enviar no WhatsApp</button>
+        <button onclick="gerarAnaliseGerente(true)" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:13px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔄 Reanalisar</button>
+      </div>
+      <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;text-align:center;margin-top:8px;" id="gerente-cache-aviso"></div>
+    </div>
+
+    <!-- Erro -->
+    <div id="gerente-erro" style="display:none;text-align:center;padding:24px 16px;">
+      <div style="font-size:32px;margin-bottom:10px;">⚠️</div>
+      <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;margin-bottom:6px;">Não foi possível gerar a análise</div>
+      <div style="font-size:12px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;" id="gerente-erro-msg"></div>
+      <button onclick="abrirConfiguracoes()" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 16px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⚙️ Configurar chave Gemini</button>
+    </div>
 
   </div>
 </div>
@@ -9219,6 +9308,234 @@ let _relPeriodoVendas = 'mes';
 let _relMarcaVendas = null; // null = geral
 let _relMarcaComp = null;   // null = geral
 let _relExpPeriodo = 'mes'; // mes | tri | ano
+
+// ===== GERENTE VIRTUAL =====
+let _gerenteAnaliseCache = null;
+let _gerenteCacheData = null;
+
+function abrirGerenteVirtual() {
+  document.getElementById('modal-gerente').classList.add('aberto');
+  document.getElementById('gerente-loading').style.display = 'none';
+  document.getElementById('gerente-resultado').style.display = 'none';
+  document.getElementById('gerente-erro').style.display = 'none';
+
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('gerente-data-label').textContent = hoje;
+
+  // Verifica cache de 24h
+  const agora = Date.now();
+  if (_gerenteAnaliseCache && _gerenteCacheData && (agora - _gerenteCacheData) < 86400000) {
+    _exibirAnaliseGerente(_gerenteAnaliseCache, true);
+    return;
+  }
+  gerarAnaliseGerente(false);
+}
+
+function _coletarDadosRep() {
+  const cfg = getConfig();
+  const metas = getMetasConfig();
+  const ativos = getClientesAtivos();
+  const hoje = new Date();
+  const Y = hoje.getFullYear(), M = hoje.getMonth(), D = hoje.getDate();
+  const inicioMes = new Date(Y,M,1);
+  const inicioMesAnt = new Date(Y,M-1,1);
+  const fimMesAnt = new Date(Y,M-1,D,23,59,59);
+  const fmtR = v => 'R$'+Math.round(v).toLocaleString('pt-BR');
+
+  // --- Dados por marca ---
+  const dadosMarcas = metas.map(meta => {
+    const real = calcularRealMarca(meta);
+    const falta = meta.valor - real;
+    const pct = meta.valor > 0 ? Math.round((real/meta.valor)*100) : 0;
+    const { fim } = _periodoMeta(meta);
+    const diasR = _diasUteisRestantes(hoje, fim);
+    const taxa = calcularTaxaConversaoMarca(meta.marca);
+    const positiv = Math.round(taxa*100);
+    const skuL = _skuLabel(meta.sku);
+    const somenteVal = meta.sku==='reais'||meta.sku==='faturamento';
+
+    // Clientes com potencial que não compraram no mês
+    const marcaNorm = meta.marca.trim().toLowerCase();
+    const semCompra = ativos.filter(c => {
+      if (!(c.marcas||[]).some(m=>(m||'').trim().toLowerCase()===marcaNorm)) return false;
+      return !(c.historico||[]).some(h => {
+        if (h.motivo!=='fechou_pedido') return false;
+        const d=new Date(h.data); if(d<inicioMes) return false;
+        return h.pedidos ? h.pedidos.some(p=>(p.marca||'').trim().toLowerCase()===marcaNorm) : true;
+      });
+    });
+    const pot = semCompra.map(c => {
+      const pv = calcularPotencialCliente(c)[meta.marca]||{};
+      return { nome:c.nome, cidade:c.cidade, potAvg: pv.avg||0 };
+    }).filter(x=>x.potAvg>0).sort((a,b)=>b.potAvg-a.potAvg).slice(0,3);
+
+    // Clientes em queda vs mês anterior
+    const queda = ativos.filter(c => {
+      if (!(c.marcas||[]).some(m=>(m||'').trim().toLowerCase()===marcaNorm)) return false;
+      const vA = (c.historico||[]).filter(h=>h.motivo==='fechou_pedido'&&new Date(h.data)>=inicioMes).reduce((s,h)=>s+(h.pedidoValor||0),0);
+      const vB = (c.historico||[]).filter(h=>h.motivo==='fechou_pedido'&&new Date(h.data)>=inicioMesAnt&&new Date(h.data)<=fimMesAnt).reduce((s,h)=>s+(h.pedidoValor||0),0);
+      return vB>0 && vA < vB*0.7;
+    }).slice(0,3).map(c=>c.nome);
+
+    const status = falta<=0?'META BATIDA':pct>=90?'no ritmo':pct>=60?'atenção':'CRÍTICO';
+    return {
+      marca: meta.marca,
+      meta: `${fmtR(meta.valor)} ${skuL}`,
+      real: `${fmtR(real)} ${skuL}`,
+      pct: `${pct}%`,
+      status,
+      falta: falta>0?`${fmtR(falta)} ${skuL}`:'0',
+      diasUteis: diasR,
+      positivacao: `${positiv}%`,
+      topPotencial: pot.map(p=>`${p.nome}${p.cidade?' ('+p.cidade+')':''}: ~${fmtR(p.potAvg)}`).join('; ')||'sem dados',
+      clientesEmQueda: queda.join(', ')||'nenhum'
+    };
+  });
+
+  // --- Pareto da carteira ---
+  const ranking = ativos.map(c => {
+    const tot = (c.historico||[]).filter(h=>h.motivo==='fechou_pedido'&&new Date(h.data)>=inicioMes).reduce((s,h)=>s+(h.pedidoValor||0),0);
+    return { nome:c.nome, tot };
+  }).filter(x=>x.tot>0).sort((a,b)=>b.tot-a.tot);
+  const totalGeral = ranking.reduce((s,x)=>s+x.tot,0);
+  const top20pct = ranking.slice(0,Math.max(1,Math.round(ranking.length*0.2))).reduce((s,x)=>s+x.tot,0);
+  const paretoShare = totalGeral>0?Math.round((top20pct/totalGeral)*100):0;
+
+  // --- Prospectos e esquecidos ---
+  const prospectos = getProspectos().filter(c => !c.dataRetornoCustom || new Date(c.dataRetornoCustom)<=hoje);
+  const esquecidos = ativos.filter(c => isEsquecido(c));
+
+  return {
+    rep: usuarioAtual?.nome || 'Representante',
+    mes: hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}),
+    marcas: dadosMarcas,
+    carteira: {
+      totalClientes: ativos.length,
+      compraramEsseMes: ranking.length,
+      prospectosAguardando: prospectos.length,
+      esquecidos: esquecidos.length,
+      paretoShare: `${paretoShare}% do faturamento vem de ${Math.round(ranking.length*0.2)||1} clientes`
+    }
+  };
+}
+
+async function gerarAnaliseGerente(forcar=false) {
+  const cfg = getConfig();
+  const apiKey = (cfg.geminiKey||'').trim();
+
+  document.getElementById('gerente-loading').style.display = 'block';
+  document.getElementById('gerente-resultado').style.display = 'none';
+  document.getElementById('gerente-erro').style.display = 'none';
+
+  if (!apiKey) {
+    document.getElementById('gerente-loading').style.display = 'none';
+    document.getElementById('gerente-erro').style.display = 'block';
+    document.getElementById('gerente-erro-msg').textContent = 'Configure sua chave Gemini em Configurações para ativar o Gestor IA.';
+    return;
+  }
+
+  const dados = _coletarDadosRep();
+
+  const prompt = `Você é o GESTOR IA: um mentor sênior para representantes comerciais no Brasil, que combina DUAS visões complementares sobre o negócio do rep. Tom direto, provocativo (estimula ação e pensamento crítico), profissional e orientado a dados. Use termos do setor quando fizer sentido: sell-in, sell-out, ruptura, positivação, mix, cobertura, giro, share, ticket médio, Pareto.
+
+Fale DIRETAMENTE com o representante na 2ª pessoa ("você"), pelo primeiro nome. Nada de saudação genérica nem de repetir os números crus — interprete-os e provoque a ação.
+
+DADOS REAIS DO REPRESENTANTE (use só o que estiver aqui, não invente números):
+${JSON.stringify(dados, null, 2)}
+
+Gere uma análise em JSON com EXATAMENTE 3 campos:
+
+1. "marca" — PERSONA GUARDIÃO DO MARKET SHARE (gerente de marca da indústria):
+Foco em positivação, cobertura e mix. Identifique quais marcas estão críticas e onde há dinheiro na mesa (clientes de alto potencial sem compra, mix incompleto). Provoque o rep a agir como estrategista da marca: sugira ligar para o gerente comercial da marca pedindo verba de sell-out, prazo especial, material de PDV ou ação de positivação focada nos clientes certos. Cite nomes de clientes e marcas dos dados. Máx 220 palavras.
+
+2. "negocio" — PERSONA CFO DO REPRESENTANTE (gestor do próprio negócio):
+Foco em rentabilidade, produtividade e Pareto. Onde está o lucro real do rep? Qual marca priorizar AGORA para maximizar comissão com o tempo que resta? Aponte desperdício de energia (clientes esquecidos, prospectos parados, foco em quem traz pouco retorno). Transforme esforço em lucro: mande o rep concentrar nos 20% que trazem 80%. Máx 220 palavras.
+
+3. "acoes" — EXATAMENTE 3 ações concretas e executáveis ESTA SEMANA, cada uma em 1 linha, começando com verbo no imperativo. Formato literal: "1. [ação]\\n2. [ação]\\n3. [ação]"
+
+Responda APENAS com JSON válido, sem texto antes ou depois:
+{"marca":"...","negocio":"...","acoes":"1. ...\\n2. ...\\n3. ..."}`;
+
+  try {
+    const body = {
+      contents:[{ parts:[{ text: prompt }] }],
+      generationConfig:{ temperature:0.7, maxOutputTokens:1500 }
+    };
+    const modelos = ['gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash'];
+    let txt = '', ultimoErro = null;
+    for (const modelo of modelos) {
+      let r;
+      try {
+        r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`,
+          { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
+        );
+      } catch(e) { ultimoErro = e; continue; }
+      if (r.status===404) { ultimoErro = new Error('Modelo indisponível'); continue; }
+      if (r.status===403) throw new Error('Chave sem permissão. Gere uma nova em aistudio.google.com.');
+      if (r.status===429) { ultimoErro = new Error('Limite de uso atingido. Aguarde 1 minuto e tente de novo.'); continue; }
+      if (!r.ok) { ultimoErro = new Error('Erro na API ('+r.status+').'); continue; }
+      const data = await r.json();
+      txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (txt) break;
+    }
+    if (!txt) throw ultimoErro || new Error('A IA não respondeu. Tente novamente.');
+
+    const m = txt.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('Resposta inesperada da IA. Tente novamente.');
+    const analise = JSON.parse(m[0]);
+    if (!analise.marca || !analise.negocio || !analise.acoes) throw new Error('Resposta incompleta. Tente novamente.');
+
+    _gerenteAnaliseCache = analise;
+    _gerenteCacheData = Date.now();
+    _exibirAnaliseGerente(analise, false);
+
+  } catch(err) {
+    document.getElementById('gerente-loading').style.display = 'none';
+    document.getElementById('gerente-erro').style.display = 'block';
+    document.getElementById('gerente-erro-msg').textContent = err.message || 'Erro desconhecido.';
+  }
+}
+
+function _exibirAnaliseGerente(analise, doCache) {
+  document.getElementById('gerente-loading').style.display = 'none';
+  document.getElementById('gerente-erro').style.display = 'none';
+  document.getElementById('gerente-resultado').style.display = 'block';
+  document.getElementById('gerente-marca-texto').textContent = analise.marca;
+  document.getElementById('gerente-negocio-texto').textContent = analise.negocio;
+  document.getElementById('gerente-acoes-texto').textContent = analise.acoes;
+  const aviso = document.getElementById('gerente-cache-aviso');
+  if (doCache && _gerenteCacheData) {
+    const h = Math.round((Date.now()-_gerenteCacheData)/3600000);
+    aviso.textContent = `Análise gerada há ${h}h · Toque em Reanalisar para atualizar`;
+  } else {
+    aviso.textContent = 'Análise gerada agora · Válida por 24h';
+  }
+}
+
+function compartilharGerenteWpp() {
+  if (!_gerenteAnaliseCache) return;
+  const cfg = getConfig();
+  const wpp = (cfg.wppRep||'').replace(/\D/g,'');
+  const rep = usuarioAtual?.nome||'';
+  const dt = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  let msg = `🤖 *GESTOR IA · ${rep} · ${dt}*\n\n`;
+  msg += `🏷️ *VISÃO DAS MARCAS*\n${_gerenteAnaliseCache.marca}\n\n`;
+  msg += `💼 *VISÃO DO SEU NEGÓCIO*\n${_gerenteAnaliseCache.negocio}\n\n`;
+  msg += `⚡ *3 AÇÕES PARA ESTA SEMANA*\n${_gerenteAnaliseCache.acoes}\n\n`;
+  msg += `_Gerado pelo Carteira Viva — seu copiloto na estrada 🚗_`;
+
+  const url = wpp
+    ? `https://wa.me/55${wpp}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+}
+
+function abrirConfiguracoes() {
+  fecharModal('modal-gerente');
+  setTimeout(()=>irPara('config'),200);
+}
 
 function abrirRelatorios() {
   _relAbaAtiva = 'metas';

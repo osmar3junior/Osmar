@@ -601,12 +601,29 @@ if ('serviceWorker' in navigator) {
   .cidade-sugestao-uf { font-size:11px; font-weight:700; color:var(--verde); background:rgba(0,214,143,.1); border-radius:6px; padding:2px 7px; flex-shrink:0; }
 
   /* METAS */
-  .meta-card { background:var(--bg2); border:1px solid var(--borda); border-radius:12px; padding:14px; margin-bottom:10px; }
-  .meta-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .meta-card {
+    background:linear-gradient(135deg,rgba(249,115,22,.04),rgba(30,30,30,0));
+    border:1px solid rgba(249,115,22,.25);
+    border-top:2.5px solid rgba(249,115,22,.5);
+    border-radius:14px;
+    padding:0;
+    margin-bottom:14px;
+    overflow:hidden;
+    box-shadow:0 2px 12px rgba(0,0,0,.18);
+  }
+  .meta-card-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px 10px;
+    background:rgba(249,115,22,.06);
+    border-bottom:1px solid rgba(249,115,22,.15);
+    margin-bottom:0;
+  }
+  .meta-card-body { padding:12px 14px 14px; }
   .meta-marca-label { font-size:14px; font-weight:600; color:var(--texto); }
   .meta-row { display:flex; gap:8px; margin-bottom:8px; }
-  .meta-periodo-btn { flex:1; background:var(--bg3); border:1px solid var(--borda); border-radius:8px; padding:7px 4px; color:var(--texto2); font-family:'Syne',sans-serif; font-size:11px; font-weight:700; cursor:pointer; transition:.15s; }
+  .meta-periodo-btn { flex:1; background:var(--bg3); border:1px solid var(--borda); border-radius:8px; padding:7px 4px; color:var(--texto2); font-family:'DM Sans',sans-serif; font-size:11px; font-weight:700; cursor:pointer; transition:.15s; }
   .meta-periodo-btn.ativo { background:rgba(0,214,143,.12); border-color:var(--verde); color:var(--verde); }
+  .meta-divider { height:1px; background:rgba(255,255,255,.05); margin:10px 0; }
   .semaforo-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
   .dot-verde-meta { background:#22C55E; box-shadow:0 0 6px rgba(34,197,94,.5); }
   .dot-amarelo-meta { background:#F59E0B; box-shadow:0 0 6px rgba(245,158,11,.5); }
@@ -1401,12 +1418,8 @@ if ('serviceWorker' in navigator) {
       <div class="config-secao-titulo">📦 Unidades de venda (SKUs)</div>
       <div class="config-secao-sub">Escolha quais unidades aparecem na tela de "Fechou pedido". Assim a lista fica curta e do jeito do seu negócio.</div>
       <div class="sku-grid" id="sku-grid"></div>
-      <div class="config-secao-sub" style="margin-bottom:8px;">Não achou a sua? Cadastre até 3 unidades personalizadas:</div>
-      <div class="sku-custom-grid">
-        <input type="text" class="sku-custom-input" id="sku-custom-0" maxlength="20" placeholder="Ex: Toneladas, Rolos, Sacas...">
-        <input type="text" class="sku-custom-input" id="sku-custom-1" maxlength="20" placeholder="Unidade personalizada 2">
-        <input type="text" class="sku-custom-input" id="sku-custom-2" maxlength="20" placeholder="Unidade personalizada 3">
-      </div>
+      <div class="config-secao-sub" style="margin-bottom:8px;">Não achou a sua? Adicione unidades personalizadas (máx. 6):</div>
+      <div class="sku-custom-grid" id="sku-custom-container"></div>
     </div>
 
     <div class="config-secao">
@@ -6275,7 +6288,7 @@ function renderizarProspectos() {
       <div style="font-size:11px;color:rgba(255,192,67,.8);margin-bottom:6px;">🏷️ ${esc(marcas)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <span style="font-size:10px;color:var(--texto3);">${ult?'Última visita: '+ult:'Sem visitas registradas'}</span>
-        ${(c.endereco||c.lat)?`<button onclick="event.stopPropagation();_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}')" style="background:linear-gradient(180deg,#33CCFF,#0EA5D6);border:none;border-radius:10px;padding:10px 18px;color:#fff;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:0 4px 0 #0875A8;min-height:44px;-webkit-tap-highlight-color:transparent;">⊙ Rota</button>`:''}
+        ${(c.endereco||c.lat)?`<span onclick="event.stopPropagation();event.preventDefault();" style="flex-shrink:0;display:inline-block;"><button ontouchend="event.stopPropagation();event.preventDefault();_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}');" onclick="event.stopPropagation();event.preventDefault();_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}');" style="background:linear-gradient(180deg,#33CCFF,#0EA5D6);border:none;border-radius:10px;padding:10px 16px;color:#fff;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:0 4px 0 #0875A8;min-height:44px;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg> Rota</button></span>`:''}
       </div>
     </div>`;
   }).join('');
@@ -8943,19 +8956,8 @@ function carregarConfig() {
   if (bufferEl) bufferEl.value = cfg.bufferMeta !== undefined ? cfg.bufferMeta : 20;
   renderizarMetasConfig(cfg);
   renderizarSkuGrid(cfg);
-  (cfg.skusCustom || ['','','']).forEach((v, i) => {
-    const el = document.getElementById('sku-custom-' + i);
-    if (el) el.value = v || '';
-  });
-  const marcasGrid = document.getElementById('marcas-grid');
-  if (marcasGrid) {
-    const marcas = cfg.marcas || Array(10).fill('');
-    marcasGrid.innerHTML = marcas.map((v, i) => `
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input type="text" class="sku-custom-input" id="marca-${i}" maxlength="30" placeholder="Marca/representação ${i+1}" value="${(v || '').replace(/"/g,'&quot;')}" style="flex:1;" onkeydown="if(event.key==='Enter'){salvarMarcaUnica(${i});}" oninput="document.getElementById('btn-marca-check-${i}').style.opacity=this.value.trim()?'1':'.35'">
-        <button id="btn-marca-check-${i}" type="button" onclick="salvarMarcaUnica(${i})" title="Salvar marca" style="flex-shrink:0;width:34px;height:34px;border-radius:9px;border:1.5px solid rgba(0,214,143,.4);background:rgba(0,214,143,.1);color:var(--verde);font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${(v||'').trim()?'1':'.35'};transition:opacity .15s,transform .1s;" onmousedown="this.style.transform='scale(.92)'" onmouseup="this.style.transform=''">✓</button>
-      </div>`).join('');
-  }
+  _renderSkuCustom();
+  _renderMarcasGrid();
   // Carrega prazo dos motivos custom
   const customs = getMotivosCustom();
   customs.forEach((label, i) => {
@@ -8967,6 +8969,62 @@ function carregarConfig() {
     if (labelEl) labelEl.textContent = label.trim() || ('Motivo personalizado ' + (i+1));
   });
 }
+function _renderSkuCustom() {
+  const cont = document.getElementById('sku-custom-container');
+  if (!cont) return;
+  const cfg = getConfig();
+  const vals = [...(cfg.skusCustom || [])];
+  while (vals.length < 6) vals.push('');
+  const preenchidos = vals.filter(v => v.trim()).length;
+  const mostrar = Math.min(preenchidos + 1, 6);
+  let html = '';
+  for (let i = 0; i < mostrar; i++) {
+    const v = vals[i] || '';
+    html += `<input type="text" class="sku-custom-input" id="sku-custom-${i}" maxlength="20"
+      placeholder="${i === 0 ? 'Ex: Toneladas, Rolos, Sacas...' : 'Unidade personalizada ' + (i+1)}"
+      value="${v.replace(/"/g,'&quot;')}" oninput="_onSkuCustomInput(${i})">`;
+  }
+  if (mostrar < 6) html += `<div style="font-size:10px;color:var(--texto3);margin-top:5px;padding:0 2px;">preencha para adicionar mais · máx. 6</div>`;
+  cont.innerHTML = html;
+}
+
+function _onSkuCustomInput(idx) {
+  const vals = Array.from({length:6}, (_, i) => (document.getElementById('sku-custom-'+i)?.value||'').trim());
+  const cfg = getConfig();
+  cfg.skusCustom = vals;
+  salvarConfigData(cfg);
+  const preenchidos = vals.filter(v=>v).length;
+  const visiveis = document.querySelectorAll('#sku-custom-container input').length;
+  const deveVer = Math.min(preenchidos + 1, 6);
+  if (deveVer !== visiveis) {
+    _renderSkuCustom();
+    setTimeout(() => {
+      const el = document.getElementById('sku-custom-'+idx);
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    }, 30);
+  }
+}
+
+function _renderMarcasGrid() {
+  const marcasGrid = document.getElementById('marcas-grid');
+  if (!marcasGrid) return;
+  const cfg = getConfig();
+  const marcas = cfg.marcas || Array(10).fill('');
+  const preenchidas = marcas.filter(m => m.trim()).length;
+  const mostrar = Math.min(preenchidas + 1, 10);
+  marcasGrid.innerHTML = Array.from({length: mostrar}, (_, i) => {
+    const v = marcas[i] || '';
+    return `<div style="display:flex;gap:6px;align-items:center;">
+      <input type="text" class="sku-custom-input" id="marca-${i}" maxlength="30"
+        placeholder="${i === 0 ? 'Ex: Lupo, Duloren, Hering...' : 'Marca/representação ' + (i+1)}"
+        value="${v.replace(/"/g,'&quot;')}" style="flex:1;"
+        onkeydown="if(event.key==='Enter'){salvarMarcaUnica(${i});}"
+        oninput="document.getElementById('btn-marca-check-${i}').style.opacity=this.value.trim()?'1':'.35'">
+      <button id="btn-marca-check-${i}" type="button" onclick="salvarMarcaUnica(${i})" title="Salvar" style="flex-shrink:0;width:34px;height:34px;border-radius:9px;border:1.5px solid rgba(0,214,143,.4);background:rgba(0,214,143,.1);color:var(--verde);font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${v.trim()?'1':'.35'};transition:opacity .15s,transform .1s;" onmousedown="this.style.transform='scale(.92)'" onmouseup="this.style.transform=''">✓</button>
+    </div>`;
+  }).join('') + (mostrar < 10 ? `<div style="font-size:10px;color:var(--texto3);margin-top:5px;padding:0 2px;">preencha e salve (✓) para adicionar mais · máx. 10</div>` : '');
+}
+
 function salvarMarcaUnica(i) {
   const input = document.getElementById('marca-' + i);
   if (!input) return;
@@ -8989,6 +9047,8 @@ function salvarMarcaUnica(i) {
   }
   if (val) { input.value = val; toast('✅ ' + val + ' salva!'); }
   else toast('Marca removida');
+  _renderMarcasGrid();
+  renderizarMetasConfig(getConfig());
 }
 
 function salvarConfig() {
@@ -9004,7 +9064,7 @@ function salvarConfig() {
     if (el) cfg['custom_' + i] = parseInt(el.value) || 30;
   });
   cfg.skus = Array.from(document.querySelectorAll('#sku-grid .sku-chip.ativo')).map(el => el.dataset.sku);
-  cfg.skusCustom = [0, 1, 2].map(i => (document.getElementById('sku-custom-' + i)?.value || '').trim());
+  cfg.skusCustom = Array.from({length:6}, (_, i) => (document.getElementById('sku-custom-'+i)?.value||'').trim());
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
   cfg.gatilhoAnticAtivo = document.getElementById('cfg-gatilho-toggle')?.dataset.ativo === 'true';
@@ -11268,7 +11328,9 @@ function adicionarMetaConfig() {
   const metas = cfg.metas || [];
   const marcas = (cfg.marcas || []).filter(Boolean);
   if (!marcas.length) { toast('Cadastre suas marcas em "Suas representações" antes de adicionar metas.'); return; }
-  metas.push({ id: 'm_' + Date.now(), marca: marcas[0], sku: (cfg.skus && cfg.skus[0]) || 'peças', tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor: 0, comissao: 0, cicloIdeal: 30 });
+  const marcasJaUsadas = metas.map(m => m.marca).filter(Boolean);
+  const proxMarca = marcas.find(m => !marcasJaUsadas.includes(m)) || '';
+  metas.push({ id: 'm_' + Date.now(), marca: proxMarca, sku: (cfg.skus && cfg.skus[0]) || 'peças', tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor: 0, comissao: 0, cicloIdeal: 30 });
   cfg.metas = metas;
   salvarConfigData(cfg);
   renderizarMetasConfig(cfg);
@@ -11288,56 +11350,78 @@ function renderizarMetasConfig(cfg) {
   const marcas = (cfg.marcas || []).filter(Boolean);
   const skusDisponiveis = [...(cfg.skus || ['peças']), ...(cfg.skusCustom || []).filter(Boolean), 'reais'];
 
+  if (!marcas.length) {
+    lista.innerHTML = '<div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:12px 14px;font-size:12px;color:#FBBF24;line-height:1.5;">⚠️ Cadastre suas marcas/representações acima antes de configurar metas.</div>';
+    return;
+  }
+
   if (!metas.length) {
-    lista.innerHTML = '<div style="font-size:12px;color:var(--texto3);padding:8px 0;">Nenhuma meta cadastrada ainda.</div>';
+    lista.innerHTML = '<div style="font-size:12px;color:var(--texto3);padding:8px 0;">Nenhuma meta cadastrada ainda. Toque em "+ Nova meta" para começar.</div>';
     return;
   }
 
   lista.innerHTML = metas.map(meta => {
-    const marcaOpts = marcas.map(m => `<option value="${m}" ${m === meta.marca ? 'selected' : ''}>${m}</option>`).join('');
+    const marcasUsadas = metas.filter(m2 => m2.id !== meta.id && m2.marca).map(m2 => m2.marca);
+    const marcasDisp = marcas.filter(m => !marcasUsadas.includes(m) || m === meta.marca);
+    const defaultOpt = meta.marca ? '' : `<option value="" disabled selected>— Selecione a marca —</option>`;
+    const marcaOpts = defaultOpt + marcasDisp.map(m => `<option value="${m}" ${m === meta.marca ? 'selected' : ''}>${m}</option>`).join('');
     const skuOpts   = skusDisponiveis.map(s => `<option value="${s}" ${s === meta.sku ? 'selected' : ''}>${_skuLabel(s)}</option>`).join('');
     const isMes     = meta.tipoPeriodo !== 'colecao';
     return `<div class="meta-card" id="meta-card-${meta.id}">
       <div class="meta-card-header">
-        <select class="campo-input" style="flex:1;margin-right:8px;" onchange="editarMetaField('${meta.id}','marca',this.value)">${marcaOpts}</select>
-        <button onclick="salvarConfig();toast('✅ Meta salva!');" title="Salvar meta" id="btn-meta-salvar-${meta.id}" style="background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);border-radius:8px;width:32px;height:32px;color:var(--verde);font-size:18px;cursor:pointer;flex-shrink:0;margin-right:4px;">✓</button>
-        <button onclick="removerMetaConfig('${meta.id}')" style="background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.3);border-radius:8px;width:32px;height:32px;color:#FF4D6A;font-size:14px;cursor:pointer;flex-shrink:0;">✕</button>
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;margin-right:8px;">
+          <span style="font-size:18px;flex-shrink:0;">🎯</span>
+          <select class="campo-input" style="flex:1;font-weight:700;font-size:13px;" onchange="editarMetaField('${meta.id}','marca',this.value)">${marcaOpts}</select>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="salvarConfig();toast('✅ Meta salva!');" title="Salvar" id="btn-meta-salvar-${meta.id}" style="background:rgba(0,214,143,.15);border:1.5px solid rgba(0,214,143,.4);border-radius:9px;width:34px;height:34px;color:var(--verde);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✓</button>
+          <button onclick="removerMetaConfig('${meta.id}')" title="Remover" style="background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.3);border-radius:9px;width:34px;height:34px;color:#FF4D6A;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
       </div>
-      <div class="meta-row">
-        <button class="meta-periodo-btn ${isMes ? 'ativo' : ''}" onclick="alternarPeriodoMeta('${meta.id}','mes')">Mês</button>
-        <button class="meta-periodo-btn ${!isMes ? 'ativo' : ''}" onclick="alternarPeriodoMeta('${meta.id}','colecao')">Por Período</button>
-      </div>
-      <div id="meta-periodo-fields-${meta.id}">
-        ${isMes
-          ? `<input type="month" class="campo-input" style="margin-bottom:8px;" value="${meta.mes || ''}" onchange="editarMetaField('${meta.id}','mes',this.value)">`
-          : `<div style="display:flex;gap:8px;margin-bottom:8px;">
-               <input type="date" class="campo-input" style="flex:1;" value="${meta.dataInicio || ''}" onchange="editarMetaField('${meta.id}','dataInicio',this.value)" placeholder="De">
-               <input type="date" class="campo-input" style="flex:1;" value="${meta.dataFim || ''}" onchange="editarMetaField('${meta.id}','dataFim',this.value)" placeholder="Até">
-             </div>`
-        }
-      </div>
-      <div class="meta-row">
-        <select class="campo-input" style="flex:1;" onchange="editarMetaField('${meta.id}','sku',this.value)">${skuOpts}</select>
-        <input type="number" class="campo-input" style="flex:1;" placeholder="${meta.sku === 'reais' || meta.sku === 'faturamento' ? 'Meta em R$' : 'Meta'}" value="${meta.valor || ''}" onchange="editarMetaField('${meta.id}','valor',Number(this.value))">
-      </div>
-      ${(meta.sku === 'reais' || meta.sku === 'faturamento') ? `<div style="background:rgba(0,214,143,.07);border:1px solid rgba(0,214,143,.22);border-radius:9px;padding:8px 10px;margin-top:2px;margin-bottom:2px;"><span style="font-size:11px;line-height:1.5;color:var(--texto2);">💡 <strong style="color:var(--verde);">Meta em R$:</strong> ao registrar uma venda, preencha o <strong style="color:var(--texto);">Valor do pedido (R$)</strong>. O campo <em>Quantidade</em> não é necessário para este tipo de meta.</span></div>` : ''}
-      <div style="display:flex;align-items:center;gap:8px;margin-top:4px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:8px 10px;">
-        <span style="font-size:12px;color:var(--amarelo);white-space:nowrap;">💰 Comissão</span>
-        <input type="number" min="0" max="100" step="0.1" class="campo-input" style="flex:1;padding:5px 8px;font-size:13px;" placeholder="%" value="${meta.comissao || ''}" onchange="editarMetaField('${meta.id}','comissao',Number(this.value))">
-        <span style="font-size:13px;color:var(--texto2);font-weight:700;">%</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-        <span style="font-size:11px;color:var(--texto2);white-space:nowrap;">Potencial exibir em:</span>
-        <button onclick="alternarExibirEmMeta('${meta.id}','reais')" style="flex:1;padding:5px 8px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid ${(meta.exibirEm || 'reais') === 'reais' ? 'var(--verde)' : 'var(--borda)'};background:${(meta.exibirEm || 'reais') === 'reais' ? 'rgba(0,214,143,.12)' : 'var(--bg3)'};color:${(meta.exibirEm || 'reais') === 'reais' ? 'var(--verde)' : 'var(--texto2)'};">R$</button>
-        <button onclick="alternarExibirEmMeta('${meta.id}','sku')" style="flex:1;padding:5px 8px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:'Syne',sans-serif;border:1px solid ${meta.exibirEm === 'sku' ? 'var(--verde)' : 'var(--borda)'};background:${meta.exibirEm === 'sku' ? 'rgba(0,214,143,.12)' : 'var(--bg3)'};color:${meta.exibirEm === 'sku' ? 'var(--verde)' : 'var(--texto2)'};">${_skuLabel(meta.sku)}</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.25);border-radius:9px;padding:8px 10px;">
-        <span style="font-size:12px;color:#A78BFA;white-space:nowrap;">🔄 Giro ideal</span>
-        <input type="number" min="1" max="365" class="campo-input" style="flex:1;padding:5px 8px;font-size:13px;" placeholder="dias" value="${meta.cicloIdeal || ''}" onchange="editarMetaField('${meta.id}','cicloIdeal',Number(this.value))">
-        <span style="font-size:12px;color:var(--texto2);white-space:nowrap;">dias entre compras</span>
-      </div>
-      <div style="font-size:11px;color:var(--texto3);line-height:1.5;margin-top:5px;padding:0 2px;">
-        💡 O giro ideal controla o <strong style="color:var(--texto2);">retorno automático</strong> quando a marca não é vendida na visita. Se o rep vende outras marcas mas não esta, o app já agenda o retorno por aqui — sem depender do giro padrão do representante.
+      <div class="meta-card-body">
+        <div style="font-size:10px;font-weight:700;color:rgba(249,115,22,.7);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px;">⏱ Período</div>
+        <div class="meta-row">
+          <button class="meta-periodo-btn ${isMes ? 'ativo' : ''}" onclick="alternarPeriodoMeta('${meta.id}','mes')">📅 Mensal</button>
+          <button class="meta-periodo-btn ${!isMes ? 'ativo' : ''}" onclick="alternarPeriodoMeta('${meta.id}','colecao')">📆 Por Período</button>
+        </div>
+        <div id="meta-periodo-fields-${meta.id}">
+          ${isMes
+            ? `<input type="month" class="campo-input" style="margin-bottom:0;" value="${meta.mes || ''}" onchange="editarMetaField('${meta.id}','mes',this.value)">`
+            : `<div style="display:flex;gap:8px;">
+                 <input type="date" class="campo-input" style="flex:1;" value="${meta.dataInicio || ''}" onchange="editarMetaField('${meta.id}','dataInicio',this.value)" placeholder="De">
+                 <input type="date" class="campo-input" style="flex:1;" value="${meta.dataFim || ''}" onchange="editarMetaField('${meta.id}','dataFim',this.value)" placeholder="Até">
+               </div>`
+          }
+        </div>
+        <div class="meta-divider"></div>
+        <div style="font-size:10px;font-weight:700;color:rgba(249,115,22,.7);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px;">🎯 Alvo</div>
+        <div class="meta-row">
+          <select class="campo-input" style="flex:1;" onchange="editarMetaField('${meta.id}','sku',this.value)">${skuOpts}</select>
+          <input type="number" class="campo-input" style="flex:1;" placeholder="${meta.sku === 'reais' || meta.sku === 'faturamento' ? 'Meta em R$' : 'Quantidade'}" value="${meta.valor || ''}" onchange="editarMetaField('${meta.id}','valor',Number(this.value))">
+        </div>
+        ${(meta.sku === 'reais' || meta.sku === 'faturamento') ? `<div style="background:rgba(0,214,143,.07);border:1px solid rgba(0,214,143,.2);border-radius:9px;padding:8px 10px;margin-bottom:8px;"><span style="font-size:11px;line-height:1.5;color:var(--texto2);">💡 <strong style="color:var(--verde);">Meta em R$:</strong> preencha o valor do pedido ao registrar a venda. Quantidade não é necessária.</span></div>` : ''}
+        <div class="meta-divider"></div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:9px 10px;">
+            <div style="font-size:10px;color:var(--amarelo);font-weight:700;margin-bottom:5px;">💰 COMISSÃO</div>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <input type="number" min="0" max="100" step="0.1" class="campo-input" style="flex:1;padding:4px 8px;font-size:13px;border:none;background:transparent;" placeholder="0" value="${meta.comissao || ''}" onchange="editarMetaField('${meta.id}','comissao',Number(this.value))">
+              <span style="font-size:13px;color:var(--texto2);font-weight:700;">%</span>
+            </div>
+          </div>
+          <div style="flex:1;background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:9px;padding:9px 10px;">
+            <div style="font-size:10px;color:#A78BFA;font-weight:700;margin-bottom:5px;">🔄 GIRO IDEAL</div>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <input type="number" min="1" max="365" class="campo-input" style="flex:1;padding:4px 8px;font-size:13px;border:none;background:transparent;" placeholder="30" value="${meta.cicloIdeal || ''}" onchange="editarMetaField('${meta.id}','cicloIdeal',Number(this.value))">
+              <span style="font-size:11px;color:var(--texto3);">dias</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+          <span style="font-size:10px;color:var(--texto3);white-space:nowrap;">Potencial em:</span>
+          <button onclick="alternarExibirEmMeta('${meta.id}','reais')" style="flex:1;padding:5px 8px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid ${(meta.exibirEm || 'reais') === 'reais' ? 'var(--verde)' : 'var(--borda)'};background:${(meta.exibirEm || 'reais') === 'reais' ? 'rgba(0,214,143,.12)' : 'var(--bg3)'};color:${(meta.exibirEm || 'reais') === 'reais' ? 'var(--verde)' : 'var(--texto2)'};">R$</button>
+          <button onclick="alternarExibirEmMeta('${meta.id}','sku')" style="flex:1;padding:5px 8px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid ${meta.exibirEm === 'sku' ? 'var(--verde)' : 'var(--borda)'};background:${meta.exibirEm === 'sku' ? 'rgba(0,214,143,.12)' : 'var(--bg3)'};color:${meta.exibirEm === 'sku' ? 'var(--verde)' : 'var(--texto2)'};">${_skuLabel(meta.sku)}</button>
+        </div>
       </div>
     </div>`;
   }).join('');

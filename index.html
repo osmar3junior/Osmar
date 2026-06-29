@@ -492,9 +492,12 @@ if ('serviceWorker' in navigator) {
   .prospect-data-btn:active { border-color:#FFC043;color:#FFC043;background:rgba(255,192,67,.1); }
   .desp-key { background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:16px 8px;font-size:22px;font-weight:600;color:var(--texto);font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .1s,transform .08s;-webkit-tap-highlight-color:transparent; }
   .desp-key:active { background:rgba(255,255,255,.1);transform:scale(.93); }
-  .canal-pedido-btn { flex:1;border-radius:9px;border:1.5px solid var(--borda);background:var(--bg2);color:var(--texto3);font-size:11px;font-weight:700;padding:9px 4px;cursor:pointer;text-align:center;font-family:'Syne',sans-serif;line-height:1.4;transition:border-color .15s,background .15s,color .15s; }
+  .canal-pedido-btn { flex:1;border-radius:9px;border:1.5px solid var(--borda);background:var(--bg2);color:var(--texto3);font-size:11px;font-weight:700;padding:9px 4px;cursor:pointer;text-align:center;font-family:'DM Sans',sans-serif;line-height:1.4;transition:border-color .15s,background .15s,color .15s; }
   .canal-pedido-btn.sel-visit { border-color:#D97706;background:rgba(217,119,6,.12);color:#FFC043; }
   .canal-pedido-btn.sel-wpp   { border-color:#22C55E;background:rgba(34,197,94,.09);color:#4ade80; }
+  @keyframes pulsaCanal { 0%,100%{box-shadow:none;border-color:var(--borda);} 50%{box-shadow:0 0 0 3px rgba(167,139,250,.3);border-color:#A78BFA;color:#A78BFA;} }
+  .pulsa-canal-a { animation:pulsaCanal 1.4s ease-in-out 5; }
+  .pulsa-canal-b { animation:pulsaCanal 1.4s ease-in-out 5 0.7s; }
   .bloco-marca-pedido { border-radius:14px;border:1.5px solid var(--borda);padding:13px;transition:border-color .2s; }
   .bloco-marca-pedido.ok-visit { border-color:rgba(217,119,6,.55); }
   .bloco-marca-pedido.ok-wpp   { border-color:rgba(34,197,94,.45); }
@@ -1030,7 +1033,7 @@ if ('serviceWorker' in navigator) {
     <div class="detalhe-nome" id="det-nome">-</div>
     <div class="detalhe-loja" id="det-loja">-</div>
     <div class="detalhe-acoes">
-      <button class="btn-acao btn-visita" onclick="abrirModalContato('visita')">📍 Resultado da Visita/Contato</button>
+      <button class="btn-acao btn-visita" onclick="abrirModalContato('visita')">📍 Resultado da visita ou contato</button>
       <button class="btn-acao btn-zap" onclick="abrirWhatsAppOuMenu()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         WhatsApp
@@ -1218,7 +1221,7 @@ if ('serviceWorker' in navigator) {
             WhatsApp
           </button>
           <button class="bsb bsb-visita" onclick="registrarVisitaMapa()">
-            📍 Resultado da Visita/Contato
+            📍 Resultado da visita ou contato
           </button>
           <button id="bs-btn-nav" class="bsb bsb-nav" onclick="navegarParaCliente()">
             🧭 Rota
@@ -1388,7 +1391,7 @@ if ('serviceWorker' in navigator) {
             <div class="esquecidos-sub">Sem nenhum contato registrado</div>
           </div>
           <div class="esquecidos-input-wrap">
-            <input type="number" class="config-dias-input" id="cfg-dias-esquecidos" min="7" max="365" value="60">
+            <input type="number" class="config-dias-input" id="cfg-dias-esquecidos" min="7" max="365" value="50">
             <span class="config-dias-unidade">dias</span>
           </div>
         </div>
@@ -1667,35 +1670,31 @@ if ('serviceWorker' in navigator) {
         <div class="forma-tag"><span class="forma-num">1</span> 🔍 Pelo CNPJ — preenche tudo sozinho</div>
         <div style="display:flex;gap:8px;align-items:flex-start;">
           <input type="text" inputmode="numeric" class="campo-input" id="nc-cnpj" placeholder="00.000.000/0000-00" style="flex:1;" oninput="mascaraCnpj(this)">
-          <button onclick="buscarCnpjNc()" id="btn-cnpj-nc" style="background:rgba(0,214,143,.12);border:1px solid rgba(0,214,143,.35);border-radius:10px;padding:11px 12px;color:var(--verde);font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;">🔍 Buscar</button>
+          <button onclick="buscarCnpjNc()" id="btn-cnpj-nc" style="background:rgba(0,214,143,.12);border:1px solid rgba(0,214,143,.35);border-radius:10px;padding:11px 12px;color:var(--verde);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;">🔍 Buscar</button>
         </div>
         <div id="nc-cnpj-status" style="display:none;margin-top:8px;font-size:12px;"></div>
+        <div id="nc-cnpj-aviso-sede" style="display:none;margin-top:8px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:9px;padding:9px 11px;font-size:11px;color:#FBBF24;line-height:1.5;">⚠️ <strong>Atenção:</strong> este é o endereço da sede do CNPJ. Se o cliente te atende em outro local, edite o endereço na opção 2 abaixo ou use o 📡 GPS para capturar onde você está agora.</div>
       </div>
 
-      <!-- 2ª FORMA: GPS -->
+      <!-- 2ª FORMA: DIGITAR ENDEREÇO -->
       <div class="forma-card forma-card-2">
-        <div class="forma-tag"><span class="forma-num">2</span> 📡 Pela sua localização atual</div>
-        <div id="nc-gps-chip" onclick="aplicarLocalizacaoNc()" style="display:none;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#38BDF8;cursor:pointer;">
-          📍 Localização detectada — <span class="texto-pulsa">toque aqui para usar</span><br><span id="nc-gps-chip-texto" style="color:var(--texto2);font-weight:400;"></span>
-        </div>
-        <div id="nc-gps-status" style="display:none;font-size:12px;color:var(--texto2);">📡 Detectando sua localização...</div>
-      </div>
-
-      <!-- 3ª FORMA: MAPA -->
-      <div class="forma-card forma-card-3">
-        <div class="forma-tag"><span class="forma-num">3</span> 🗺️ Marcando no mapa</div>
-        <button type="button" onclick="abrirMapaParaNovoCliente()" style="width:100%;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 12px;color:#A78BFA;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">🗺️ Marcar local no mapa</button>
-      </div>
-
-      <!-- 4ª FORMA: DIGITAR ENDEREÇO -->
-      <div class="forma-card forma-card-4">
-        <div class="forma-tag"><span class="forma-num">4</span> ⌨️ Digitando o endereço</div>
+        <div class="forma-tag"><span class="forma-num">2</span> ⌨️ Digitando o endereço</div>
         <div style="display:flex;gap:8px;align-items:flex-start;">
           <input type="text" class="campo-input" id="nc-endereco" placeholder="Ex: Rua das Flores, 123" style="flex:1;" oninput="limparValidacaoEnderecoNc()">
-          <button onclick="validarEnderecoNc()" id="btn-validar-nc" style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:11px 12px;color:#FBBF24;font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;">🔍 Validar</button>
+          <button onclick="validarEnderecoNc()" id="btn-validar-nc" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:11px 12px;color:#38BDF8;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;">🔍 Validar</button>
         </div>
         <div id="nc-end-status" style="display:none;margin-top:8px;font-size:12px;"></div>
         <div id="nc-end-sugestoes" style="display:none;margin-top:8px;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;overflow:hidden;"></div>
+      </div>
+
+      <!-- 3ª FORMA: GPS RÁPIDO -->
+      <div class="forma-card forma-card-3">
+        <div class="forma-tag"><span class="forma-num">3</span> 📡 Cadastro rápido via GPS</div>
+        <div style="font-size:11px;color:var(--texto2);margin-bottom:8px;line-height:1.5;">Use sua localização atual para gerar a rota deste cliente. Ideal quando você está na porta da loja. Preencha só o nome da loja e do comprador abaixo — o mapa já fica pronto.</div>
+        <div id="nc-gps-chip" onclick="aplicarLocalizacaoNc()" style="display:none;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#A78BFA;cursor:pointer;">
+          📍 Localização detectada — <span class="texto-pulsa">toque aqui para usar</span><br><span id="nc-gps-chip-texto" style="color:var(--texto2);font-weight:400;"></span>
+        </div>
+        <div id="nc-gps-status" style="display:none;font-size:12px;color:var(--texto2);">📡 Detectando sua localização...</div>
       </div>
 
       <input type="hidden" id="nc-lat">
@@ -1721,7 +1720,6 @@ if ('serviceWorker' in navigator) {
     </div>
     <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="nc-cidade" placeholder="CIDADE" style="text-transform:uppercase;"></div>
     <div class="campo-grupo"><label class="campo-label">WhatsApp</label><input type="tel" class="campo-input" id="nc-telefone" placeholder="(00) 00000-0000"></div>
-    <div class="campo-grupo"><label class="campo-label">E-mail do cliente</label><input type="email" class="campo-input" id="nc-email" placeholder="cliente@email.com"></div>
     <div class="campo-grupo"><label class="campo-label">Marcas representadas <span style="color:var(--texto3);font-weight:400;">(até 5)</span></label><div class="sku-grid" id="nc-marcas-grid"></div></div>
 
     <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;margin-bottom:14px;">
@@ -1786,7 +1784,6 @@ if ('serviceWorker' in navigator) {
     </div>
     <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="ec-cidade" placeholder="CIDADE" style="text-transform:uppercase;"></div>
     <div class="campo-grupo"><label class="campo-label">WhatsApp</label><input type="tel" class="campo-input" id="ec-telefone" placeholder="(00) 00000-0000"></div>
-    <div class="campo-grupo"><label class="campo-label">E-mail do cliente</label><input type="email" class="campo-input" id="ec-email" placeholder="cliente@email.com"></div>
     <div class="campo-grupo"><label class="campo-label">Marcas representadas <span style="color:var(--texto3);font-weight:400;">(até 5)</span></label><div class="sku-grid" id="ec-marcas-grid"></div></div>
 
     <!-- ENDEREÇO COM VALIDAÇÃO -->
@@ -4239,7 +4236,7 @@ function salvarClientes(c) {
 function getConfig() {
   const email = usuarioAtual?.email || '';
   if (_cacheConfig && _cacheConfigEmail === email) return _cacheConfig;
-  const def = { estoque_alto:21, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguardando_proposta:7, aguarda_colecao:60, fechou_pedido:45, comprou_concorrente:30, inadimplente:15, fechado:60, nao_vai_comprar:90, dias_esquecidos:60, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''] };
+  const def = { estoque_alto:30, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguardando_proposta:3, aguarda_colecao:60, fechou_pedido:30, comprou_concorrente:30, inadimplente:45, fechado:60, nao_vai_comprar:90, dias_esquecidos:50, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''] };
   _cacheConfig = Object.assign(def, getData('cv_config_' + email) || {});
   _cacheConfigEmail = email;
   return _cacheConfig;
@@ -7014,14 +7011,12 @@ async function buscarCnpjNc() {
     if (endEl && endereco) endEl.value = endereco;
     const cidEl = document.getElementById('nc-cidade');
     if (cidEl) cidEl.value = d.municipio || '';
-    const telEl = document.getElementById('nc-telefone');
-    if (telEl && d.ddd_telefone_1) {
-      const t = d.ddd_telefone_1.replace(/\D/g, '');
-      telEl.value = t.length >= 10 ? `(${t.slice(0,2)}) ${t.slice(2, t.length-4)}-${t.slice(-4)}` : d.ddd_telefone_1;
-    }
     const seg = sugerirSegmentoPorCnae(d.cnae_fiscal_descricao);
     if (seg) document.getElementById('nc-segmento').value = seg;
-    status.innerHTML = `<span style="color:var(--verde);">✅ ${d.razao_social || 'Empresa encontrada'} — confira os campos preenchidos.</span>`;
+    status.innerHTML = `<span style="color:var(--verde);">✅ ${d.razao_social || 'Empresa encontrada'} — confira e edite os campos antes de salvar.</span>`;
+    // Avisa que endereço pode ser da sede, não do local de atendimento
+    const avisoSede = document.getElementById('nc-cnpj-aviso-sede');
+    if (avisoSede && endereco) avisoSede.style.display = 'block';
     _piscarCamposVazios();
     if (endereco) geocodificarEnderecoCnpj(d, endereco);
   } catch (e) {
@@ -7251,7 +7246,7 @@ function detectarLocalizacaoNc() {
 function _piscarCamposVazios() {
   // Campos obrigatórios/recomendados que piscam se vazios após escolher localização
   const campos7 = ['nc-nome','nc-loja','nc-cidade','nc-telefone'];
-  const campos3 = ['nc-email'];
+  const campos3 = [];
   const piscar = (ids, cls) => {
     ids.forEach(id => {
       const el = document.getElementById(id);
@@ -7672,7 +7667,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
   _ptag.innerHTML = cliente.tipo === 'prospect' ? `<span class="prospect-tag" style="margin-bottom:6px;display:inline-flex;">🔭 EM PROSPECÇÃO</span>` : '';
   // Botão de visita: muda texto para prospectos
   const btnVisita = document.querySelector('.btn-acao.btn-visita');
-  if (btnVisita) btnVisita.textContent = cliente.tipo === 'prospect' ? '📍 Resultado da Visita/Contato' : '📍 Resultado da Visita/Contato';
+  if (btnVisita) btnVisita.textContent = cliente.tipo === 'prospect' ? '📍 Resultado da visita ou contato' : '📍 Resultado da visita ou contato';
   // Endereço do check-in
   let endEl = document.getElementById('det-endereco-tag');
   if (!endEl) {
@@ -8290,7 +8285,7 @@ function abrirModalContato(tipo) {
     unidadePadrao = unidadesSeg[cliente.segmento];
   }
   renderizarCamposPedido(cliente, unidadePadrao);
-  document.getElementById('modal-contato-titulo').textContent = tipo === 'visita' ? '📍 Resultado da Visita/Contato' : '💬 Registrar contato WhatsApp';
+  document.getElementById('modal-contato-titulo').textContent = tipo === 'visita' ? '📍 Resultado da visita ou contato' : '💬 Registrar contato WhatsApp';
   renderizarListaMotivos();
   // Calcula e aplica altura real da lista após render
   document.getElementById('modal-contato').classList.add('aberto');
@@ -8573,7 +8568,7 @@ function confirmarExcluirCliente() {
 // ===== NOVO CLIENTE =====
 function abrirModalNovoCliente() {
   setNcTipo('cliente');
-  ['nc-nome','nc-loja','nc-cidade','nc-telefone','nc-email','nc-endereco','nc-lat','nc-lng','nc-cnpj'].forEach(id => {
+  ['nc-nome','nc-loja','nc-cidade','nc-telefone','nc-endereco','nc-lat','nc-lng','nc-cnpj'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const cnpjSt = document.getElementById('nc-cnpj-status');
@@ -8634,7 +8629,6 @@ function salvarNovoCliente() {
     segmento: document.getElementById('nc-segmento').value || 'geral',
     cidade: document.getElementById('nc-cidade').value.trim().toUpperCase(),
     telefone: document.getElementById('nc-telefone').value.trim(),
-    emailCliente: document.getElementById('nc-email').value.trim(),
     marcas: getMarcasSelecionadas('nc-marcas-grid'),
     tipo: document.getElementById('nc-tipo')?.value || 'cliente',
     historico: [], criadoEm: new Date().toISOString()
@@ -8762,7 +8756,7 @@ function salvarConfig() {
     const el = document.getElementById('cfg-' + k);
     if (el) cfg[k] = parseInt(el.value) || 30;
   });
-  cfg.dias_esquecidos = parseInt(document.getElementById('cfg-dias-esquecidos').value) || 60;
+  cfg.dias_esquecidos = parseInt(document.getElementById('cfg-dias-esquecidos').value) || 50;
   // Salva prazo dos motivos custom
   [0, 1, 2].forEach(i => {
     const el = document.getElementById('cfg-custom-' + i);
@@ -11444,8 +11438,8 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
         <div style="display:flex;align-items:center;gap:4px;">${numLabel}<span id="check-marca-${i}" style="opacity:0;font-size:12px;color:#4ade80;transition:opacity .2s;">✓</span></div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <button type="button" class="canal-pedido-btn" id="canal-visit-${i}" onclick="setPedidoCanal(${i},'visita')">📍 Visita<br>Presencial</button>
-        <button type="button" class="canal-pedido-btn" id="canal-wpp-${i}" onclick="setPedidoCanal(${i},'wpp')">💬 WhatsApp<br>/ e-mail</button>
+        <button type="button" class="canal-pedido-btn pulsa-canal-a" id="canal-visit-${i}" onclick="setPedidoCanal(${i},'visita')">📍 Visita<br>Presencial</button>
+        <button type="button" class="canal-pedido-btn pulsa-canal-b" id="canal-wpp-${i}" onclick="setPedidoCanal(${i},'wpp')">💬 Pedido<br>Não Presencial</button>
       </div>
       <div style="display:grid;grid-template-columns:${somenteValor ? '1fr' : '1fr 1fr'};gap:10px;margin-bottom:10px;">
         <div>
@@ -11469,6 +11463,7 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
         <select class="campo-input" id="pedido-unidade-${i}" ${selectAttr}></select>
         ${temMeta ? `<div style="font-size:10px;color:var(--texto3);margin-top:4px;">🔒 Definida pela meta — não editável</div>` : ''}
       </div>
+      <button type="button" onclick="salvarPedidoDireto()" style="width:100%;margin-top:12px;background:rgba(0,200,150,.1);border:1.5px solid rgba(0,200,150,.35);border-radius:10px;padding:11px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">💾 Salvar venda</button>
     </div>`;
   }).join('');
   marcas.forEach((marca, i) => {

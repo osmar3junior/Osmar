@@ -1541,10 +1541,31 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="config-secao">
-      <div class="config-secao-titulo">🔔 Notificações diárias</div>
-      <div class="config-secao-sub">Receba um resumo toda manhã com sua rota, prospectos e meta — mesmo com o app fechado.</div>
-      <div id="notif-status-box" style="margin-top:10px;"></div>
-      <button onclick="ativarNotificacoes()" id="btn-ativar-notif" style="margin-top:10px;width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.4);border-radius:11px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔔 Ativar notificações</button>
+      <div class="config-secao-titulo">🔔 Resumo diário</div>
+      <div class="config-secao-sub">Configure o horário e receba seu resumo todo dia — clientes de hoje, prospectos e status das metas.</div>
+
+      <!-- Horário -->
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--borda);border-radius:11px;padding:12px 14px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--texto);">⏰ Horário do resumo</div>
+          <div style="font-size:11px;color:var(--texto3);margin-top:2px;">O app avisa você neste horário todo dia</div>
+        </div>
+        <input type="time" id="cfg-horario-notif" value="07:30" style="background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:7px 10px;color:var(--texto);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;outline:none;">
+      </div>
+
+      <!-- Toggle WhatsApp -->
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--borda);border-radius:11px;padding:12px 14px;margin-bottom:12px;">
+        <div style="flex:1;min-width:0;margin-right:12px;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);">💬 Enviar resumo pro WhatsApp</div>
+          <div style="font-size:11px;color:var(--texto3);margin-top:2px;line-height:1.4;">No horário configurado, abre o WhatsApp com o resumo do dia pronto para enviar para você mesmo</div>
+        </div>
+        <button id="cfg-notif-wpp-toggle" onclick="toggleNotifWpp()" style="width:48px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;background:#333;flex-shrink:0;">
+          <span id="cfg-notif-wpp-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#888;transition:left .2s,background .2s;"></span>
+        </button>
+      </div>
+
+      <div id="notif-status-box" style="margin-bottom:10px;"></div>
+      <button onclick="ativarNotificacoes()" id="btn-ativar-notif" style="width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.4);border-radius:11px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔔 Ativar lembretes</button>
     </div>
 
     <button class="btn-primario" onclick="salvarConfig()">Salvar configurações</button>
@@ -2640,6 +2661,25 @@ if ('serviceWorker' in navigator) {
 
     <input type="hidden" id="nova-desp-valor">
     <input type="hidden" id="nova-desp-cat">
+  </div>
+</div>
+
+<!-- MODAL RESUMO MATINAL -->
+<div class="modal-overlay" id="modal-resumo-matinal" style="align-items:center;padding:20px;">
+  <div class="modal-box" style="border-radius:20px;padding:24px 20px 20px;max-width:380px;width:100%;">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:36px;margin-bottom:6px;">☀️</div>
+      <div style="font-size:18px;font-weight:800;color:var(--texto);font-family:'DM Sans',sans-serif;" id="modal-matinal-nome">Bom dia!</div>
+      <div style="font-size:11px;color:var(--texto3);margin-top:2px;" id="modal-matinal-data"></div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:14px 16px;margin-bottom:16px;" id="modal-matinal-corpo"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button id="btn-matinal-wpp" onclick="_abrirWppResumoDiario();fecharModal('modal-resumo-matinal')" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;border:none;border-radius:12px;padding:13px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        💬 Enviar para meu WhatsApp
+      </button>
+      <button onclick="fecharModal('modal-resumo-matinal');irPara('dashboard')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Ver no app →</button>
+    </div>
   </div>
 </div>
 
@@ -4291,7 +4331,7 @@ function salvarClientes(c) {
 function getConfig() {
   const email = usuarioAtual?.email || '';
   if (_cacheConfig && _cacheConfigEmail === email) return _cacheConfig;
-  const def = { estoque_alto:30, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguardando_proposta:3, aguarda_colecao:60, fechou_pedido:30, comprou_concorrente:30, inadimplente:45, fechado:60, nao_vai_comprar:90, dias_esquecidos:50, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''] };
+  const def = { estoque_alto:30, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguardando_proposta:3, aguarda_colecao:60, fechou_pedido:30, comprou_concorrente:30, inadimplente:45, fechado:60, nao_vai_comprar:90, dias_esquecidos:50, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''], horarioNotif:'07:30', notifWpp:true };
   _cacheConfig = Object.assign(def, getData('cv_config_' + email) || {});
   _cacheConfigEmail = email;
   return _cacheConfig;
@@ -4347,7 +4387,7 @@ async function fazerLogin() {
     irPara('dashboard');
     _sbAuth(email, senha);
     setTimeout(_checarOnboarding, 2500); // espera o pull da nuvem antes de decidir mostrar o assistente
-    setTimeout(() => { if (Notification.permission === 'granted') { _salvarDadosNotifSW(); _checarGatilhoMetaAtrasada(); } }, 3000);
+    setTimeout(() => { if (Notification.permission === 'granted') { _salvarDadosNotifSW(); _checarGatilhoMetaAtrasada(); _agendarNotifDiaria(); } }, 3000);
   } else {
     // Cache foi limpo — tenta recuperar pelo Supabase
     toast('🔄 Recuperando dados da nuvem...');
@@ -7598,9 +7638,10 @@ function abrirFiltrado(tipo) {
         const d = pot[marca] || { avg:0, max:0, count:0, avgQtd:0, maxQtd:0, countQtd:0 };
         let mM = mC[marca];
         const cfgM = (_cfg.metas||[]).find(m => m.marca === marca);
-        const exEm = cfgM?.exibirEm || 'reais';
-        const skuA = cfgM ? _skuAbrev(cfgM.sku) : '';
-        const pv = exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
+        const _skuM = cfgM?.sku || 'reais';
+        const _usaQ = _skuM !== 'reais' && _skuM !== 'faturamento';
+        const skuA = _usaQ ? _skuAbrev(_skuM) : '';
+        const pv = _usaQ ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
         // Fallback para vencidos sem cache: calcula meta da marca direto
         if (!mM && ehHoje && cfgM && cfgM.valor > 0) {
           const _diasR = _diasUteisRestantes(new Date(), _periodoMeta(cfgM).fim);
@@ -7760,9 +7801,10 @@ function renderizarClientes(filtro = '') {
                 ? `<span class="meta-hoje-pisca" style="background:rgba(249,115,22,.22);color:#F97316;border-radius:4px;padding:2px 6px;white-space:nowrap;font-weight:700;">🎯 ${fmtK(_mCliente.meta)}${skuSigla ? ' '+skuSigla : ''}</span>`
                 : '';
               const _cm = (getConfig().metas || []).find(m => m.marca === marca);
-              const _exEm = _cm?.exibirEm || 'reais';
-              const _pv = _exEm === 'sku' ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
-              const _un = _exEm === 'sku' ? _skuAbrev(_cm.sku) : '';
+              const _skuCm = _cm?.sku || 'reais';
+              const _usaQCm = _skuCm !== 'reais' && _skuCm !== 'faturamento';
+              const _pv = _usaQCm ? { avg: d.avgQtd, max: d.maxQtd, n: d.countQtd } : { avg: d.avg, max: d.max, n: d.count };
+              const _un = _usaQCm ? _skuAbrev(_skuCm) : '';
               const potCompact = _pv.n > 0
                 ? `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;"><span style="color:rgba(255,255,255,.4);">méd</span><strong style="color:rgba(255,255,255,.8);">${fmtK(_pv.avg)}${_un ? ' '+_un : ''}</strong><span style="color:rgba(255,255,255,.2);">·</span><span style="color:rgba(255,255,255,.4);">máx</span><strong style="color:#00D68F;">${fmtK(_pv.max)}${_un ? ' '+_un : ''}</strong></span>`
                 : '';
@@ -8166,11 +8208,12 @@ function _atualizarPotBoxDetalhe(cliente) {
     }
     // Se não é hoje/atrasado → sem badge, apenas méd/máx
 
-    const _cfgMeta = (getConfig().metas || []).find(m => m.marca === marca);
-    const _exibirEm = _cfgMeta?.exibirEm || 'reais';
-    const _skuNome  = _cfgMeta ? _skuLabel(_cfgMeta.sku) : '';
-    const _potVal   = _exibirEm === 'sku' ? { avg:d.avgQtd, max:d.maxQtd, n:d.countQtd } : { avg:d.avg, max:d.max, n:d.count };
-    const _unidade  = _exibirEm === 'sku' ? ` ${_skuNome}` : '';
+    const _cfgMeta  = (getConfig().metas || []).find(m => m.marca === marca);
+    const _skuMeta  = _cfgMeta?.sku || 'reais';
+    const _usaQtd   = _skuMeta !== 'reais' && _skuMeta !== 'faturamento';
+    const _skuNome  = _usaQtd ? _skuLabel(_skuMeta) : '';
+    const _potVal   = _usaQtd ? { avg:d.avgQtd, max:d.maxQtd, n:d.countQtd } : { avg:d.avg, max:d.max, n:d.count };
+    const _unidade  = _usaQtd ? ` ${_skuNome}` : '';
     const potHtml   = _potVal.n > 0
       ? `<span style="font-size:11px;color:var(--texto2);">méd <strong style="color:var(--texto);">${fmtK(_potVal.avg)}${_unidade}</strong></span><span style="font-size:11px;color:var(--texto3);margin:0 4px;">·</span><span style="font-size:11px;color:var(--texto2);">máx <strong style="color:var(--verde);">${fmtK(_potVal.max)}${_unidade}</strong></span>`
       : `<span style="font-size:11px;color:var(--texto3);font-style:italic;">sem histórico</span>`;
@@ -8188,10 +8231,10 @@ function _atualizarPotBoxDetalhe(cliente) {
 
   const headerLabel = ehHojeOuAtrasado
     ? `<span class="meta-hoje-pisca" style="font-size:10px;font-weight:700;color:${atrasado ? '#F59E0B' : '#F97316'};text-transform:uppercase;letter-spacing:.5px;">${atrasado ? '⚠️ Visita atrasada' : '🎯 Meta de venda hoje'}</span>`
-    : `<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Histórico/Potencial</span>`;
+    : `<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Histórico de compra</span>`;
 
   potBox.style.display = 'block';
-  potBox.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">${headerLabel}<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Histórico/Potencial</span></div>${linhas.join('')}`;
+  potBox.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">${headerLabel}<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Histórico de compra</span></div>${linhas.join('')}`;
 }
 
 function excluirHistorico(idx) {
@@ -8945,8 +8988,11 @@ function carregarConfig() {
     const el = document.getElementById('cfg-' + k);
     if (el) el.value = cfg[k] || 30;
   });
-  document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 60;
+  document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 50;
   document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
+  const horEl = document.getElementById('cfg-horario-notif');
+  if (horEl) horEl.value = cfg.horarioNotif || '07:30';
+  _renderNotifWppToggle(cfg.notifWpp !== false);
   _renderGatilhoConfig(cfg);
   _renderOnbToggle(cfg.onboardingFeito);
   document.getElementById('cfg-wpp-rep').value = cfg.wppRep ? cfg.wppRep.replace(/^55/, '') : '';
@@ -8973,36 +9019,65 @@ function _renderSkuCustom() {
   const cont = document.getElementById('sku-custom-container');
   if (!cont) return;
   const cfg = getConfig();
-  const vals = [...(cfg.skusCustom || [])];
-  while (vals.length < 6) vals.push('');
-  const preenchidos = vals.filter(v => v.trim()).length;
-  const mostrar = Math.min(preenchidos + 1, 6);
-  let html = '';
-  for (let i = 0; i < mostrar; i++) {
-    const v = vals[i] || '';
-    html += `<input type="text" class="sku-custom-input" id="sku-custom-${i}" maxlength="20"
-      placeholder="${i === 0 ? 'Ex: Toneladas, Rolos, Sacas...' : 'Unidade personalizada ' + (i+1)}"
-      value="${v.replace(/"/g,'&quot;')}" oninput="_onSkuCustomInput(${i})">`;
+  const salvos = (cfg.skusCustom || []).filter(v => v.trim());
+  const podeMais = salvos.length < 6;
+
+  // Chips dos SKUs já salvos
+  let chipsHtml = '';
+  if (salvos.length) {
+    chipsHtml = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">`;
+    salvos.forEach(v => {
+      chipsHtml += `<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(0,214,143,.12);border:1.5px solid rgba(0,214,143,.35);border-radius:20px;padding:7px 8px 7px 13px;font-size:13px;color:var(--verde);font-weight:700;font-family:'DM Sans',sans-serif;">
+        ${v}
+        <button type="button" onclick="excluirSkuCustom('${v.replace(/'/g,"\\'")}')" title="Remover" style="background:rgba(0,214,143,.15);border:none;border-radius:50%;width:18px;height:18px;color:var(--verde);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;">✕</button>
+      </div>`;
+    });
+    chipsHtml += `</div>`;
   }
-  if (mostrar < 6) html += `<div style="font-size:10px;color:var(--texto3);margin-top:5px;padding:0 2px;">preencha para adicionar mais · máx. 6</div>`;
-  cont.innerHTML = html;
+
+  // Campo para adicionar novo (só se ainda couber)
+  let inputHtml = '';
+  if (podeMais) {
+    inputHtml = `<div style="display:flex;gap:6px;align-items:center;">
+      <input type="text" class="sku-custom-input" id="sku-custom-new" maxlength="20"
+        placeholder="${salvos.length === 0 ? 'Ex: Toneladas, Rolos, Sacas...' : 'Mais uma unidade...'}"
+        style="flex:1;" onkeydown="if(event.key==='Enter'){salvarSkuCustomNovo();}">
+      <button type="button" onclick="salvarSkuCustomNovo()" title="Salvar" style="flex-shrink:0;width:34px;height:34px;border-radius:9px;border:1.5px solid rgba(0,214,143,.4);background:rgba(0,214,143,.1);color:var(--verde);font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .15s;">✓</button>
+    </div>
+    <div style="font-size:10px;color:var(--texto3);margin-top:5px;">${salvos.length}/6 unidades personalizadas</div>`;
+  } else {
+    inputHtml = `<div style="font-size:10px;color:var(--texto3);">Limite de 6 atingido — remova uma para adicionar outra</div>`;
+  }
+
+  cont.innerHTML = chipsHtml + inputHtml;
 }
 
-function _onSkuCustomInput(idx) {
-  const vals = Array.from({length:6}, (_, i) => (document.getElementById('sku-custom-'+i)?.value||'').trim());
+function salvarSkuCustomNovo() {
+  const input = document.getElementById('sku-custom-new');
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) { toast('Digite o nome da unidade antes de salvar'); return; }
   const cfg = getConfig();
-  cfg.skusCustom = vals;
+  const salvos = (cfg.skusCustom || []).filter(v => v.trim());
+  if (salvos.includes(val)) { toast('Esta unidade já está cadastrada'); return; }
+  if (salvos.length >= 6) { toast('Limite de 6 unidades personalizadas atingido'); return; }
+  salvos.push(val);
+  cfg.skusCustom = salvos;
   salvarConfigData(cfg);
-  const preenchidos = vals.filter(v=>v).length;
-  const visiveis = document.querySelectorAll('#sku-custom-container input').length;
-  const deveVer = Math.min(preenchidos + 1, 6);
-  if (deveVer !== visiveis) {
-    _renderSkuCustom();
-    setTimeout(() => {
-      const el = document.getElementById('sku-custom-'+idx);
-      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
-    }, 30);
-  }
+  _renderSkuCustom();
+  renderizarSkuGrid(cfg);
+  toast('✅ ' + val + ' adicionada!');
+}
+
+function excluirSkuCustom(val) {
+  const cfg = getConfig();
+  cfg.skusCustom = (cfg.skusCustom || []).filter(v => v.trim() !== val.trim());
+  // Remove dos SKUs ativos se estava ativo
+  cfg.skus = (cfg.skus || []).filter(s => s !== val.trim());
+  salvarConfigData(cfg);
+  _renderSkuCustom();
+  renderizarSkuGrid(cfg);
+  toast('Unidade "' + val + '" removida');
 }
 
 function _renderMarcasGrid() {
@@ -9021,8 +9096,23 @@ function _renderMarcasGrid() {
         onkeydown="if(event.key==='Enter'){salvarMarcaUnica(${i});}"
         oninput="document.getElementById('btn-marca-check-${i}').style.opacity=this.value.trim()?'1':'.35'">
       <button id="btn-marca-check-${i}" type="button" onclick="salvarMarcaUnica(${i})" title="Salvar" style="flex-shrink:0;width:34px;height:34px;border-radius:9px;border:1.5px solid rgba(0,214,143,.4);background:rgba(0,214,143,.1);color:var(--verde);font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${v.trim()?'1':'.35'};transition:opacity .15s,transform .1s;" onmousedown="this.style.transform='scale(.92)'" onmouseup="this.style.transform=''">✓</button>
+      <button type="button" onclick="excluirMarca(${i})" title="Remover marca" style="flex-shrink:0;width:34px;height:34px;border-radius:9px;border:1.5px solid rgba(255,77,106,.35);background:rgba(255,77,106,.08);color:#FF4D6A;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${v.trim()?'1':'.2'};transition:opacity .15s,transform .1s;" onmousedown="this.style.transform='scale(.92)'" onmouseup="this.style.transform=''">✕</button>
     </div>`;
   }).join('') + (mostrar < 10 ? `<div style="font-size:10px;color:var(--texto3);margin-top:5px;padding:0 2px;">preencha e salve (✓) para adicionar mais · máx. 10</div>` : '');
+}
+
+function excluirMarca(i) {
+  const cfg = getConfig();
+  const marcas = cfg.marcas || Array(10).fill('');
+  const nome = marcas[i];
+  if (!nome || !nome.trim()) return;
+  if (!confirm(`Remover a marca "${nome}" das suas representações?`)) return;
+  marcas.splice(i, 1);
+  cfg.marcas = marcas;
+  salvarConfigData(cfg);
+  _renderMarcasGrid();
+  renderizarMetasConfig(cfg);
+  toast('Marca "' + nome + '" removida');
 }
 
 function salvarMarcaUnica(i) {
@@ -9067,6 +9157,8 @@ function salvarConfig() {
   cfg.skusCustom = Array.from({length:6}, (_, i) => (document.getElementById('sku-custom-'+i)?.value||'').trim());
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
+  cfg.horarioNotif = document.getElementById('cfg-horario-notif')?.value || '07:30';
+  cfg.notifWpp = document.getElementById('cfg-notif-wpp-toggle')?.dataset.ativo === 'true';
   cfg.gatilhoAnticAtivo = document.getElementById('cfg-gatilho-toggle')?.dataset.ativo === 'true';
   cfg.gatilhoDias = [...document.querySelectorAll('.cfg-gatilho-dia.ativo')].map(b => Number(b.dataset.dias));
   cfg.wppRep = (document.getElementById('cfg-wpp-rep')?.value || '').replace(/\D/g,'');
@@ -9075,6 +9167,7 @@ function salvarConfig() {
   cfg.bufferMeta = _bufEl ? Number(_bufEl.value) : 20;
   salvarConfigData(cfg);
   atualizarSemaforoDash();
+  if (Notification.permission === 'granted') _agendarNotifDiaria();
   toast('Configurações salvas!');
 }
 
@@ -9275,6 +9368,141 @@ function _atualizarStatusNotif() {
   }
 }
 
+// ===== RESUMO DIÁRIO — WHATSAPP =====
+
+function _renderNotifWppToggle(ativo) {
+  const btn  = document.getElementById('cfg-notif-wpp-toggle');
+  const knob = document.getElementById('cfg-notif-wpp-knob');
+  if (!btn || !knob) return;
+  btn.dataset.ativo = ativo ? 'true' : 'false';
+  btn.style.background = ativo ? '#00D68F' : '#333';
+  knob.style.left = ativo ? '25px' : '3px';
+  knob.style.background = ativo ? '#fff' : '#888';
+}
+
+function toggleNotifWpp() {
+  const btn = document.getElementById('cfg-notif-wpp-toggle');
+  if (!btn) return;
+  const novoEstado = btn.dataset.ativo !== 'true';
+  _renderNotifWppToggle(novoEstado);
+  const cfg = getConfig();
+  cfg.notifWpp = novoEstado;
+  salvarConfigData(cfg);
+}
+
+function _gerarResumoDiarioWpp() {
+  const cfg = getConfig();
+  const clientes = getClientesAtivos();
+  const hoje = new Date();
+  const dataFmt = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
+  const nomeRep = (usuarioAtual?.nome || 'Rep').split(' ')[0];
+
+  const clientesHoje = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; });
+  const prospectos   = getProspectos().filter(c => !c.dataRetornoCustom || new Date(c.dataRetornoCustom) <= hoje);
+  const metas        = getMetasConfig();
+  const esquecidos   = clientes.filter(c => isEsquecido(c)).length;
+
+  let msg = `📊 *Carteira Viva — Resumo do dia*\n`;
+  msg += `☀️ Bom dia, ${nomeRep}! ${dataFmt}\n`;
+  msg += `─────────────────────\n`;
+
+  if (clientesHoje.length) {
+    msg += `\n📍 *${clientesHoje.length} cliente${clientesHoje.length > 1 ? 's' : ''} para visitar hoje:*\n`;
+    clientesHoje.slice(0, 5).forEach(c => {
+      msg += `• ${c.nome}${c.cidade ? ' (' + c.cidade + ')' : ''}\n`;
+    });
+    if (clientesHoje.length > 5) msg += `  ...e mais ${clientesHoje.length - 5}\n`;
+  } else {
+    msg += `\n✅ Nenhuma visita urgente hoje\n`;
+  }
+
+  if (prospectos.length) {
+    msg += `\n🔭 *${prospectos.length} prospecto${prospectos.length > 1 ? 's' : ''} com retorno hoje*\n`;
+  }
+
+  if (metas.length) {
+    msg += `\n🎯 *Status das metas:*\n`;
+    metas.forEach(m => {
+      const real = calcularRealMarca(m);
+      const pct  = m.valor > 0 ? Math.round((real / m.valor) * 100) : 0;
+      const emoji = pct >= 100 ? '🏆' : pct >= 70 ? '🟢' : pct >= 40 ? '🟡' : '🔴';
+      msg += `${emoji} ${m.marca}: ${pct}%\n`;
+    });
+  }
+
+  if (esquecidos > 0) {
+    msg += `\n👻 ${esquecidos} cliente${esquecidos > 1 ? 's' : ''} esquecido${esquecidos > 1 ? 's' : ''} — hora de reativar\n`;
+  }
+
+  msg += `─────────────────────\n`;
+  msg += `💪 Bora vender! _Carteira Viva_`;
+  return msg;
+}
+
+function _abrirWppResumoDiario() {
+  const msg = _gerarResumoDiarioWpp();
+  const cfg = getConfig();
+  const tel = (cfg.wppRep || '').replace(/\D/g, '');
+  const url = tel
+    ? `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`
+    : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+function _mostrarModalMatinal() {
+  const modal = document.getElementById('modal-resumo-matinal');
+  if (!modal) return;
+  const clientes = getClientesAtivos();
+  const hoje = new Date();
+  const clientesHoje = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; }).length;
+  const prospectos   = getProspectos().filter(c => !c.dataRetornoCustom || new Date(c.dataRetornoCustom) <= hoje).length;
+  const metas        = getMetasConfig();
+  const cfg          = getConfig();
+  const nomeRep = (usuarioAtual?.nome || 'Representante').split(' ')[0];
+
+  let corpo = `<div style="font-size:13px;color:var(--texto2);line-height:1.7;">`;
+  corpo += clientesHoje
+    ? `<div>📍 <strong style="color:var(--texto);">${clientesHoje} cliente${clientesHoje>1?'s':''}</strong> para visitar hoje</div>`
+    : `<div>✅ Nenhuma visita urgente hoje</div>`;
+  if (prospectos) corpo += `<div>🔭 <strong style="color:var(--texto);">${prospectos} prospecto${prospectos>1?'s':''}</strong> com retorno hoje</div>`;
+  metas.slice(0, 3).forEach(m => {
+    const real = calcularRealMarca(m);
+    const pct = m.valor > 0 ? Math.round((real/m.valor)*100) : 0;
+    const emoji = pct>=100?'🏆':pct>=70?'🟢':pct>=40?'🟡':'🔴';
+    corpo += `<div>${emoji} ${m.marca}: <strong style="color:var(--texto);">${pct}%</strong> da meta</div>`;
+  });
+  corpo += `</div>`;
+
+  document.getElementById('modal-matinal-nome').textContent = `☀️ Bom dia, ${nomeRep}!`;
+  const dataEl = document.getElementById('modal-matinal-data');
+  if (dataEl) dataEl.textContent = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
+  document.getElementById('modal-matinal-corpo').innerHTML = corpo;
+
+  const btnWpp = document.getElementById('btn-matinal-wpp');
+  if (btnWpp) btnWpp.style.display = cfg.notifWpp !== false ? 'flex' : 'none';
+
+  modal.classList.add('aberto');
+}
+
+let _notifTimer = null;
+function _agendarNotifDiaria() {
+  clearTimeout(_notifTimer);
+  if (Notification.permission !== 'granted') return;
+  const cfg = getConfig();
+  const horario = cfg.horarioNotif || '07:30';
+  const [h, m] = horario.split(':').map(Number);
+  const agora = new Date();
+  const alvo  = new Date();
+  alvo.setHours(h, m, 0, 0);
+  if (alvo <= agora) alvo.setDate(alvo.getDate() + 1);
+  const ms = alvo - agora;
+  _notifTimer = setTimeout(async () => {
+    await _dispararNotificacaoLocal();
+    _mostrarModalMatinal();
+    _agendarNotifDiaria(); // reagenda para o próximo dia
+  }, ms);
+}
+
 async function ativarNotificacoes() {
   if (!('Notification' in window)) { toast('Seu navegador não suporta notificações'); return; }
 
@@ -9289,6 +9517,7 @@ async function ativarNotificacoes() {
 
   await _registrarPeriodicSync();
   await _salvarDadosNotifSW();
+  _agendarNotifDiaria();
   toast('✅ Notificações ativadas!');
   setTimeout(_dispararNotificacaoLocal, 1000);
 }
@@ -11327,10 +11556,10 @@ function adicionarMetaConfig() {
   const cfg = getConfig();
   const metas = cfg.metas || [];
   const marcas = (cfg.marcas || []).filter(Boolean);
-  if (!marcas.length) { toast('Cadastre suas marcas em "Suas representações" antes de adicionar metas.'); return; }
+  if (!marcas.length) { toast('👆 Antes de criar uma meta, cadastre as marcas que você representa na seção "Suas representações" acima. Depois é só voltar aqui!'); return; }
   const marcasJaUsadas = metas.map(m => m.marca).filter(Boolean);
   const proxMarca = marcas.find(m => !marcasJaUsadas.includes(m)) || '';
-  metas.push({ id: 'm_' + Date.now(), marca: proxMarca, sku: (cfg.skus && cfg.skus[0]) || 'peças', tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor: 0, comissao: 0, cicloIdeal: 30 });
+  metas.unshift({ id: 'm_' + Date.now(), marca: proxMarca, sku: (cfg.skus && cfg.skus[0]) || 'peças', tipoPeriodo: 'mes', mes: new Date().toISOString().slice(0, 7), dataInicio: '', dataFim: '', valor: 0, comissao: 0, cicloIdeal: 30 });
   cfg.metas = metas;
   salvarConfigData(cfg);
   renderizarMetasConfig(cfg);
@@ -11351,7 +11580,10 @@ function renderizarMetasConfig(cfg) {
   const skusDisponiveis = [...(cfg.skus || ['peças']), ...(cfg.skusCustom || []).filter(Boolean), 'reais'];
 
   if (!marcas.length) {
-    lista.innerHTML = '<div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:12px 14px;font-size:12px;color:#FBBF24;line-height:1.5;">⚠️ Cadastre suas marcas/representações acima antes de configurar metas.</div>';
+    lista.innerHTML = `<div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:14px 16px;line-height:1.6;">
+      <div style="font-size:13px;font-weight:700;color:#FBBF24;margin-bottom:6px;">👆 Cadastre suas marcas primeiro</div>
+      <div style="font-size:12px;color:var(--texto2);">Para criar uma meta, você precisa ter pelo menos uma marca cadastrada.<br>Role para cima até a seção <strong style="color:var(--texto);">🏷️ Suas representações</strong>, adicione as marcas que você representa e volte aqui — elas vão aparecer automaticamente na seleção.</div>
+    </div>`;
     return;
   }
 
@@ -11394,10 +11626,12 @@ function renderizarMetasConfig(cfg) {
           }
         </div>
         <div class="meta-divider"></div>
-        <div style="font-size:10px;font-weight:700;color:rgba(249,115,22,.7);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px;">🎯 Alvo</div>
+        <div style="margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:800;color:rgba(249,115,22,.95);">SKU</span><span style="font-size:10px;font-weight:600;color:rgba(249,115,22,.6);letter-spacing:.5px;text-transform:uppercase;"> Padrão da Meta</span>
+        </div>
         <div class="meta-row">
           <select class="campo-input" style="flex:1;" onchange="editarMetaField('${meta.id}','sku',this.value)">${skuOpts}</select>
-          <input type="number" class="campo-input" style="flex:1;" placeholder="${meta.sku === 'reais' || meta.sku === 'faturamento' ? 'Meta em R$' : 'Quantidade'}" value="${meta.valor || ''}" onchange="editarMetaField('${meta.id}','valor',Number(this.value))">
+          <input type="number" class="campo-input" style="flex:1;" placeholder="${meta.sku === 'reais' || meta.sku === 'faturamento' ? 'Meta em R$' : 'Cadastre a meta aqui'}" value="${meta.valor || ''}" onchange="editarMetaField('${meta.id}','valor',Number(this.value))">
         </div>
         ${(meta.sku === 'reais' || meta.sku === 'faturamento') ? `<div style="background:rgba(0,214,143,.07);border:1px solid rgba(0,214,143,.2);border-radius:9px;padding:8px 10px;margin-bottom:8px;"><span style="font-size:11px;line-height:1.5;color:var(--texto2);">💡 <strong style="color:var(--verde);">Meta em R$:</strong> preencha o valor do pedido ao registrar a venda. Quantidade não é necessária.</span></div>` : ''}
         <div class="meta-divider"></div>
@@ -11417,11 +11651,7 @@ function renderizarMetasConfig(cfg) {
             </div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
-          <span style="font-size:10px;color:var(--texto3);white-space:nowrap;">Potencial em:</span>
-          <button onclick="alternarExibirEmMeta('${meta.id}','reais')" style="flex:1;padding:5px 8px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid ${(meta.exibirEm || 'reais') === 'reais' ? 'var(--verde)' : 'var(--borda)'};background:${(meta.exibirEm || 'reais') === 'reais' ? 'rgba(0,214,143,.12)' : 'var(--bg3)'};color:${(meta.exibirEm || 'reais') === 'reais' ? 'var(--verde)' : 'var(--texto2)'};">R$</button>
-          <button onclick="alternarExibirEmMeta('${meta.id}','sku')" style="flex:1;padding:5px 8px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid ${meta.exibirEm === 'sku' ? 'var(--verde)' : 'var(--borda)'};background:${meta.exibirEm === 'sku' ? 'rgba(0,214,143,.12)' : 'var(--bg3)'};color:${meta.exibirEm === 'sku' ? 'var(--verde)' : 'var(--texto2)'};">${_skuLabel(meta.sku)}</button>
-        </div>
+        <div style="font-size:10px;color:var(--texto3);margin-top:6px;">📊 O histórico de compra do cliente será exibido em <strong style="color:var(--texto2);">${(meta.sku === 'reais' || meta.sku === 'faturamento') ? 'R$' : _skuLabel(meta.sku)}</strong> — igual ao SKU da meta.</div>
       </div>
     </div>`;
   }).join('');
@@ -13394,7 +13624,7 @@ function ajustarAlturaListaMotivos() {
     setTimeout(verificarEnderecosPendentes, 3000);
     setTimeout(solicitarPermissaoNotificacao, 2000);
     setTimeout(verificarENotificarEsquecidos, 5000);
-    setTimeout(() => { if (('Notification' in window) && Notification.permission === 'granted') { _salvarDadosNotifSW(); _checarGatilhoMetaAtrasada(); } }, 4000);
+    setTimeout(() => { if (('Notification' in window) && Notification.permission === 'granted') { _salvarDadosNotifSW(); _checarGatilhoMetaAtrasada(); _agendarNotifDiaria(); } }, 4000);
     // Deep-link de notificação (app aberto do zero via clique)
     try {
       const acaoParam = new URLSearchParams(location.search).get('acao');

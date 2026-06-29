@@ -1503,10 +1503,10 @@ if ('serviceWorker' in navigator) {
 
     <div class="config-secao" style="background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(79,70,229,.04));border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:16px;">
       <div class="config-secao-titulo">🤖 Gestor IA</div>
-      <div class="config-secao-sub">Ative seu consultor inteligente: o Gestor IA analisa suas marcas, sua carteira e sugere ações para você bater a meta. Cole sua chave gratuita do Google Gemini. <span onclick="abrirGuiaApi()" style="color:#A78BFA;cursor:pointer;font-weight:600;">Ver passo a passo →</span></div>
-      <input type="text" class="campo-input" id="cfg-gemini-key" placeholder="AIza..." style="margin-top:8px;font-family:monospace;font-size:13px;letter-spacing:.5px;" oninput="_modeloGeminiCache=null" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <button onclick="salvarConfig();testarChaveGemini()" style="width:100%;margin-top:8px;background:rgba(124,58,237,.12);border:1.5px solid rgba(124,58,237,.4);border-radius:10px;padding:11px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔎 Salvar e testar chave</button>
-      <div style="font-size:11px;color:var(--texto3);margin-top:8px;line-height:1.5;">🔒 Sua chave fica só no seu aparelho. É gratuita e leva 3 minutos para obter. <span onclick="abrirComoAtivarApi()" style="color:#A78BFA;cursor:pointer;font-weight:600;">Deu erro? Como ativar a API →</span></div>
+      <div class="config-secao-sub">Ative seu consultor inteligente: o Gestor IA analisa suas marcas, sua carteira e sugere ações para você bater a meta. Cole sua chave gratuita do Groq. <span onclick="abrirGuiaApi()" style="color:#A78BFA;cursor:pointer;font-weight:600;">Ver passo a passo →</span></div>
+      <input type="text" class="campo-input" id="cfg-groq-key" placeholder="gsk_..." style="margin-top:8px;font-family:monospace;font-size:13px;letter-spacing:.5px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button onclick="salvarConfig();testarChaveGroq()" style="width:100%;margin-top:8px;background:rgba(124,58,237,.12);border:1.5px solid rgba(124,58,237,.4);border-radius:10px;padding:11px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔎 Salvar e testar chave</button>
+      <div style="font-size:11px;color:var(--texto3);margin-top:8px;line-height:1.5;">🔒 Sua chave fica só no seu aparelho. É gratuita e leva 3 minutos para obter. <span onclick="abrirComoAtivarApi()" style="color:#A78BFA;cursor:pointer;font-weight:600;">Como criar sua chave Groq →</span></div>
     </div>
 
     <div class="config-secao">
@@ -2186,7 +2186,7 @@ if ('serviceWorker' in navigator) {
       <div style="font-size:32px;margin-bottom:10px;">⚠️</div>
       <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;margin-bottom:6px;">Não foi possível gerar a análise</div>
       <div style="font-size:12px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;" id="gerente-erro-msg"></div>
-      <button onclick="abrirConfiguracoes()" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 16px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⚙️ Configurar chave Gemini</button>
+      <button onclick="abrirConfiguracoes()" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 16px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⚙️ Configurar chave Groq</button>
     </div>
 
   </div>
@@ -2584,28 +2584,28 @@ if ('serviceWorker' in navigator) {
 
     <div class="guia-step">
       <div class="guia-step-num">1</div>
-      <div class="guia-step-text">Toque no botão abaixo para abrir o <strong style="color:var(--texto);">Google AI Studio</strong> no seu navegador.</div>
+      <div class="guia-step-text">Toque no botão abaixo para abrir o <strong style="color:var(--texto);">Groq</strong> no seu navegador.</div>
     </div>
 
-    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="display:block;text-decoration:none;margin-bottom:22px;">
-      <div style="background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.45);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--verde);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;">
-        🌐 Abrir Google AI Studio →
+    <a href="https://console.groq.com/keys" target="_blank" rel="noopener" style="display:block;text-decoration:none;margin-bottom:22px;">
+      <div style="background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.45);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;">
+        🌐 Abrir Groq Console →
       </div>
     </a>
 
     <div class="guia-step">
       <div class="guia-step-num">2</div>
-      <div class="guia-step-text">Entre com sua <strong style="color:var(--texto);">conta Google</strong> (o mesmo Gmail que você já usa).</div>
+      <div class="guia-step-text">Crie uma conta gratuita com seu <strong style="color:var(--texto);">e-mail</strong> (sem cartão de crédito).</div>
     </div>
 
     <div class="guia-step">
       <div class="guia-step-num">3</div>
-      <div class="guia-step-text">Clique em <strong style="color:var(--texto);">"Create API key"</strong> → depois em <strong style="color:var(--texto);">"Create API key in new project"</strong>.</div>
+      <div class="guia-step-text">Clique em <strong style="color:var(--texto);">"Create API Key"</strong>, dê um nome qualquer (ex: Carteira Viva) e clique em <strong style="color:var(--texto);">"Submit"</strong>.</div>
     </div>
 
     <div class="guia-step">
       <div class="guia-step-num">4</div>
-      <div class="guia-step-text">Copie a chave gerada. Ela começa com <code style="background:var(--bg3);padding:2px 7px;border-radius:5px;color:var(--verde);font-size:12px;">AIza...</code></div>
+      <div class="guia-step-text">Copie a chave gerada. Ela começa com <code style="background:var(--bg3);padding:2px 7px;border-radius:5px;color:var(--verde);font-size:12px;">gsk_...</code></div>
     </div>
 
     <div class="guia-step">
@@ -2615,7 +2615,7 @@ if ('serviceWorker' in navigator) {
 
     <div style="margin-top:4px;">
       <label class="campo-label">Cole sua chave aqui</label>
-      <input type="text" class="campo-input" id="guia-gemini-key" placeholder="AIza..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="font-family:monospace;font-size:13px;letter-spacing:.5px;margin-top:4px;">
+      <input type="text" class="campo-input" id="guia-groq-key" placeholder="gsk_..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="font-family:monospace;font-size:13px;letter-spacing:.5px;margin-top:4px;">
       <button class="btn-primario" onclick="salvarChaveDoGuia()" style="margin-top:10px;">✅ Ativar Gestor IA</button>
     </div>
   </div>
@@ -8630,8 +8630,8 @@ function carregarConfig() {
   _renderGatilhoConfig(cfg);
   _renderOnbToggle(cfg.onboardingFeito);
   document.getElementById('cfg-wpp-rep').value = cfg.wppRep ? cfg.wppRep.replace(/^55/, '') : '';
-  const geminiEl = document.getElementById('cfg-gemini-key');
-  if (geminiEl) geminiEl.value = cfg.geminiKey || '';
+  const geminiEl = document.getElementById('cfg-groq-key');
+  if (geminiEl) geminiEl.value = cfg.groqKey || '';
   const bufferEl = document.getElementById('cfg-buffer-meta');
   if (bufferEl) bufferEl.value = cfg.bufferMeta !== undefined ? cfg.bufferMeta : 20;
   renderizarMetasConfig(cfg);
@@ -8703,7 +8703,7 @@ function salvarConfig() {
   cfg.gatilhoAnticAtivo = document.getElementById('cfg-gatilho-toggle')?.dataset.ativo === 'true';
   cfg.gatilhoDias = [...document.querySelectorAll('.cfg-gatilho-dia.ativo')].map(b => Number(b.dataset.dias));
   cfg.wppRep = (document.getElementById('cfg-wpp-rep')?.value || '').replace(/\D/g,'');
-  cfg.geminiKey = (document.getElementById('cfg-gemini-key')?.value || '').trim();
+  cfg.groqKey = (document.getElementById('cfg-groq-key')?.value || '').trim();
   const _bufEl = document.getElementById('cfg-buffer-meta');
   cfg.bufferMeta = _bufEl ? Number(_bufEl.value) : 20;
   salvarConfigData(cfg);
@@ -9311,33 +9311,6 @@ let _relExpPeriodo = 'mes'; // mes | tri | ano
 // ===== GERENTE VIRTUAL =====
 let _gerenteAnaliseCache = null;
 let _gerenteCacheData = null;
-let _modeloGeminiCache = null; // ex.: "models/gemini-1.5-flash" — descoberto dinamicamente
-
-// Pergunta ao Google quais modelos a chave do rep tem acesso e escolhe o melhor.
-// Resolve o erro "Modelo indisponível" — cada conta libera modelos diferentes.
-async function _descobrirModeloGemini(apiKey) {
-  if (_modeloGeminiCache) return _modeloGeminiCache;
-  let r;
-  try {
-    r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-  } catch(e) {
-    throw new Error('Sem conexão para validar a chave. Verifique sua internet.');
-  }
-  if (r.status === 403) throw new Error('A IA (Generative Language API) não está ativada nesse projeto. Toque em "Como ativar" abaixo.');
-  if (r.status === 400) throw new Error('Chave inválida. Gere uma nova em aistudio.google.com.');
-  if (!r.ok) throw new Error('Erro ao validar a chave ('+r.status+').');
-  const data = await r.json();
-  const modelos = (data.models || []).filter(m => (m.supportedGenerationMethods||[]).includes('generateContent'));
-  if (!modelos.length) throw new Error('Nenhum modelo de IA disponível para esta chave.');
-  // Prioriza modelos flash (rápidos e econômicos), depois pro
-  const pref = ['flash-latest','2.5-flash','2.0-flash-lite','2.0-flash','1.5-flash','flash','pro-latest','1.5-pro','pro'];
-  for (const p of pref) {
-    const achado = modelos.find(m => (m.name||'').includes(p));
-    if (achado) { _modeloGeminiCache = achado.name; return achado.name; }
-  }
-  _modeloGeminiCache = modelos[0].name;
-  return modelos[0].name;
-}
 
 function abrirGerenteVirtual() {
   document.getElementById('modal-gerente').classList.add('aberto');
@@ -9447,7 +9420,7 @@ function _coletarDadosRep() {
 
 async function gerarAnaliseGerente(forcar=false) {
   const cfg = getConfig();
-  const apiKey = (cfg.geminiKey||'').trim();
+  const apiKey = (cfg.groqKey||'').trim();
 
   document.getElementById('gerente-loading').style.display = 'block';
   document.getElementById('gerente-resultado').style.display = 'none';
@@ -9456,7 +9429,7 @@ async function gerarAnaliseGerente(forcar=false) {
   if (!apiKey) {
     document.getElementById('gerente-loading').style.display = 'none';
     document.getElementById('gerente-erro').style.display = 'block';
-    document.getElementById('gerente-erro-msg').textContent = 'Configure sua chave Gemini em Configurações para ativar o Gestor IA.';
+    document.getElementById('gerente-erro-msg').textContent = 'Configure sua chave Groq em Configurações para ativar o Gestor IA.';
     return;
   }
 
@@ -9484,20 +9457,38 @@ Responda APENAS com JSON válido, sem texto antes ou depois:
 
   try {
     const body = {
-      contents:[{ parts:[{ text: prompt }] }],
-      generationConfig:{ temperature:0.7, maxOutputTokens:1500 }
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 1500,
+      response_format: { type: 'json_object' }
     };
-    // Descobre automaticamente um modelo que a chave do rep tenha acesso
-    const modelo = await _descobrirModeloGemini(apiKey);
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/${modelo}:generateContent?key=${apiKey}`,
-      { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
-    );
-    if (r.status===403) throw new Error('Chave sem permissão. Verifique se a Generative Language API está ativada.');
-    if (r.status===429) throw new Error('Limite de uso atingido. Aguarde 1 minuto e tente de novo.');
-    if (!r.ok) throw new Error('Erro na API ('+r.status+').');
+
+    const _msgLoading = (txt) => {
+      const el = document.querySelector('#gerente-loading .estrada-buscando-txt');
+      if (el) el.textContent = txt;
+    };
+
+    let r;
+    for (let tentativa = 1; tentativa <= 3; tentativa++) {
+      r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify(body)
+      });
+      if ((r.status === 503 || r.status === 500) && tentativa < 3) {
+        _msgLoading(`Servidor ocupado, tentando novamente (${tentativa}/2)...`);
+        await new Promise(res => setTimeout(res, 3000));
+        continue;
+      }
+      break;
+    }
+    if (r.status === 401) throw new Error('Chave inválida. Verifique sua chave Groq em Configurações.');
+    if (r.status === 429) throw new Error('Limite de uso atingido. Aguarde 1 minuto e tente de novo.');
+    if (r.status === 503 || r.status === 500) throw new Error('Servidor da IA temporariamente sobrecarregado. Tente novamente em 1-2 minutos.');
+    if (!r.ok) throw new Error('Erro na API ('+r.status+'). Tente novamente.');
     const data = await r.json();
-    const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const txt = data.choices?.[0]?.message?.content || '';
     if (!txt) throw new Error('A IA não respondeu. Tente novamente.');
 
     const m = txt.match(/\{[\s\S]*\}/);
@@ -12428,7 +12419,7 @@ function excluirDespesa(id) {
 }
 
 function abrirGuiaApi() {
-  document.getElementById('guia-gemini-key').value = getConfig().geminiKey || '';
+  document.getElementById('guia-groq-key').value = getConfig().groqKey || '';
   document.getElementById('modal-guia-api').classList.add('aberto');
 }
 
@@ -12505,33 +12496,41 @@ function compartilharDespesasEmail() {
 }
 
 function salvarChaveDoGuia() {
-  const chave = document.getElementById('guia-gemini-key').value.trim();
+  const chave = document.getElementById('guia-groq-key').value.trim();
   if (!chave) { toast('Cole sua chave antes de salvar'); return; }
   const cfg = getConfig();
-  cfg.geminiKey = chave;
+  cfg.groqKey = chave;
   salvarConfigData(cfg);
-  _modeloGeminiCache = null; // chave nova → redescobre o modelo
   _gerenteAnaliseCache = null;
-  const cfgInput = document.getElementById('cfg-gemini-key');
+  const cfgInput = document.getElementById('cfg-groq-key');
   if (cfgInput) cfgInput.value = chave;
   fecharModal('modal-guia-api');
-  testarChaveGemini();
+  testarChaveGroq();
 }
 
 function abrirComoAtivarApi() {
-  window.open('https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com', '_blank');
-  toast('Ative a "Generative Language API" e volte para testar');
+  window.open('https://console.groq.com/keys', '_blank');
+  toast('Crie sua chave gratuita no Groq Console e cole aqui');
 }
 
-// Testa a chave e dá um retorno claro em português
-async function testarChaveGemini() {
-  const chave = (getConfig().geminiKey || '').trim();
-  if (!chave) { toast('Cole sua chave do Gemini primeiro'); return; }
-  if (!chave.startsWith('AIza')) { toast('⚠️ A chave deve começar com AIza'); return; }
+// Testa a chave Groq e dá retorno claro em português
+async function testarChaveGroq() {
+  const chave = (getConfig().groqKey || '').trim();
+  if (!chave) { toast('Cole sua chave Groq primeiro'); return; }
   toast('🔎 Testando sua chave...');
-  _modeloGeminiCache = null;
   try {
-    const modelo = await _descobrirModeloGemini(chave);
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${chave}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: 'Responda apenas: ok' }],
+        max_tokens: 5
+      })
+    });
+    if (r.status === 401) throw new Error('Chave inválida. Verifique e tente novamente.');
+    if (r.status === 429) throw new Error('Limite atingido. Aguarde 1 minuto.');
+    if (!r.ok) throw new Error('Erro ao conectar ('+r.status+'). Tente novamente.');
     toast('✅ Chave funcionando! Gestor IA ativo.');
     return true;
   } catch(e) {
@@ -12539,6 +12538,9 @@ async function testarChaveGemini() {
     return false;
   }
 }
+
+// alias para compatibilidade com chamadas antigas
+const testarChaveGemini = testarChaveGroq;
 
 function salvarMotivosOrdem(ordem) {
   const key = 'cv_motivos_ordem_' + (usuarioAtual?.email || '');

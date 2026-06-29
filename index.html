@@ -381,20 +381,19 @@ if ('serviceWorker' in navigator) {
 
   /* CARTÕES DAS FORMAS DE CADASTRO */
   .forma-card { border-radius:14px; padding:13px; margin-bottom:10px; }
-  .forma-tag { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; border-radius:8px; padding:3px 10px; margin-bottom:10px; letter-spacing:.2px; }
+  .forma-tag { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; border-radius:8px; padding:3px 10px; margin-bottom:8px; letter-spacing:.2px; }
   .forma-card-1 { border:1.5px solid rgba(0,214,143,.4); background:rgba(0,214,143,.06); }
   .forma-card-1 .forma-tag { color:#00D68F; background:rgba(0,214,143,.14); }
   .forma-card-2 { border:1.5px solid rgba(56,189,248,.35); background:rgba(56,189,248,.05); }
   .forma-card-2 .forma-tag { color:#38BDF8; background:rgba(56,189,248,.12); }
   .forma-card-3 { border:1.5px solid rgba(167,139,250,.35); background:rgba(167,139,250,.05); }
   .forma-card-3 .forma-tag { color:#A78BFA; background:rgba(167,139,250,.12); }
-  .forma-card-4 { border:1.5px solid rgba(251,191,36,.3); background:rgba(251,191,36,.04); }
-  .forma-card-4 .forma-tag { color:#FBBF24; background:rgba(251,191,36,.12); }
-  .forma-num { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; font-size:11px; font-weight:800; flex-shrink:0; }
+  .forma-num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; font-size:12px; font-weight:800; flex-shrink:0; }
   .forma-card-1 .forma-num { background:rgba(0,214,143,.2); color:#00D68F; }
   .forma-card-2 .forma-num { background:rgba(56,189,248,.2); color:#38BDF8; }
   .forma-card-3 .forma-num { background:rgba(167,139,250,.2); color:#A78BFA; }
-  .forma-card-4 .forma-num { background:rgba(251,191,36,.18); color:#FBBF24; }
+  .btn-limpar-forma { background:none; border:none; color:var(--texto3); font-size:11px; font-weight:600; cursor:pointer; padding:2px 6px; border-radius:6px; font-family:'DM Sans',sans-serif; }
+  .btn-limpar-forma:active { background:rgba(255,255,255,.06); }
   @keyframes piscaBordaCampo {
     0%,100% { border-color:var(--borda); box-shadow:none; }
     50%      { border-color:#00D68F; box-shadow:0 0 0 2px rgba(0,214,143,.2); }
@@ -1658,29 +1657,65 @@ if ('serviceWorker' in navigator) {
     </div>
     <div class="modal-sub">Preencha os dados básicos para começar.</div>
 
-    <!-- 4 FORMAS DE CADASTRAR -->
+    <!-- 3 FORMAS DE CADASTRAR -->
     <div class="campo-grupo">
-      <div id="formas-titulo" class="formas-titulo-pisca" style="text-align:center;margin-bottom:14px;padding:10px 12px;background:rgba(255,255,255,.04);border-radius:12px;border:1px solid rgba(255,255,255,.08);">
-        <div style="font-size:11px;color:var(--texto3);margin-bottom:3px;">📍 LOCALIZAÇÃO DO CLIENTE</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:var(--texto);letter-spacing:0;line-height:1.5;">Escolha uma das 4 formas para cadastrar o seu cliente</div>
+      <div style="background:linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:12px 14px;margin-bottom:12px;text-align:center;">
+        <div style="font-size:10px;color:var(--texto3);letter-spacing:.8px;margin-bottom:4px;">📍 ONDE FICA ESTE CLIENTE?</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:800;color:var(--texto);">Escolha <span style="color:var(--verde);">UMA</span> das 3 formas abaixo</div>
+        <div style="font-size:11px;color:var(--texto3);margin-top:3px;">Você não precisa preencher todas — só a que preferir</div>
       </div>
 
       <!-- 1ª FORMA: CNPJ -->
       <div class="forma-card forma-card-1">
-        <div class="forma-tag"><span class="forma-num">1</span> 🔍 Pelo CNPJ — preenche tudo sozinho</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div class="forma-tag" style="margin-bottom:0;"><span class="forma-num">1</span> 🔍 Pelo CNPJ</div>
+          <button class="btn-limpar-forma" id="btn-limpar-cnpj" onclick="_limparCardCnpj()" style="display:none;">✕ Limpar</button>
+        </div>
+        <div style="font-size:11px;color:#00D68F;margin-bottom:8px;font-weight:600;">Mais rápido — preenche nome, endereço e segmento automaticamente</div>
         <div style="display:flex;gap:8px;align-items:flex-start;">
           <input type="text" inputmode="numeric" class="campo-input" id="nc-cnpj" placeholder="00.000.000/0000-00" style="flex:1;" oninput="mascaraCnpj(this)">
           <button onclick="buscarCnpjNc()" id="btn-cnpj-nc" style="background:rgba(0,214,143,.12);border:1px solid rgba(0,214,143,.35);border-radius:10px;padding:11px 12px;color:var(--verde);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;">🔍 Buscar</button>
         </div>
         <div id="nc-cnpj-status" style="display:none;margin-top:8px;font-size:12px;"></div>
-        <div id="nc-cnpj-aviso-sede" style="display:none;margin-top:8px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:9px;padding:9px 11px;font-size:11px;color:#FBBF24;line-height:1.5;">⚠️ <strong>Atenção:</strong> este é o endereço da sede do CNPJ. Se o cliente te atende em outro local, edite o endereço na opção 2 abaixo ou use o 📡 GPS para capturar onde você está agora.</div>
+
+        <!-- Duplicata detectada -->
+        <div id="nc-cnpj-duplicata" style="display:none;margin-top:10px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);border-radius:10px;padding:11px 13px;">
+          <div style="font-size:12px;font-weight:700;color:#FBBF24;margin-bottom:6px;">⚠️ Este cliente já está cadastrado!</div>
+          <div style="font-size:11px;color:var(--texto2);margin-bottom:10px;" id="nc-cnpj-duplicata-nome"></div>
+          <button onclick="_abrirClienteDuplicado()" style="width:100%;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:9px;padding:9px;color:#FBBF24;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">👤 Ver cliente cadastrado →</button>
+        </div>
+
+        <!-- Endereço encontrado — confirmação inline -->
+        <div id="nc-cnpj-resultado" style="display:none;margin-top:10px;background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.3);border-radius:10px;padding:11px 13px;">
+          <div style="font-size:10px;color:var(--verde);font-weight:700;letter-spacing:.4px;margin-bottom:4px;">📍 ENDEREÇO ENCONTRADO</div>
+          <div style="font-size:12px;color:var(--texto);font-weight:600;margin-bottom:3px;" id="nc-cnpj-end-texto"></div>
+          <div style="font-size:10px;color:#FBBF24;margin-bottom:10px;">⚠️ Este é o endereço da sede. Se o cliente te atende em outro local, toque em "É outro endereço".</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="_confirmarEndCnpj()" style="flex:2;background:rgba(0,214,143,.12);border:1.5px solid rgba(0,214,143,.4);border-radius:9px;padding:9px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">✅ Confirmar endereço</button>
+            <button onclick="_outroEndCnpj()" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:9px;padding:9px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">✏️ É outro</button>
+          </div>
+        </div>
+
+        <!-- CNPJ não encontrado -->
+        <div id="nc-cnpj-nao-encontrado" style="display:none;margin-top:10px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:11px 13px;">
+          <div style="font-size:12px;font-weight:700;color:#F87171;margin-bottom:4px;">❌ CNPJ não encontrado na base</div>
+          <div style="font-size:11px;color:var(--texto2);margin-bottom:10px;">Sem problema — use uma das outras formas para cadastrar:</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="_focarCard2()" style="flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:9px;padding:9px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">⌨️ Digitar endereço</button>
+            <button onclick="_focarCard3()" style="flex:1;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);border-radius:9px;padding:9px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">📡 Usar GPS</button>
+          </div>
+        </div>
       </div>
 
       <!-- 2ª FORMA: DIGITAR ENDEREÇO -->
-      <div class="forma-card forma-card-2">
-        <div class="forma-tag"><span class="forma-num">2</span> ⌨️ Digitando o endereço</div>
+      <div class="forma-card forma-card-2" id="nc-card-endereco">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div class="forma-tag" style="margin-bottom:0;"><span class="forma-num">2</span> ⌨️ Digitando o endereço</div>
+          <button class="btn-limpar-forma" onclick="_limparCardEndereco()">✕ Limpar</button>
+        </div>
+        <div style="font-size:11px;color:#38BDF8;margin-bottom:8px;font-weight:600;">Digite a rua e número — o app valida e coloca no mapa</div>
         <div style="display:flex;gap:8px;align-items:flex-start;">
-          <input type="text" class="campo-input" id="nc-endereco" placeholder="Ex: Rua das Flores, 123" style="flex:1;" oninput="limparValidacaoEnderecoNc()">
+          <input type="text" class="campo-input" id="nc-endereco" placeholder="Ex: Rua das Flores, 123 — São Paulo" style="flex:1;" oninput="limparValidacaoEnderecoNc()">
           <button onclick="validarEnderecoNc()" id="btn-validar-nc" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:11px 12px;color:#38BDF8;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;">🔍 Validar</button>
         </div>
         <div id="nc-end-status" style="display:none;margin-top:8px;font-size:12px;"></div>
@@ -1688,9 +1723,13 @@ if ('serviceWorker' in navigator) {
       </div>
 
       <!-- 3ª FORMA: GPS RÁPIDO -->
-      <div class="forma-card forma-card-3">
-        <div class="forma-tag"><span class="forma-num">3</span> 📡 Cadastro rápido via GPS</div>
-        <div style="font-size:11px;color:var(--texto2);margin-bottom:8px;line-height:1.5;">Use sua localização atual para gerar a rota deste cliente. Ideal quando você está na porta da loja. Preencha só o nome da loja e do comprador abaixo — o mapa já fica pronto.</div>
+      <div class="forma-card forma-card-3" id="nc-card-gps">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div class="forma-tag" style="margin-bottom:0;"><span class="forma-num">3</span> 📡 Cadastro rápido via GPS</div>
+          <button class="btn-limpar-forma" onclick="_limparCardGps()">✕ Limpar</button>
+        </div>
+        <div style="font-size:11px;color:#A78BFA;margin-bottom:8px;font-weight:600;">Ideal quando você está na porta da loja — só para gerar a rota</div>
+        <div style="font-size:11px;color:var(--texto2);margin-bottom:8px;line-height:1.5;">Sua localização atual vira o endereço do cliente. Preencha o nome da loja e do comprador — pronto.</div>
         <div id="nc-gps-chip" onclick="aplicarLocalizacaoNc()" style="display:none;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#A78BFA;cursor:pointer;">
           📍 Localização detectada — <span class="texto-pulsa">toque aqui para usar</span><br><span id="nc-gps-chip-texto" style="color:var(--texto2);font-weight:400;"></span>
         </div>
@@ -6981,73 +7020,211 @@ function sugerirSegmentoPorCnae(desc) {
   return null;
 }
 
+// Normaliza resposta de qualquer API CNPJ para formato comum
+function _normalizarCnpj(d, fonte) {
+  if (fonte === 'cnpjws') {
+    const est = d.estabelecimento || {};
+    return {
+      razaoSocial: d.razao_social || '',
+      nomeFantasia: d.nome_fantasia || '',
+      logradouro: est.logradouro || '',
+      numero: est.numero || '',
+      bairro: est.bairro || '',
+      municipio: est.municipio?.nome || '',
+      cep: (est.cep || '').replace(/\D/g,''),
+      cnaeDesc: d.cnae_fiscal_descricao || (d.cnaes_secundarios?.[0]?.descricao || '')
+    };
+  }
+  if (fonte === 'receitaws') {
+    return {
+      razaoSocial: d.nome || '',
+      nomeFantasia: d.fantasia || '',
+      logradouro: d.logradouro || '',
+      numero: d.numero || '',
+      bairro: d.bairro || '',
+      municipio: d.municipio || '',
+      cep: (d.cep || '').replace(/\D/g,''),
+      cnaeDesc: d.atividade_principal?.[0]?.text || ''
+    };
+  }
+  // brasilapi
+  return {
+    razaoSocial: d.razao_social || '',
+    nomeFantasia: d.nome_fantasia || '',
+    logradouro: d.logradouro || '',
+    numero: d.numero || '',
+    bairro: d.bairro || '',
+    municipio: d.municipio || '',
+    cep: (d.cep || '').replace(/\D/g,''),
+    cnaeDesc: d.cnae_fiscal_descricao || ''
+  };
+}
+
+async function _fetchCnpjApi(cnpj14, url, fonte) {
+  const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  if (!r.ok) throw new Error('not_found');
+  const d = await r.json();
+  if (d.status === 'ERROR' || d.tipo === 'CNPJ_INVALIDO') throw new Error('not_found');
+  return _normalizarCnpj(d, fonte);
+}
+
 async function buscarCnpjNc() {
   const raw = document.getElementById('nc-cnpj').value.replace(/\D/g, '');
   const status = document.getElementById('nc-cnpj-status');
   const btn = document.getElementById('btn-cnpj-nc');
+  const elDup = document.getElementById('nc-cnpj-duplicata');
+  const elRes = document.getElementById('nc-cnpj-resultado');
+  const elNao = document.getElementById('nc-cnpj-nao-encontrado');
+
   if (raw.length !== 14) { toast('Digite o CNPJ completo (14 números)'); return; }
+
+  // Esconde painéis anteriores
+  [elDup, elRes, elNao].forEach(el => el.style.display = 'none');
+  document.getElementById('btn-limpar-cnpj').style.display = 'inline';
+
   if (!navigator.onLine) {
     status.style.display = 'block';
     status.innerHTML = `<span style="color:var(--amarelo);">⚠️ Sem internet — use outra forma de cadastro.</span>`;
     return;
   }
+
+  // Verifica duplicata pelo CNPJ já cadastrado
+  const cnpjLimpo = raw;
+  const clienteExistente = getClientes().find(c => (c.cnpj || '').replace(/\D/g,'') === cnpjLimpo);
+  if (clienteExistente) {
+    status.style.display = 'none';
+    elDup.style.display = 'block';
+    document.getElementById('nc-cnpj-duplicata-nome').textContent = clienteExistente.loja || clienteExistente.nome || 'Cliente já cadastrado';
+    window._cnpjDuplicataId = clienteExistente.id;
+    btn.textContent = '🔍 Buscar'; btn.disabled = false;
+    return;
+  }
+
   btn.textContent = '⏳'; btn.disabled = true;
   status.style.display = 'block';
-  status.innerHTML = `<span style="color:var(--texto2);">🔎 Consultando a Receita Federal...</span>`;
+  status.innerHTML = `<span style="color:var(--texto2);">🔎 Consultando (3 fontes em paralelo)...</span>`;
+
   try {
-    const resp = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + raw);
-    if (!resp.ok) {
-      status.innerHTML = `<span style="color:var(--vermelho);">❌ CNPJ não encontrado. Confira os números.</span>`;
-      btn.textContent = '🔍 Buscar'; btn.disabled = false;
-      return;
-    }
-    const d = await resp.json();
-    // Preenche os campos (todos editáveis — o rep confere antes de salvar)
+    const d = await Promise.any([
+      _fetchCnpjApi(raw, `https://publica.cnpj.ws/cnpj/${raw}`, 'cnpjws'),
+      _fetchCnpjApi(raw, `https://receitaws.com.br/v1/cnpj/${raw}`, 'receitaws'),
+      _fetchCnpjApi(raw, `https://brasilapi.com.br/api/cnpj/v1/${raw}`, 'brasilapi')
+    ]);
+
+    // Preenche nome da loja e cidade
     const lojaEl = document.getElementById('nc-loja');
-    if (lojaEl) lojaEl.value = d.nome_fantasia || d.razao_social || '';
-    const endParts = [d.logradouro, d.numero].filter(Boolean).join(', ');
-    const endereco = endParts + (d.bairro ? ' - ' + d.bairro : '');
-    const endEl = document.getElementById('nc-endereco');
-    if (endEl && endereco) endEl.value = endereco;
+    if (lojaEl && !lojaEl.value) lojaEl.value = d.nomeFantasia || d.razaoSocial || '';
     const cidEl = document.getElementById('nc-cidade');
-    if (cidEl) cidEl.value = d.municipio || '';
-    const seg = sugerirSegmentoPorCnae(d.cnae_fiscal_descricao);
+    if (cidEl && !cidEl.value) cidEl.value = d.municipio || '';
+    const seg = sugerirSegmentoPorCnae(d.cnaeDesc);
     if (seg) document.getElementById('nc-segmento').value = seg;
-    status.innerHTML = `<span style="color:var(--verde);">✅ ${d.razao_social || 'Empresa encontrada'} — confira e edite os campos antes de salvar.</span>`;
-    // Avisa que endereço pode ser da sede, não do local de atendimento
-    const avisoSede = document.getElementById('nc-cnpj-aviso-sede');
-    if (avisoSede && endereco) avisoSede.style.display = 'block';
+
+    // Monta endereço e mostra inline no card 1
+    const endParts = [d.logradouro, d.numero].filter(Boolean).join(', ');
+    const endereco = endParts + (d.bairro ? ' — ' + d.bairro : '') + (d.municipio ? ', ' + d.municipio : '');
+    window._cnpjTemp = { d, endereco };
+
+    status.innerHTML = `<span style="color:var(--verde);">✅ ${d.razaoSocial || 'Empresa encontrada'}</span>`;
+
+    if (endereco.trim()) {
+      document.getElementById('nc-cnpj-end-texto').textContent = endereco;
+      elRes.style.display = 'block';
+    } else {
+      // Encontrou empresa mas sem endereço — confirma sem endereço
+      _confirmarEndCnpj();
+    }
     _piscarCamposVazios();
-    if (endereco) geocodificarEnderecoCnpj(d, endereco);
+
   } catch (e) {
-    status.innerHTML = `<span style="color:var(--amarelo);">⚠️ Falha na consulta. Tente de novo ou use outra forma.</span>`;
+    // Todas as 3 APIs falharam
+    status.style.display = 'none';
+    elNao.style.display = 'block';
   }
+
   btn.textContent = '🔍 Buscar'; btn.disabled = false;
 }
 
+function _confirmarEndCnpj() {
+  const { d, endereco } = window._cnpjTemp || {};
+  document.getElementById('nc-cnpj-resultado').style.display = 'none';
+  if (endereco) {
+    document.getElementById('nc-endereco').value = endereco;
+    if (d) geocodificarEnderecoCnpj(d, endereco);
+  }
+  toast('✅ Endereço confirmado!');
+}
+
+function _outroEndCnpj() {
+  document.getElementById('nc-cnpj-resultado').style.display = 'none';
+  _focarCard2();
+  toast('Digite o endereço correto no campo abaixo');
+}
+
+function _focarCard2() {
+  const card = document.getElementById('nc-card-endereco');
+  if (card) card.scrollIntoView({ behavior:'smooth', block:'center' });
+  setTimeout(() => document.getElementById('nc-endereco')?.focus(), 400);
+}
+
+function _focarCard3() {
+  const card = document.getElementById('nc-card-gps');
+  if (card) card.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+function _abrirClienteDuplicado() {
+  const id = window._cnpjDuplicataId;
+  if (!id) return;
+  fecharModal('modal-novo-cliente');
+  clienteAtualId = id;
+  const c = getClientes().find(x => x.id === id);
+  if (c) { abrirDetalhe(id); }
+}
+
+function _limparCardCnpj() {
+  ['nc-cnpj','nc-cnpj-status','nc-cnpj-duplicata','nc-cnpj-resultado','nc-cnpj-nao-encontrado']
+    .forEach(id => { const el = document.getElementById(id); if (el) { el.value !== undefined ? el.value = '' : el.style.display = 'none'; } });
+  document.getElementById('nc-cnpj-status').style.display = 'none';
+  document.getElementById('btn-limpar-cnpj').style.display = 'none';
+  window._cnpjTemp = null;
+}
+
+function _limparCardEndereco() {
+  const end = document.getElementById('nc-endereco');
+  if (end) end.value = '';
+  ['nc-end-status','nc-end-sugestoes'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  enderecoValidadoNc = null;
+  document.getElementById('nc-lat').value = '';
+  document.getElementById('nc-lng').value = '';
+}
+
+function _limparCardGps() {
+  const chip = document.getElementById('nc-gps-chip');
+  const st = document.getElementById('nc-gps-status');
+  if (chip) chip.style.display = 'none';
+  if (st) st.style.display = 'none';
+  document.getElementById('nc-lat').value = '';
+  document.getElementById('nc-lng').value = '';
+}
+
 async function geocodificarEnderecoCnpj(d, enderecoExibido) {
-  const status = document.getElementById('nc-end-status');
-  status.style.display = 'block';
-  status.innerHTML = `<span style="color:var(--texto2);">📡 Localizando no mapa...</span>`;
-  // Tenta do mais específico ao mais garantido (CEP quase sempre resolve)
   const tentativas = [
     [d.logradouro, d.numero, d.municipio, 'Brasil'].filter(Boolean).join(', '),
-    [d.cep, 'Brasil'].filter(Boolean).join(', '),
+    [(d.cep||'').replace(/\D/g,''), 'Brasil'].filter(Boolean).join(', '),
     [d.logradouro, d.municipio, 'Brasil'].filter(Boolean).join(', ')
   ];
   for (const q of tentativas) {
-    if (!q || q === 'Brasil') continue;
+    if (!q || q === 'Brasil' || q.trim() === ',') continue;
     try {
       const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=pt-BR`);
       const res = await resp.json();
       if (res && res.length > 0) {
         enderecoValidadoNc = { lat: res[0].lat, lng: res[0].lon, display: enderecoExibido };
-        status.innerHTML = `<span style="color:var(--verde);">✅ Endereço localizado! Alfinete será criado no mapa.</span>`;
+        document.getElementById('nc-lat').value = res[0].lat;
+        document.getElementById('nc-lng').value = res[0].lon;
         return;
       }
     } catch (e) { /* tenta a próxima */ }
   }
-  status.innerHTML = `<span style="color:var(--amarelo);">⚠️ Não achei no mapa automaticamente — toque em 🔍 Validar para tentar manualmente.</span>`;
 }
 
 async function validarEndereco() {
@@ -8629,6 +8806,7 @@ function salvarNovoCliente() {
     segmento: document.getElementById('nc-segmento').value || 'geral',
     cidade: document.getElementById('nc-cidade').value.trim().toUpperCase(),
     telefone: document.getElementById('nc-telefone').value.trim(),
+    cnpj: (document.getElementById('nc-cnpj')?.value || '').replace(/\D/g,'') || undefined,
     marcas: getMarcasSelecionadas('nc-marcas-grid'),
     tipo: document.getElementById('nc-tipo')?.value || 'cliente',
     historico: [], criadoEm: new Date().toISOString()

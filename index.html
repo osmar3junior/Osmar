@@ -1740,8 +1740,11 @@ if ('serviceWorker' in navigator) {
       <input type="hidden" id="nc-lng">
     </div>
 
-    <div class="campo-grupo"><label class="campo-label">Nome do contato *</label><input type="text" class="campo-input" id="nc-nome" placeholder="NOME DO COMPRADOR OU DONO" style="text-transform:uppercase;"></div>
-    <div class="campo-grupo"><label class="campo-label">Nome da loja *</label><input type="text" class="campo-input" id="nc-loja" placeholder="RAZÃO SOCIAL OU NOME FANTASIA" style="text-transform:uppercase;"></div>
+    <!-- Lembrete dinâmico após confirmação do endereço -->
+    <div id="nc-lembrete-campos" style="display:none;background:rgba(239,68,68,.06);border:1.5px solid rgba(239,68,68,.25);border-radius:12px;padding:12px 14px;margin-bottom:14px;"></div>
+
+    <div class="campo-grupo"><label class="campo-label">Nome do contato *</label><input type="text" class="campo-input" id="nc-nome" placeholder="NOME DO COMPRADOR OU DONO" style="text-transform:uppercase;" oninput="_mostrarLembreteCampos()"></div>
+    <div class="campo-grupo"><label class="campo-label">Nome da loja *</label><input type="text" class="campo-input" id="nc-loja" placeholder="RAZÃO SOCIAL OU NOME FANTASIA" style="text-transform:uppercase;" oninput="_mostrarLembreteCampos()"></div>
     <div class="campo-grupo"><label class="campo-label">Segmento</label>
       <select class="campo-input" id="nc-segmento">
         <option value="geral">🏪 Geral</option>
@@ -1758,7 +1761,7 @@ if ('serviceWorker' in navigator) {
       </select>
     </div>
     <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="nc-cidade" placeholder="CIDADE" style="text-transform:uppercase;"></div>
-    <div class="campo-grupo"><label class="campo-label">WhatsApp</label><input type="tel" class="campo-input" id="nc-telefone" placeholder="(00) 00000-0000"></div>
+    <div class="campo-grupo"><label class="campo-label">WhatsApp</label><input type="tel" class="campo-input" id="nc-telefone" placeholder="(00) 00000-0000" oninput="_mostrarLembreteCampos()"></div>
     <div class="campo-grupo"><label class="campo-label">Marcas representadas <span style="color:var(--texto3);font-weight:400;">(até 5)</span></label><div class="sku-grid" id="nc-marcas-grid"></div></div>
 
     <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;margin-bottom:14px;">
@@ -4481,6 +4484,19 @@ function abrirNotificacoes() {
     );
   }
 
+  const metasAtrasadas = _getMetasAtrasadas();
+  if (metasAtrasadas.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#FB923C;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">⚡ Precisa acelerar</div>`;
+    metasAtrasadas.forEach(a => {
+      const diasTxt = a.diasRestantes === 1 ? '1 dia restante' : `${a.diasRestantes} dias restantes`;
+      html += linhaAlerta('⚡','rgba(251,146,60,.4)','rgba(251,146,60,.07)',
+        `${a.marca} — ${a.pctReal}% vendido · ${a.pctPeriodo}% do período`,
+        `${diasTxt} · o ritmo atual não bate a meta`,
+        `fecharModal('modal-notificacoes');setTimeout(()=>abrirRelatorios(),200)`
+      );
+    });
+  }
+
   if (metasRisco.length) {
     html += `<div style="font-size:10px;font-weight:700;color:#7DD3FC;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">📊 Meta em risco</div>`;
     metasRisco.forEach(m => {
@@ -4566,7 +4582,8 @@ function _atualizarBadgeNotif() {
   const alertas = calcularAlertasMarcas();
   const urgentes = getClientesAtivos().filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; });
   const gatilhos = calcularGatilhosAntecipacao().filter(g => g.urgencia === 'ultima');
-  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length;
+  const atrasadas = _getMetasAtrasadas();
+  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length;
   const badge = document.getElementById('notif-badge');
   const btn = badge?.parentElement;
   if (!badge) return;
@@ -6977,6 +6994,8 @@ function confirmarSugestaoNc(idx) {
   document.getElementById('nc-end-sugestoes').style.display = 'none';
   document.getElementById('nc-end-status').style.display = 'block';
   document.getElementById('nc-end-status').innerHTML = `<span style="color:var(--verde);">✅ Endereço validado! Alfinete será criado no mapa.</span>`;
+  window._lembreteAtivo = true;
+  _mostrarLembreteCampos();
   // Preenche cidade usando o campo address do Nominatim (preciso, não mais extração por posição)
   const cidadeEl = document.getElementById('nc-cidade');
   if (cidadeEl && !cidadeEl.value) {
@@ -7152,6 +7171,8 @@ function _confirmarEndCnpj() {
     if (d) geocodificarEnderecoCnpj(d, endereco);
   }
   toast('✅ Endereço confirmado!');
+  window._lembreteAtivo = true;
+  _mostrarLembreteCampos();
 }
 
 function _outroEndCnpj() {
@@ -7420,6 +7441,37 @@ function detectarLocalizacaoNc() {
   }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
+function _mostrarLembreteCampos() {
+  const lembrete = document.getElementById('nc-lembrete-campos');
+  if (!lembrete || lembrete.style.display === 'none' && !window._lembreteAtivo) return;
+  const nome = document.getElementById('nc-nome')?.value.trim() || '';
+  const loja = document.getElementById('nc-loja')?.value.trim() || '';
+  const tel  = document.getElementById('nc-telefone')?.value.trim() || '';
+  const faltaObrig = [];
+  if (!nome) faltaObrig.push({ label: 'Nome do comprador', id: 'nc-nome' });
+  if (!loja) faltaObrig.push({ label: 'Nome da loja', id: 'nc-loja' });
+  const faltaTel = !tel;
+  if (!faltaObrig.length && !faltaTel) { lembrete.style.display = 'none'; window._lembreteAtivo = false; return; }
+  const focusEl = id => `document.getElementById('${id}').focus();document.getElementById('${id}').scrollIntoView({behavior:'smooth',block:'center'})`;
+  let html = `<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:8px;">📋 Falta preencher para salvar o cliente:</div>`;
+  faltaObrig.forEach(f => {
+    html += `<button type="button" onclick="${focusEl(f.id)}" style="display:inline-flex;align-items:center;gap:5px;background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.4);border-radius:20px;padding:6px 12px;color:#F87171;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;margin:3px 3px 3px 0;">✏️ ${f.label} *</button>`;
+  });
+  if (faltaTel) {
+    html += `<div style="font-size:10px;color:var(--texto3);margin-top:8px;margin-bottom:4px;">Opcional — mas importante para mensagens personalizadas:</div>`;
+    html += `<button type="button" onclick="${focusEl('nc-telefone')}" style="display:inline-flex;align-items:center;gap:5px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.3);border-radius:20px;padding:6px 12px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">💬 WhatsApp</button>`;
+  }
+  lembrete.innerHTML = html;
+  lembrete.style.display = 'block';
+  window._lembreteAtivo = true;
+  if (faltaObrig.length) {
+    setTimeout(() => {
+      const el = document.getElementById(faltaObrig[0].id);
+      if (el) { el.scrollIntoView({ behavior:'smooth', block:'center' }); el.focus(); }
+    }, 350);
+  }
+}
+
 function _piscarCamposVazios() {
   // Campos obrigatórios/recomendados que piscam se vazios após escolher localização
   const campos7 = ['nc-nome','nc-loja','nc-cidade','nc-telefone'];
@@ -7453,6 +7505,8 @@ function aplicarLocalizacaoNc() {
   st.style.display = 'block';
   st.innerHTML = `<span style="color:var(--verde);">✅ Localização aplicada.</span>`;
   _piscarCamposVazios();
+  window._lembreteAtivo = true;
+  _mostrarLembreteCampos();
 }
 
 function abrirMapaParaNovoCliente() {
@@ -8748,6 +8802,15 @@ function abrirModalNovoCliente() {
   ['nc-nome','nc-loja','nc-cidade','nc-telefone','nc-endereco','nc-lat','nc-lng','nc-cnpj'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+  // Reseta lembrete de campos
+  window._lembreteAtivo = false;
+  const lembrete = document.getElementById('nc-lembrete-campos');
+  if (lembrete) lembrete.style.display = 'none';
+  ['nc-cnpj-duplicata','nc-cnpj-resultado','nc-cnpj-nao-encontrado'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  document.getElementById('btn-limpar-cnpj').style.display = 'none';
+  window._cnpjTemp = null;
   const cnpjSt = document.getElementById('nc-cnpj-status');
   if (cnpjSt) cnpjSt.style.display = 'none';
   document.getElementById('nc-segmento').value = 'geral';
@@ -9228,6 +9291,26 @@ async function _dispararNotificacaoLocal() {
   });
 }
 
+// Retorna marcas que passaram da metade do período e estão abaixo do ritmo necessário
+function _getMetasAtrasadas() {
+  const metas = getMetasConfig();
+  const atrasadas = [];
+  metas.forEach(meta => {
+    const real  = calcularRealMarca(meta);
+    if (meta.valor - real <= 0) return; // meta batida
+    const { inicio, fim } = _periodoMeta(meta);
+    const agora = new Date();
+    const diasTotal    = Math.max(1, Math.round((fim - inicio) / 86400000));
+    const diasPassados = Math.max(0, Math.min(Math.round((agora - inicio) / 86400000), diasTotal));
+    const pctPeriodo   = Math.round((diasPassados / diasTotal) * 100);
+    if (pctPeriodo < 50) return; // ainda na 1ª metade
+    const pctReal = meta.valor > 0 ? Math.round((real / meta.valor) * 100) : 0;
+    if (pctReal / pctPeriodo >= 0.9) return; // no ritmo
+    atrasadas.push({ marca: meta.marca, pctPeriodo, pctReal, diasRestantes: diasTotal - diasPassados, meta });
+  });
+  return atrasadas;
+}
+
 // ===== GATILHO: marca atrasada depois da metade do período =====
 // Dispara UMA vez por marca/período quando: passou da metade E está fora do ritmo.
 async function _checarGatilhoMetaAtrasada() {
@@ -9648,6 +9731,43 @@ function _coletarDadosRep() {
   const prospectos = getProspectos().filter(c => !c.dataRetornoCustom || new Date(c.dataRetornoCustom)<=hoje);
   const esquecidos = ativos.filter(c => isEsquecido(c));
 
+  // --- Canal de pedidos: presencial vs. não presencial ---
+  const pedidosMes = [];
+  ativos.forEach(c => {
+    (c.historico||[]).forEach(h => {
+      if (h.motivo !== 'fechou_pedido') return;
+      if (new Date(h.data) < inicioMes) return;
+      (h.pedidos||[]).forEach(p => {
+        pedidosMes.push({ canal: p.canal||null, valor: p.valor||0, cliente: c.nome, cidade: c.cidade||'' });
+      });
+    });
+  });
+  const vlPresencial    = pedidosMes.filter(p=>p.canal==='visita').reduce((s,p)=>s+p.valor,0);
+  const vlNaoPresencial = pedidosMes.filter(p=>p.canal==='wpp').reduce((s,p)=>s+p.valor,0);
+  const qtPresencial    = pedidosMes.filter(p=>p.canal==='visita').length;
+  const qtNaoPresencial = pedidosMes.filter(p=>p.canal==='wpp').length;
+
+  // --- Top 20% Pareto nomeado ---
+  const top20lista = ranking.slice(0, Math.max(1, Math.round(ranking.length*0.2)));
+  const top20nomes = top20lista.map(c => `${c.nome}: ${fmtR(c.tot)}`);
+
+  // --- Cidades da carteira (para análise de rota) ---
+  const cidadeFreq = {};
+  ativos.forEach(c => { if (c.cidade) cidadeFreq[c.cidade.trim()] = (cidadeFreq[c.cidade.trim()]||0)+1; });
+  const cidadesOrdenadas = Object.entries(cidadeFreq).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([cidade,qtd])=>`${cidade}(${qtd})`);
+
+  // --- Clientes que já compram remoto (candidatos a abordar via WhatsApp) ---
+  const compramRemoto = ativos.filter(c =>
+    (c.historico||[]).some(h => h.motivo==='fechou_pedido' && (h.pedidos||[]).some(p=>p.canal==='wpp'))
+  ).map(c=>c.nome).slice(0,5);
+
+  // --- Clientes de alto potencial que nunca compraram remoto ---
+  const potRemoto = ranking.slice(0, Math.round(ranking.length*0.3)).filter(c => {
+    const cli = ativos.find(x=>x.nome===c.nome);
+    if (!cli) return false;
+    return !(cli.historico||[]).some(h => h.motivo==='fechou_pedido' && (h.pedidos||[]).some(p=>p.canal==='wpp'));
+  }).map(c=>c.nome).slice(0,5);
+
   return {
     rep: usuarioAtual?.nome || 'Representante',
     mes: hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}),
@@ -9657,7 +9777,19 @@ function _coletarDadosRep() {
       compraramEsseMes: ranking.length,
       prospectosAguardando: prospectos.length,
       esquecidos: esquecidos.length,
-      paretoShare: `${paretoShare}% do faturamento vem de ${Math.round(ranking.length*0.2)||1} clientes`
+      paretoShare: `${paretoShare}% do faturamento vem dos top ${Math.round(ranking.length*0.2)||1} clientes`,
+      top20clientes: top20nomes,
+      cidades: cidadesOrdenadas,
+    },
+    canaisDePedido: {
+      presencial: { qtd: qtPresencial, valor: fmtR(vlPresencial) },
+      naoPresencial: { qtd: qtNaoPresencial, valor: fmtR(vlNaoPresencial) },
+      observacao: qtPresencial+qtNaoPresencial===0 ? 'canal não registrado ainda' : null
+    },
+    inteligenciaDeRota: {
+      clientesQueJaCompramRemoto: compramRemoto,
+      topClientesSemCompraRemota: potRemoto,
+      notaRota: 'Sugira concentrar visitas presenciais nas cidades com mais clientes e usar WhatsApp para clientes de cidades isoladas ou de alto potencial que já demonstraram abertura remota.'
     }
   };
 }
@@ -9689,12 +9821,12 @@ ${JSON.stringify(dados, null, 2)}
 Gere uma análise em JSON com EXATAMENTE 3 campos:
 
 1. "marca" — PERSONA GUARDIÃO DO MARKET SHARE (gerente de marca da indústria):
-Foco em positivação, cobertura e mix. Identifique quais marcas estão críticas e onde há dinheiro na mesa (clientes de alto potencial sem compra, mix incompleto). Provoque o rep a agir como estrategista da marca: sugira ligar para o gerente comercial da marca pedindo verba de sell-out, prazo especial, material de PDV ou ação de positivação focada nos clientes certos. Cite nomes de clientes e marcas dos dados. Máx 220 palavras.
+Foco em positivação, cobertura e mix. Identifique quais marcas estão críticas e onde há dinheiro na mesa (clientes de alto potencial sem compra, mix incompleto). Analise os dados de canal: se há pedidos não presenciais, destaque quais clientes já compram por WhatsApp e sugira usar esse canal para ampliar positivação sem visita — especialmente em cidades com 1-2 clientes onde o deslocamento não compensa. Provoque o rep a ligar para o gerente comercial da marca pedindo verba de sell-out, prazo especial ou material de PDV. Cite nomes de clientes e marcas dos dados. Máx 230 palavras.
 
-2. "negocio" — PERSONA CFO DO REPRESENTANTE (gestor do próprio negócio):
-Foco em rentabilidade, produtividade e Pareto. Onde está o lucro real do rep? Qual marca priorizar AGORA para maximizar comissão com o tempo que resta? Aponte desperdício de energia (clientes esquecidos, prospectos parados, foco em quem traz pouco retorno). Transforme esforço em lucro: mande o rep concentrar nos 20% que trazem 80%. Máx 220 palavras.
+2. "negocio" — PERSONA CFO DO REPRESENTANTE (gestor do próprio negócio) + ESTRATEGISTA DE ROTA:
+Foco em rentabilidade, produtividade, Pareto e inteligência de rota. Onde está o lucro real? Qual marca priorizar AGORA para maximizar comissão? Analise a geografia da carteira (cidades com mais clientes) e dê uma recomendação de rota: vale concentrar dias inteiros nas cidades mais densas e usar WhatsApp para cidades isoladas? Ou o rep deve fazer um "tiro de ponta a ponta" para alcançar clientes de alto potencial antes de fechar o período? Aponte quem são os top 20% pelo nome e quanto representam. Identifique clientes de alto potencial que nunca compraram remotamente e que poderiam ser abordados por WhatsApp para liberar dias de rota para novos territórios. Aponte desperdício de energia: clientes esquecidos, prospectos parados, visitas em clientes de baixo retorno. Máx 250 palavras.
 
-3. "acoes" — EXATAMENTE 3 ações concretas e executáveis ESTA SEMANA, cada uma em 1 linha, começando com verbo no imperativo. Formato literal: "1. [ação]\\n2. [ação]\\n3. [ação]"
+3. "acoes" — EXATAMENTE 3 ações concretas e executáveis ESTA SEMANA, priorizando impacto máximo no menor tempo. Pelo menos 1 ação deve envolver abordagem remota (WhatsApp) com cliente específico do top potencial, e pelo menos 1 deve ser uma decisão de rota ou concentração geográfica. Cada ação em 1 linha começando com verbo no imperativo, citando nomes reais dos dados. Formato literal: "1. [ação]\\n2. [ação]\\n3. [ação]"
 
 Responda APENAS com JSON válido, sem texto antes ou depois:
 {"marca":"...","negocio":"...","acoes":"1. ...\\n2. ...\\n3. ..."}`;
@@ -11616,7 +11748,8 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
         <div style="display:flex;align-items:center;gap:4px;">${numLabel}<span id="check-marca-${i}" style="opacity:0;font-size:12px;color:#4ade80;transition:opacity .2s;">✓</span></div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <button type="button" class="canal-pedido-btn pulsa-canal-a" id="canal-visit-${i}" onclick="setPedidoCanal(${i},'visita')">📍 Visita<br>Presencial</button>
+        <div style="font-size:10px;color:var(--texto3);margin-bottom:6px;line-height:1.45;">👆 <strong style="color:var(--texto2);">Como foi este pedido?</strong> Marque abaixo — ajuda o Gestor IA a sugerir a melhor rota e identificar clientes para abordar à distância.</div>
+        <button type="button" class="canal-pedido-btn pulsa-canal-a" id="canal-visit-${i}" onclick="setPedidoCanal(${i},'visita')">📍 Pedido<br>Presencial</button>
         <button type="button" class="canal-pedido-btn pulsa-canal-b" id="canal-wpp-${i}" onclick="setPedidoCanal(${i},'wpp')">💬 Pedido<br>Não Presencial</button>
       </div>
       <div style="display:grid;grid-template-columns:${somenteValor ? '1fr' : '1fr 1fr'};gap:10px;margin-bottom:10px;">
@@ -12794,7 +12927,9 @@ function salvarMotivosOrdem(ordem) {
 
 function getMotivosCustom() {
   const key = 'cv_motivos_custom_' + (usuarioAtual?.email || '');
-  return getData(key) || ['','',''];
+  const saved = getData(key) || [];
+  while (saved.length < 6) saved.push('');
+  return saved;
 }
 
 function salvarMotivosCustom(customs) {
@@ -12821,10 +12956,14 @@ function renderizarListaMotivos() {
       </div>`;
   }).join('');
 
-  // Separador e motivos personalizados
+  // Separador e motivos personalizados — exibe preenchidos + 1 vazio (máx 6)
+  const preenchidos = customs.filter(v => v.trim() !== '').length;
+  const mostrar = Math.min(preenchidos + 1, 6);
   html += `<div class="motivo-custom-label">✏️ Motivos personalizados</div>`;
-  customs.forEach((val, i) => {
+  for (let i = 0; i < mostrar; i++) {
+    const val = customs[i] || '';
     const temTexto = val.trim() !== '';
+    const placeholder = (i === 0 && !temTexto) ? 'Adicionar motivo personalizado...' : `Motivo ${i + 1}...`;
     html += `
       <div class="motivo-item motivo-custom ${temTexto ? 'tem-texto' : ''}" data-custom="${i}"
         onclick="selecionarMotivoCustom(this, ${i})"
@@ -12832,13 +12971,16 @@ function renderizarListaMotivos() {
         <span class="motivo-emoji">📝</span>
         <input class="motivo-item-custom-input" type="text" maxlength="60"
           id="motivo-custom-${i}"
-          placeholder="Motivo personalizado ${i+1}..."
+          placeholder="${placeholder}"
           value="${val.replace(/"/g,'&quot;')}"
           oninput="onCustomMotivoInput(${i})"
           onclick="event.stopPropagation()"
           ondblclick="event.stopPropagation()">
       </div>`;
-  });
+  }
+  if (mostrar < 6) {
+    html += `<div style="font-size:10px;color:var(--texto3);text-align:center;margin-top:4px;padding-bottom:4px;">preencha para adicionar mais · máx. 6</div>`;
+  }
 
   lista.innerHTML = html;
   iniciarDragDrop();
@@ -12940,11 +13082,22 @@ function onCustomMotivoInput(idx) {
   const customs = getMotivosCustom();
   customs[idx] = val;
   salvarMotivosCustom(customs);
-  // Atualiza classe do item pai
   const item = input.closest('.motivo-item');
   if (item) {
     if (val.trim()) item.classList.add('tem-texto');
     else item.classList.remove('tem-texto');
+  }
+  // Se o campo recém preenchido é o último visível e ainda cabe mais, re-renderiza para abrir o próximo
+  const visiveis = document.querySelectorAll('[data-custom]').length;
+  const preenchidosAgora = customs.filter(v => v.trim() !== '').length;
+  const deveVer = Math.min(preenchidosAgora + 1, 6);
+  if (deveVer !== visiveis) {
+    renderizarListaMotivos();
+    // Reposiciona foco no campo que estava sendo editado
+    setTimeout(() => {
+      const el = document.getElementById('motivo-custom-' + idx);
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    }, 30);
   }
 }
 

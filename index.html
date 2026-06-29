@@ -375,6 +375,8 @@ if ('serviceWorker' in navigator) {
   .campo-obs:focus { border-color:var(--verde); }
   .campo-obs::placeholder { color:var(--texto3); }
   .modal-btns { display:flex; gap:10px; }
+  .chip-data-ct { flex:1; background:var(--bg3); border:1px solid var(--borda); border-radius:20px; padding:7px 4px; color:var(--texto2); font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; cursor:pointer; min-width:0; transition:all .15s; }
+  .chip-data-ct.ativo { background:rgba(0,214,143,.12); border-color:rgba(0,214,143,.4); color:var(--verde); }
   .btn-secundario { flex:1; background:var(--bg3); border:1px solid var(--borda); border-radius:10px; padding:13px; color:var(--texto); font-family:'Syne',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
 
   /* CARTÕES DAS FORMAS DE CADASTRO */
@@ -1580,7 +1582,21 @@ if ('serviceWorker' in navigator) {
         <button onclick="fecharModal('modal-contato')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
       </div>
       <div class="modal-sub">Toque uma vez para selecionar · <strong style="color:var(--verde)">Toque duas vezes para salvar direto</strong></div>
-      <div style="font-size:11px;color:var(--texto3);margin-bottom:10px;">☰ Segure e arraste para reordenar</div>
+      <div style="font-size:11px;color:var(--texto3);margin-bottom:8px;">☰ Segure e arraste para reordenar</div>
+
+      <!-- Seletor de data retroativa -->
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;color:var(--texto3);margin-bottom:5px;letter-spacing:.4px;">📅 DATA DO REGISTRO</div>
+        <div style="display:flex;gap:5px;">
+          <button class="chip-data-ct ativo" data-dias="0" onclick="_selecionarDataCt(0,this)">Hoje</button>
+          <button class="chip-data-ct" data-dias="1" onclick="_selecionarDataCt(1,this)">Ontem</button>
+          <button class="chip-data-ct" data-dias="2" onclick="_selecionarDataCt(2,this)">2 dias</button>
+          <button class="chip-data-ct" data-dias="3" onclick="_selecionarDataCt(3,this)">3 dias</button>
+          <button class="chip-data-ct" id="chip-data-picker" onclick="_abrirPickerCt()" style="flex:.7;">📅</button>
+        </div>
+        <input type="date" id="input-data-ct-picker" style="display:none;position:absolute;" onchange="_onPickerCt(this.value)">
+        <div id="data-ct-label" style="display:none;font-size:11px;color:var(--verde);margin-top:5px;text-align:center;font-weight:600;"></div>
+      </div>
     </div>
 
     <!-- Lista de motivos — rola -->
@@ -8203,6 +8219,45 @@ function editarContato(idx) {
   document.getElementById('modal-contato').classList.add('aberto');
 }
 
+// ===== DATA RETROATIVA DO CONTATO =====
+let _dataContatoSelecionada = null; // null = hoje
+
+function _selecionarDataCt(diasAtras, el) {
+  document.querySelectorAll('.chip-data-ct').forEach(b => b.classList.remove('ativo'));
+  el.classList.add('ativo');
+  const label = document.getElementById('data-ct-label');
+  if (diasAtras === 0) {
+    _dataContatoSelecionada = null;
+    label.style.display = 'none';
+  } else {
+    const d = new Date();
+    d.setDate(d.getDate() - diasAtras);
+    d.setHours(12, 0, 0, 0);
+    _dataContatoSelecionada = d;
+    label.textContent = '📅 ' + d.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
+    label.style.display = 'block';
+  }
+}
+
+function _abrirPickerCt() {
+  const picker = document.getElementById('input-data-ct-picker');
+  picker.max = new Date().toISOString().split('T')[0];
+  picker.min = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 3); return d.toISOString().split('T')[0]; })();
+  picker.value = '';
+  picker.click();
+}
+
+function _onPickerCt(value) {
+  if (!value) return;
+  const d = new Date(value + 'T12:00:00');
+  _dataContatoSelecionada = d;
+  document.querySelectorAll('.chip-data-ct').forEach(b => b.classList.remove('ativo'));
+  document.getElementById('chip-data-picker').classList.add('ativo');
+  const label = document.getElementById('data-ct-label');
+  label.textContent = '📅 ' + d.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+  label.style.display = 'block';
+}
+
 // ===== CONTATO =====
 function abrirModalContato(tipo) {
   // Prospectos têm fluxo próprio de visita
@@ -8215,6 +8270,13 @@ function abrirModalContato(tipo) {
   tipoContatoAtual = tipo;
   motivoSelecionado = null;
   document.getElementById('obs-contato').value = '';
+  // Reseta seletor de data para "Hoje"
+  _dataContatoSelecionada = null;
+  document.querySelectorAll('.chip-data-ct').forEach(b => b.classList.remove('ativo'));
+  const chipHoje = document.querySelector('.chip-data-ct[data-dias="0"]');
+  if (chipHoje) chipHoje.classList.add('ativo');
+  const labelData = document.getElementById('data-ct-label');
+  if (labelData) labelData.style.display = 'none';
   document.getElementById('campos-pedido').style.display = 'none';
   // Pré-seleciona unidade pelo segmento do cliente
   const clientes = getClientes();
@@ -8255,7 +8317,7 @@ function salvarContato() {
   const contato = {
     tipo: tipoContatoAtual,
     motivo: motivoSelecionado,
-    data: new Date().toISOString(),
+    data: (_dataContatoSelecionada || new Date()).toISOString(),
     obs: document.getElementById('obs-contato').value.trim()
   };
 

@@ -8384,7 +8384,11 @@ function salvarContato() {
     toast(motivoSelecionado === 'fechou_pedido' ? '✅ Pedido atualizado!' : 'Contato atualizado!');
   } else {
     delete clientes[idx].dataRetornoCustom;
-    clientes[idx].historico.unshift(contato);
+    // Insere na posição cronológica correta (mais recente primeiro)
+    const _tsContato = new Date(contato.data).getTime();
+    const _posInsert = clientes[idx].historico.findIndex(h => new Date(h.data).getTime() < _tsContato);
+    if (_posInsert === -1) clientes[idx].historico.push(contato);
+    else clientes[idx].historico.splice(_posInsert, 0, contato);
 
     // Retorno inteligente por marca: se fechou pedido de só algumas marcas,
     // sugere data de retorno pela marca não vendida com menor ciclo

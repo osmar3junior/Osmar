@@ -1504,8 +1504,9 @@ if ('serviceWorker' in navigator) {
     <div class="config-secao" style="background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(79,70,229,.04));border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:16px;">
       <div class="config-secao-titulo">🤖 Gestor IA</div>
       <div class="config-secao-sub">Ative seu consultor inteligente: o Gestor IA analisa suas marcas, sua carteira e sugere ações para você bater a meta. Cole sua chave gratuita do Google Gemini. <span onclick="abrirGuiaApi()" style="color:#A78BFA;cursor:pointer;font-weight:600;">Ver passo a passo →</span></div>
-      <input type="text" class="campo-input" id="cfg-gemini-key" placeholder="AIza..." style="margin-top:8px;font-family:monospace;font-size:13px;letter-spacing:.5px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <div style="font-size:11px;color:var(--texto3);margin-top:8px;line-height:1.5;">🔒 Sua chave fica só no seu aparelho. É gratuita e leva 3 minutos para obter.</div>
+      <input type="text" class="campo-input" id="cfg-gemini-key" placeholder="AIza..." style="margin-top:8px;font-family:monospace;font-size:13px;letter-spacing:.5px;" oninput="_modeloGeminiCache=null" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button onclick="salvarConfig();testarChaveGemini()" style="width:100%;margin-top:8px;background:rgba(124,58,237,.12);border:1.5px solid rgba(124,58,237,.4);border-radius:10px;padding:11px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔎 Salvar e testar chave</button>
+      <div style="font-size:11px;color:var(--texto3);margin-top:8px;line-height:1.5;">🔒 Sua chave fica só no seu aparelho. É gratuita e leva 3 minutos para obter. <span onclick="abrirComoAtivarApi()" style="color:#A78BFA;cursor:pointer;font-weight:600;">Deu erro? Como ativar a API →</span></div>
     </div>
 
     <div class="config-secao">
@@ -9310,6 +9311,33 @@ let _relExpPeriodo = 'mes'; // mes | tri | ano
 // ===== GERENTE VIRTUAL =====
 let _gerenteAnaliseCache = null;
 let _gerenteCacheData = null;
+let _modeloGeminiCache = null; // ex.: "models/gemini-1.5-flash" — descoberto dinamicamente
+
+// Pergunta ao Google quais modelos a chave do rep tem acesso e escolhe o melhor.
+// Resolve o erro "Modelo indisponível" — cada conta libera modelos diferentes.
+async function _descobrirModeloGemini(apiKey) {
+  if (_modeloGeminiCache) return _modeloGeminiCache;
+  let r;
+  try {
+    r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+  } catch(e) {
+    throw new Error('Sem conexão para validar a chave. Verifique sua internet.');
+  }
+  if (r.status === 403) throw new Error('A IA (Generative Language API) não está ativada nesse projeto. Toque em "Como ativar" abaixo.');
+  if (r.status === 400) throw new Error('Chave inválida. Gere uma nova em aistudio.google.com.');
+  if (!r.ok) throw new Error('Erro ao validar a chave ('+r.status+').');
+  const data = await r.json();
+  const modelos = (data.models || []).filter(m => (m.supportedGenerationMethods||[]).includes('generateContent'));
+  if (!modelos.length) throw new Error('Nenhum modelo de IA disponível para esta chave.');
+  // Prioriza modelos flash (rápidos e econômicos), depois pro
+  const pref = ['flash-latest','2.5-flash','2.0-flash-lite','2.0-flash','1.5-flash','flash','pro-latest','1.5-pro','pro'];
+  for (const p of pref) {
+    const achado = modelos.find(m => (m.name||'').includes(p));
+    if (achado) { _modeloGeminiCache = achado.name; return achado.name; }
+  }
+  _modeloGeminiCache = modelos[0].name;
+  return modelos[0].name;
+}
 
 function abrirGerenteVirtual() {
   document.getElementById('modal-gerente').classList.add('aberto');
@@ -9459,25 +9487,18 @@ Responda APENAS com JSON válido, sem texto antes ou depois:
       contents:[{ parts:[{ text: prompt }] }],
       generationConfig:{ temperature:0.7, maxOutputTokens:1500 }
     };
-    const modelos = ['gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash'];
-    let txt = '', ultimoErro = null;
-    for (const modelo of modelos) {
-      let r;
-      try {
-        r = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`,
-          { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
-        );
-      } catch(e) { ultimoErro = e; continue; }
-      if (r.status===404) { ultimoErro = new Error('Modelo indisponível'); continue; }
-      if (r.status===403) throw new Error('Chave sem permissão. Gere uma nova em aistudio.google.com.');
-      if (r.status===429) { ultimoErro = new Error('Limite de uso atingido. Aguarde 1 minuto e tente de novo.'); continue; }
-      if (!r.ok) { ultimoErro = new Error('Erro na API ('+r.status+').'); continue; }
-      const data = await r.json();
-      txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (txt) break;
-    }
-    if (!txt) throw ultimoErro || new Error('A IA não respondeu. Tente novamente.');
+    // Descobre automaticamente um modelo que a chave do rep tenha acesso
+    const modelo = await _descobrirModeloGemini(apiKey);
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${modelo}:generateContent?key=${apiKey}`,
+      { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
+    );
+    if (r.status===403) throw new Error('Chave sem permissão. Verifique se a Generative Language API está ativada.');
+    if (r.status===429) throw new Error('Limite de uso atingido. Aguarde 1 minuto e tente de novo.');
+    if (!r.ok) throw new Error('Erro na API ('+r.status+').');
+    const data = await r.json();
+    const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!txt) throw new Error('A IA não respondeu. Tente novamente.');
 
     const m = txt.match(/\{[\s\S]*\}/);
     if (!m) throw new Error('Resposta inesperada da IA. Tente novamente.');
@@ -12489,10 +12510,34 @@ function salvarChaveDoGuia() {
   const cfg = getConfig();
   cfg.geminiKey = chave;
   salvarConfigData(cfg);
+  _modeloGeminiCache = null; // chave nova → redescobre o modelo
+  _gerenteAnaliseCache = null;
   const cfgInput = document.getElementById('cfg-gemini-key');
   if (cfgInput) cfgInput.value = chave;
   fecharModal('modal-guia-api');
-  toast('✅ Gestor IA ativado com sucesso!');
+  testarChaveGemini();
+}
+
+function abrirComoAtivarApi() {
+  window.open('https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com', '_blank');
+  toast('Ative a "Generative Language API" e volte para testar');
+}
+
+// Testa a chave e dá um retorno claro em português
+async function testarChaveGemini() {
+  const chave = (getConfig().geminiKey || '').trim();
+  if (!chave) { toast('Cole sua chave do Gemini primeiro'); return; }
+  if (!chave.startsWith('AIza')) { toast('⚠️ A chave deve começar com AIza'); return; }
+  toast('🔎 Testando sua chave...');
+  _modeloGeminiCache = null;
+  try {
+    const modelo = await _descobrirModeloGemini(chave);
+    toast('✅ Chave funcionando! Gestor IA ativo.');
+    return true;
+  } catch(e) {
+    toast('❌ ' + (e.message || 'Falha ao testar a chave'));
+    return false;
+  }
 }
 
 function salvarMotivosOrdem(ordem) {

@@ -2191,6 +2191,7 @@ if ('serviceWorker' in navigator) {
       <div class="modal-titulo" style="margin-bottom:2px;">📦 Pedido fora da rota</div>
       <button onclick="fecharModal('modal-fora-rota')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
     </div>
+    <div style="font-size:12px;color:var(--texto2);line-height:1.5;margin-bottom:10px;">Você saiu da rota — veja quem por perto tem mais chance de comprar, com nota de 0 a 10.</div>
     <div id="fr-subtitulo" style="font-size:12px;color:var(--texto3);margin-bottom:16px;">Clientes perto de -</div>
 
     <div style="background:var(--bg2);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-bottom:14px;">
@@ -8382,12 +8383,13 @@ function abrirDetalhe(clienteId, telaOrigem) {
             ${h.pedidoValor ? `<span style="font-size:12px;font-weight:600;color:var(--verde);">💰 R$ ${h.pedidoValor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
            </div>`
         : '');
+      const foiPresencial = !(h.pedidos && h.pedidos.length && h.pedidos.every(p => p.canal === 'wpp'));
       return `
         <div class="historico-item" style="cursor:pointer;" onclick="editarContato(${idx})">
-          <div class="historico-dot">${h.tipo === 'visita' ? '📍' : '💬'}</div>
+          <div class="historico-dot">${h.tipo === 'visita' ? (foiPresencial ? '📍' : '💬') : '💬'}</div>
           <div class="historico-info">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;gap:10px;">
-              <div class="historico-tipo">${h.tipo === 'visita' ? 'Visita presencial' : 'Contato WhatsApp'}</div>
+              <div class="historico-tipo">${h.tipo === 'visita' ? (foiPresencial ? 'Visita presencial' : 'Contato com cliente') : 'Contato WhatsApp'}</div>
               <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
                 <span style="font-size:11px;color:var(--verde);font-weight:600;">✏️ Editar</span>
                 <button onclick="event.stopPropagation();excluirHistorico(${idx})" title="Excluir este registro" style="background:rgba(255,77,106,.12);border:1px solid rgba(255,77,106,.35);border-radius:7px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#FF4D6A;font-size:13px;cursor:pointer;line-height:1;padding:0;">🗑️</button>
@@ -8473,7 +8475,8 @@ function excluirHistorico(idx) {
   const reg = hist[idx];
   if (!reg) return;
 
-  const tipoTxt = reg.tipo === 'visita' ? 'Visita presencial' : 'Contato WhatsApp';
+  const regFoiPresencial = !(reg.pedidos && reg.pedidos.length && reg.pedidos.every(p => p.canal === 'wpp'));
+  const tipoTxt = reg.tipo === 'visita' ? (regFoiPresencial ? 'Visita presencial' : 'Contato com cliente') : 'Contato WhatsApp';
   const motivoTxt = MOTIVOS_BASE[reg.motivo]?.label || reg.motivo;
   if (!confirm(`Excluir este registro do histórico?\n\n${tipoTxt} · ${motivoTxt}\n${formatarData(reg.data)}\n\nEssa ação não pode ser desfeita.`)) return;
 

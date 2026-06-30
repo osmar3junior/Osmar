@@ -6326,7 +6326,7 @@ function renderizarProspectos() {
       <div onclick="fecharModal('modal-prospectos');setTimeout(()=>abrirDetalhe('${c.id}','prospectos'),200)" style="background:var(--bg3);border:1.5px solid rgba(255,192,67,.25);border-radius:12px;padding:12px;cursor:pointer;flex:1;min-width:0;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
           <div style="min-width:0;flex:1;">
-            <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--texto);margin-bottom:1px;">${esc(c.nome)}</div>
+            <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);margin-bottom:1px;">${esc(c.nome)}</div>
             <div style="font-size:11px;color:var(--texto2);">${esc(c.loja||'')}${c.cidade?' · '+esc(c.cidade):''}</div>
           </div>
           <span style="font-size:11px;font-weight:700;color:${retornoCor};white-space:nowrap;flex-shrink:0;">${retornoTxt}</span>
@@ -8435,6 +8435,7 @@ let _rotaLat = null, _rotaLng = null;
 function _navegarProspecto(lat, lng, endEnc) {
   _rotaLat = lat || null;
   _rotaLng = lng || null;
+  document.getElementById('modal-prospectos')?.classList.remove('aberto');
   abrirRotaCliente(endEnc);
 }
 

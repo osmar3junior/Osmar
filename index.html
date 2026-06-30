@@ -6322,19 +6322,21 @@ function renderizarProspectos() {
     const retornoCor = (!retorno || vencido) ? 'var(--vermelho)' : eHoje ? 'var(--amarelo)' : 'var(--texto2)';
     const marcas = (c.marcas||[]).join(' · ') || 'Marca a definir';
     const ult = c.historico?.length ? new Date(c.historico[0].data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : null;
-    return `<div onclick="fecharModal('modal-prospectos');setTimeout(()=>abrirDetalhe('${c.id}','prospectos'),200)" style="background:var(--bg3);border:1.5px solid rgba(255,192,67,.25);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
-        <div style="min-width:0;flex:1;">
-          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--texto);margin-bottom:1px;">${esc(c.nome)}</div>
-          <div style="font-size:11px;color:var(--texto2);">${esc(c.loja||'')}${c.cidade?' · '+esc(c.cidade):''}</div>
+    return `<div style="background:var(--bg3);border:1.5px solid rgba(255,192,67,.25);border-radius:12px;margin-bottom:8px;overflow:hidden;">
+      <div onclick="fecharModal('modal-prospectos');setTimeout(()=>abrirDetalhe('${c.id}','prospectos'),200)" style="padding:12px;cursor:pointer;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--texto);margin-bottom:1px;">${esc(c.nome)}</div>
+            <div style="font-size:11px;color:var(--texto2);">${esc(c.loja||'')}${c.cidade?' · '+esc(c.cidade):''}</div>
+          </div>
+          <span style="font-size:11px;font-weight:700;color:${retornoCor};white-space:nowrap;flex-shrink:0;">${retornoTxt}</span>
         </div>
-        <span style="font-size:11px;font-weight:700;color:${retornoCor};white-space:nowrap;flex-shrink:0;">${retornoTxt}</span>
+        <div style="font-size:11px;color:rgba(255,192,67,.8);margin-bottom:6px;">🏷️ ${esc(marcas)}</div>
+        <div style="font-size:10px;color:var(--texto3);">${ult?'Última visita: '+ult:'Sem visitas registradas'}</div>
       </div>
-      <div style="font-size:11px;color:rgba(255,192,67,.8);margin-bottom:6px;">🏷️ ${esc(marcas)}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:10px;color:var(--texto3);">${ult?'Última visita: '+ult:'Sem visitas registradas'}</span>
-        ${(c.endereco||c.lat)?`<span onclick="event.stopPropagation();event.preventDefault();" style="flex-shrink:0;display:inline-block;"><button ontouchend="event.stopPropagation();event.preventDefault();_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}');" onclick="event.stopPropagation();event.preventDefault();_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}');" style="background:linear-gradient(180deg,#33CCFF,#0EA5D6);border:none;border-radius:10px;padding:10px 16px;color:#fff;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:0 4px 0 #0875A8;min-height:44px;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg> Rota</button></span>`:''}
-      </div>
+      ${(c.endereco||c.lat)?`<div style="padding:0 12px 12px;display:flex;justify-content:flex-end;">
+        <button onclick="_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}')" style="background:linear-gradient(180deg,#33CCFF,#0EA5D6);border:none;border-radius:10px;padding:10px 16px;color:#fff;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:0 4px 0 #0875A8;min-height:44px;display:flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg> Rota</button>
+      </div>`:''}
     </div>`;
   }).join('');
 }
@@ -6961,6 +6963,16 @@ async function cadastrarClienteNoPonto(lat, lng) {
 
 // ===== VALIDAÇÃO DE ENDEREÇO (editar cliente) =====
 let enderecoValidado = null;
+let _endSugestoesGeo = [];
+let _endNumeroDigitado = '';
+
+// Preserva o número digitado pelo rep quando o OSM/Nominatim não tem o nº exato cadastrado
+function _preservarNumeroDigitado(resumo, numeroDigitado, temNumeroOSM) {
+  if (!numeroDigitado || temNumeroOSM || resumo.includes(numeroDigitado)) return resumo;
+  const partes = resumo.split(',').map(s => s.trim());
+  partes.splice(1, 0, numeroDigitado);
+  return partes.join(', ');
+}
 
 function limparValidacaoEndereco() {
   enderecoValidado = null;
@@ -6974,6 +6986,7 @@ function limparValidacaoEndereco() {
 
 let enderecoValidadoNc = null;
 let _ncSugestoesGeo = [];
+let _ncNumeroDigitado = '';
 
 function limparValidacaoEnderecoNc() {
   enderecoValidadoNc = null;
@@ -7017,6 +7030,7 @@ async function validarEnderecoNc() {
       status.innerHTML = `<span style="color:var(--vermelho);">❌ Endereço não encontrado. Tente ser mais específico.</span>`;
     } else {
       _ncSugestoesGeo = res;
+      _ncNumeroDigitado = (input.match(/\d+/) || [])[0] || '';
       sugestoes.style.display = 'block';
       sugestoes.innerHTML = res.map((r, i) => {
         const addr = r.address || {};
@@ -7044,14 +7058,18 @@ function confirmarSugestaoNc(idx) {
   if (!r) return;
   const lat = r.lat;
   const lng = r.lon;
+  const temNumeroOSM = !!(r.address && r.address.house_number);
   const display = r.display_name;
-  const resumo = display.split(',').slice(0, 3).join(',').trim();
+  let resumo = display.split(',').slice(0, 3).join(',').trim();
+  resumo = _preservarNumeroDigitado(resumo, _ncNumeroDigitado, temNumeroOSM);
   enderecoValidadoNc = { lat, lng, display: resumo };
   document.getElementById('nc-endereco').value = resumo;
   document.getElementById('btn-validar-nc')?.classList.remove('btn-validar-pisca');
   document.getElementById('nc-end-sugestoes').style.display = 'none';
   document.getElementById('nc-end-status').style.display = 'block';
-  document.getElementById('nc-end-status').innerHTML = `<span style="color:var(--verde);">✅ Endereço validado! Alfinete será criado no mapa.</span>`;
+  document.getElementById('nc-end-status').innerHTML = temNumeroOSM
+    ? `<span style="color:var(--verde);">✅ Endereço validado! Alfinete será criado no mapa.</span>`
+    : `<span style="color:var(--verde);">✅ Endereço validado!</span> <span style="color:var(--texto3);">(mapa não tem o nº exato — alfinete fica próximo)</span>`;
   window._lembreteAtivo = true;
   _mostrarLembreteCampos();
   // Preenche cidade usando o campo address do Nominatim (preciso, não mais extração por posição)
@@ -7345,9 +7363,11 @@ async function validarEndereco() {
     }
 
     // Mostra sugestões
+    _endSugestoesGeo = resultados;
+    _endNumeroDigitado = (input.match(/\d+/) || [])[0] || '';
     sugestoes.style.display = 'block';
     sugestoes.innerHTML = resultados.map((r, i) => `
-      <div onclick="confirmarSugestao(${i})" data-lat="${r.lat}" data-lng="${r.lon}" data-display="${encodeURIComponent(r.display_name)}"
+      <div onclick="confirmarSugestao(${i})"
         style="padding:12px 14px;border-bottom:1px solid var(--borda);cursor:pointer;transition:background .15s;"
         onmouseenter="this.style.background='rgba(0,214,143,.07)'"
         onmouseleave="this.style.background='transparent'">
@@ -7368,19 +7388,22 @@ async function validarEndereco() {
 }
 
 function confirmarSugestao(idx) {
-  const items = document.querySelectorAll('#end-sugestoes > div');
-  const item = items[idx];
-  const lat = item.dataset.lat;
-  const lng = item.dataset.lng;
-  const display = decodeURIComponent(item.dataset.display);
-  const resumo = display.split(',').slice(0,3).join(',').trim();
+  const r = _endSugestoesGeo[idx];
+  if (!r) return;
+  const lat = r.lat;
+  const lng = r.lon;
+  const temNumeroOSM = !!(r.address && r.address.house_number);
+  let resumo = r.display_name.split(',').slice(0,3).join(',').trim();
+  resumo = _preservarNumeroDigitado(resumo, _endNumeroDigitado, temNumeroOSM);
 
   enderecoValidado = { lat, lng, display: resumo };
 
   document.getElementById('ec-endereco').value = resumo;
   document.getElementById('end-sugestoes').style.display = 'none';
   document.getElementById('end-status').style.display = 'block';
-  document.getElementById('end-status').innerHTML = `<span style="color:var(--verde);">✅ Endereço validado! Alfinete será criado no mapa.</span>`;
+  document.getElementById('end-status').innerHTML = temNumeroOSM
+    ? `<span style="color:var(--verde);">✅ Endereço validado! Alfinete será criado no mapa.</span>`
+    : `<span style="color:var(--verde);">✅ Endereço validado!</span> <span style="color:var(--texto3);">(mapa não tem o nº exato — alfinete fica próximo)</span>`;
 }
 
 function verificarEnderecosPendentes() {

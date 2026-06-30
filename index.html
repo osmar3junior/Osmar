@@ -6322,8 +6322,8 @@ function renderizarProspectos() {
     const retornoCor = (!retorno || vencido) ? 'var(--vermelho)' : eHoje ? 'var(--amarelo)' : 'var(--texto2)';
     const marcas = (c.marcas||[]).join(' · ') || 'Marca a definir';
     const ult = c.historico?.length ? new Date(c.historico[0].data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : null;
-    return `<div style="background:var(--bg3);border:1.5px solid rgba(255,192,67,.25);border-radius:12px;margin-bottom:8px;overflow:hidden;">
-      <div onclick="fecharModal('modal-prospectos');setTimeout(()=>abrirDetalhe('${c.id}','prospectos'),200)" style="padding:12px;cursor:pointer;">
+    return `<div style="display:flex;align-items:stretch;gap:8px;margin-bottom:8px;">
+      <div onclick="fecharModal('modal-prospectos');setTimeout(()=>abrirDetalhe('${c.id}','prospectos'),200)" style="background:var(--bg3);border:1.5px solid rgba(255,192,67,.25);border-radius:12px;padding:12px;cursor:pointer;flex:1;min-width:0;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
           <div style="min-width:0;flex:1;">
             <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--texto);margin-bottom:1px;">${esc(c.nome)}</div>
@@ -6334,9 +6334,7 @@ function renderizarProspectos() {
         <div style="font-size:11px;color:rgba(255,192,67,.8);margin-bottom:6px;">🏷️ ${esc(marcas)}</div>
         <div style="font-size:10px;color:var(--texto3);">${ult?'Última visita: '+ult:'Sem visitas registradas'}</div>
       </div>
-      ${(c.endereco||c.lat)?`<div style="padding:0 12px 12px;display:flex;justify-content:flex-end;">
-        <button onclick="_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}')" style="background:linear-gradient(180deg,#33CCFF,#0EA5D6);border:none;border-radius:10px;padding:10px 16px;color:#fff;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:0 4px 0 #0875A8;min-height:44px;display:flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg> Rota</button>
-      </div>`:''}
+      ${(c.endereco||c.lat)?`<button onclick="_navegarProspecto('${c.lat||''}','${c.lng||''}','${encodeURIComponent(c.endereco||'')}')" style="background:linear-gradient(180deg,#33CCFF,#0EA5D6);border:none;border-radius:12px;padding:10px 14px;color:#fff;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:0 4px 0 #0875A8;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:62px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>Rota</button>`:''}
     </div>`;
   }).join('');
 }

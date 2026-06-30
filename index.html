@@ -1056,6 +1056,7 @@ if ('serviceWorker' in navigator) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         </button>
       </div>
+      <button id="btn-fora-rota-detalhe" onclick="abrirForaDaRota()" style="display:none;width:100%;margin-top:8px;background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.4);border-radius:11px;padding:11px 8px;align-items:center;justify-content:center;gap:6px;color:#A78BFA;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;">📦 Pedido fora da rota</button>
     </div>
   </div>
   <div class="detalhe-content">
@@ -2180,6 +2181,34 @@ if ('serviceWorker' in navigator) {
         <span style="font-size:22px;">🎯</span>
         <div><div style="font-size:14px;font-weight:700;color:var(--texto);">Prontos para comprar</div><div style="font-size:11px;color:var(--texto3);">Clientes com maior probabilidade de comprar agora</div></div>
       </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-fora-rota">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="modal-titulo" style="margin-bottom:2px;">📦 Pedido fora da rota</div>
+      <button onclick="fecharModal('modal-fora-rota')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div id="fr-subtitulo" style="font-size:12px;color:var(--texto3);margin-bottom:16px;">Clientes perto de -</div>
+
+    <div style="background:var(--bg2);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+        <span style="font-size:12px;color:var(--texto2);font-weight:600;">Raio de busca</span>
+        <span id="fr-raio-out" style="font-size:20px;font-weight:700;color:var(--texto);">20 km</span>
+      </div>
+      <div id="fr-segmentos" style="display:flex;gap:3px;margin-bottom:10px;"></div>
+      <input type="range" id="fr-raio-slider" min="5" max="300" step="5" value="20" oninput="_foraRotaSliderInput(this.value)"
+        style="width:100%;height:4px;border-radius:99px;background:var(--bg3);accent-color:#FFC043;cursor:pointer;">
+      <div id="fr-contagem" style="font-size:12px;color:var(--texto2);margin-top:10px;">- clientes encontrados</div>
+    </div>
+
+    <div id="fr-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button id="fr-btn-ordem" onclick="_foraRotaToggleOrdem()" style="background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.35);border-radius:11px;padding:12px;color:#38BDF8;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">➤ Ver rota com prioridade</button>
+      <button onclick="_foraRotaWhatsApp()" style="display:flex;align-items:center;justify-content:center;gap:7px;background:#25D366;border:none;border-radius:11px;padding:12px;color:#fff;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">💬 Enviar via WhatsApp</button>
     </div>
   </div>
 </div>
@@ -4398,7 +4427,7 @@ async function fazerLogin() {
     irPara('dashboard');
     _sbAuth(email, senha);
     setTimeout(_checarOnboarding, 2500); // espera o pull da nuvem antes de decidir mostrar o assistente
-    setTimeout(() => { if (Notification.permission === 'granted') { _salvarDadosNotifSW(); _checarGatilhoMetaAtrasada(); _agendarNotifDiaria(); } }, 3000);
+    setTimeout(() => { if (Notification.permission === 'granted') { _salvarDadosNotifSW(); _agendarNotifDiaria(); } }, 3000);
   } else {
     // Cache foi limpo — tenta recuperar pelo Supabase
     toast('🔄 Recuperando dados da nuvem...');
@@ -6276,6 +6305,136 @@ function _scoreFoco(c) {
   return { score, focoCount };
 }
 
+// ===== PEDIDO FORA DA ROTA =====
+// Nota (0-10): mistura "quão atrasada está a marca em relação ao giro ideal" com o potencial de venda dela.
+function _notaForaRota(c) {
+  const metas = getConfig().metas || [];
+  const pot = calcularPotencialCliente(c);
+  let melhor = null;
+  (c.marcas && c.marcas.length ? c.marcas : ['_']).forEach(marca => {
+    const m = metas.find(mm => mm.marca === marca);
+    let ult = null;
+    (c.historico || []).forEach(h => {
+      if (h.motivo !== 'fechou_pedido') return;
+      const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : (c.marcas||[])[0] === marca;
+      if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
+    });
+    const dias = ult ? Math.floor((new Date() - ult) / 86400000) : null;
+    const cicloIdeal = m?.cicloIdeal || 60;
+    const atrasoScore = dias === null ? 0.4 : Math.min(1, dias / cicloIdeal);
+    const pv = pot[marca] || {};
+    const potencial = pv.max || pv.avg || 0;
+    const potencialScore = Math.min(1, potencial / 1000);
+    const nota = Math.min(10, atrasoScore * 6 + potencialScore * 4);
+    if (!melhor || nota > melhor.nota) melhor = { marca: marca === '_' ? (c.marcas?.[0] || 'Sem marca') : marca, nota };
+  });
+  return melhor || { marca: 'Sem marca', nota: 0 };
+}
+
+function _candidatosForaDaRota(anchor, raioKm) {
+  return getClientesAtivos()
+    .filter(c => c.id !== anchor.id && c.lat && c.lng)
+    .map(c => {
+      const dist = calcularDistancia(parseFloat(anchor.lat), parseFloat(anchor.lng), parseFloat(c.lat), parseFloat(c.lng));
+      const { marca, nota } = _notaForaRota(c);
+      return { cliente: c, dist, marca, nota };
+    })
+    .filter(x => x.dist <= raioKm);
+}
+
+function abrirForaDaRota() {
+  const cliente = getClientes().find(c => c.id === clienteAtualId);
+  if (!cliente || !cliente.lat || !cliente.lng) { toast('Este cliente precisa ter localização salva.'); return; }
+  window._foraRotaAnchorId = cliente.id;
+  window._foraRotaRaio = 20;
+  window._foraRotaOrdemRota = false;
+  document.getElementById('fr-subtitulo').textContent = `Clientes perto de ${cliente.nome}`;
+  document.getElementById('fr-raio-slider').value = 20;
+  document.getElementById('fr-btn-ordem').textContent = '➤ Ver rota com prioridade';
+  document.getElementById('modal-fora-rota').classList.add('aberto');
+  _renderForaDaRota();
+}
+
+function _foraRotaSliderInput(valor) {
+  window._foraRotaRaio = Number(valor);
+  _renderForaDaRota();
+}
+
+function _foraRotaToggleOrdem() {
+  window._foraRotaOrdemRota = !window._foraRotaOrdemRota;
+  document.getElementById('fr-btn-ordem').textContent = window._foraRotaOrdemRota ? '⭐ Ver por potencial' : '➤ Ver rota com prioridade';
+  _renderForaDaRota();
+}
+
+function _foraRotaListaAtual() {
+  const anchor = getClientes().find(c => c.id === window._foraRotaAnchorId);
+  if (!anchor) return { anchor: null, lista: [] };
+  let lista = _candidatosForaDaRota(anchor, window._foraRotaRaio);
+  if (window._foraRotaOrdemRota) {
+    const ordenados = _nearestNeighbor(lista.map(x => x.cliente), parseFloat(anchor.lat), parseFloat(anchor.lng));
+    lista = ordenados.map(c => lista.find(x => x.cliente.id === c.id));
+  } else {
+    lista.sort((a, b) => b.nota - a.nota);
+  }
+  return { anchor, lista };
+}
+
+function _renderForaDaRota() {
+  const raio = window._foraRotaRaio || 20;
+  document.getElementById('fr-raio-out').textContent = raio + ' km';
+
+  const segWrap = document.getElementById('fr-segmentos');
+  const NSEG = 14;
+  if (!segWrap.children.length) {
+    for (let i = 0; i < NSEG; i++) {
+      const seg = document.createElement('div');
+      seg.style.height = '8px';
+      seg.style.flex = '1';
+      seg.style.borderRadius = '4px';
+      segWrap.appendChild(seg);
+    }
+  }
+  const segsLigados = Math.round((raio / 300) * NSEG);
+  Array.from(segWrap.children).forEach((seg, i) => { seg.style.background = i < segsLigados ? 'var(--amarelo)' : 'var(--bg3)'; });
+
+  const { lista } = _foraRotaListaAtual();
+  const contagem = document.getElementById('fr-contagem');
+  contagem.textContent = `${lista.length} cliente${lista.length !== 1 ? 's' : ''} encontrado${lista.length !== 1 ? 's' : ''}`;
+
+  const cont = document.getElementById('fr-lista');
+  if (!lista.length) { cont.innerHTML = `<div style="text-align:center;padding:20px;color:var(--texto3);font-size:13px;">Nenhum cliente nesse raio. Aumente o raio de busca.</div>`; return; }
+
+  cont.innerHTML = lista.map((x, i) => {
+    const cor = x.nota >= 7 ? 'var(--verde)' : x.nota >= 4.5 ? 'var(--amarelo)' : 'var(--texto2)';
+    const ordemTag = window._foraRotaOrdemRota ? `<div style="font-size:11px;color:#38BDF8;font-weight:700;margin-bottom:2px;">#${i + 1} na rota</div>` : '';
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--borda);border-radius:12px;cursor:pointer;" onclick="fecharModal('modal-fora-rota');setTimeout(()=>abrirDetalhe('${x.cliente.id}','clientes'),200)">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${cor};flex-shrink:0;">${x.nota.toFixed(1)}</div>
+        <div style="flex:1;min-width:0;">
+          ${ordemTag}
+          <div style="font-weight:600;font-size:14px;color:var(--texto);">${esc(x.cliente.nome)}</div>
+          <div style="font-size:11px;color:var(--texto2);">${x.dist.toFixed(1)} km · sugestão: ${esc(x.marca)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function _foraRotaWhatsApp() {
+  const cfg = getConfig();
+  if (!cfg.wppRep) { toast('Cadastre seu WhatsApp em Configurações primeiro 📲'); return; }
+  const { anchor, lista } = _foraRotaListaAtual();
+  if (!anchor || !lista.length) { toast('Nenhum cliente encontrado nesse raio.'); return; }
+  const hoje = new Date();
+  const dataTxt = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
+  let msg = `📦 *PEDIDO FORA DA ROTA*\n_Perto de ${anchor.nome} — ${dataTxt}_\n_Gerado pelo Carteira Viva_\n`;
+  lista.forEach((x, i) => {
+    msg += `\n${i + 1}. 🏪 *${x.cliente.nome.toUpperCase()}*${x.cliente.cidade ? ' · ' + x.cliente.cidade : ''}\n   📏 ${x.dist.toFixed(1)} km · ⭐ nota ${x.nota.toFixed(1)} · 🏷️ ${x.marca}\n`;
+  });
+  msg += `\n_${lista.length} cliente${lista.length>1?'s':''} encontrado${lista.length>1?'s':''} · Carteira Viva_`;
+  fecharModal('modal-fora-rota');
+  _wppAbrir(msg);
+}
+
 // ===== PROSPECTOS =====
 function setNcTipo(tipo) {
   const el = document.getElementById('nc-tipo');
@@ -8042,6 +8201,8 @@ function abrirDetalhe(clienteId, telaOrigem) {
     endEl.innerHTML = '';
     if (btnRotaDet) btnRotaDet.style.display = 'none';
   }
+  const btnForaRota = document.getElementById('btn-fora-rota-detalhe');
+  if (btnForaRota) btnForaRota.style.display = (cliente.lat && cliente.lng) ? 'flex' : 'none';
   // Segmento
   let segEl = document.getElementById('det-segmento-tag');
   if (!segEl) {
@@ -9752,63 +9913,6 @@ function _getMetasAtrasadas() {
   return atrasadas;
 }
 
-// ===== GATILHO: marca atrasada depois da metade do período =====
-// Dispara UMA vez por marca/período quando: passou da metade E está fora do ritmo.
-async function _checarGatilhoMetaAtrasada() {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  if (!usuarioAtual) return;
-  const metas = getMetasConfig();
-  if (!metas.length) return;
-
-  const chaveAvisos = 'cv_notif_avisos_' + usuarioAtual.email;
-  const avisos = getData(chaveAvisos) || {};
-  const atrasadas = [];
-
-  metas.forEach(meta => {
-    const real  = calcularRealMarca(meta);
-    const falta = meta.valor - real;
-    if (falta <= 0) return; // meta já batida
-
-    const { inicio, fim } = _periodoMeta(meta);
-    const agora = new Date();
-    const diasTotal    = Math.max(1, Math.round((fim - inicio) / 86400000));
-    const diasPassados = Math.max(0, Math.min(Math.round((agora - inicio) / 86400000), diasTotal));
-    const pctPeriodo   = Math.round((diasPassados / diasTotal) * 100);
-    if (pctPeriodo < 50) return; // ainda não passou da metade
-
-    const pctReal = meta.valor > 0 ? Math.round((real / meta.valor) * 100) : 0;
-    const ratio   = pctPeriodo > 0 ? pctReal / pctPeriodo : 1;
-    if (ratio >= 0.9) return; // está no ritmo
-
-    const periodoId = meta.mes || ((meta.dataInicio || '') + (meta.dataFim || ''));
-    const chave = meta.id + '_' + periodoId;
-    if (avisos[chave]) return; // já avisou neste período
-
-    atrasadas.push({ marca: meta.marca, chave });
-  });
-
-  if (!atrasadas.length) return;
-
-  // Notifica até 3 marcas numa única notificação e marca todas como avisadas.
-  const alvo = atrasadas.slice(0, 3);
-  const nomes = alvo.map(a => a.marca);
-  const titulo = nomes.length === 1 ? `⚠️ ${nomes[0]} está atrasada` : `⚠️ ${nomes.length} marcas atrasadas`;
-  const corpo  = nomes.length === 1
-    ? `Já passou da metade do período. Veja quais clientes podem te ajudar a bater a meta da ${nomes[0]}.`
-    : `${nomes.join(', ')} — veja quais clientes podem te ajudar a bater a meta.`;
-
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    reg.showNotification(titulo, {
-      body: corpo,
-      tag: 'carteira-meta-atrasada',
-      requireInteraction: false,
-      data: { url: './', acao: 'acoes' }
-    });
-    alvo.forEach(a => { avisos[a.chave] = Date.now(); });
-    setData(chaveAvisos, avisos);
-  } catch(e) {}
-}
 
 // Notificação clicada → abre a aba certa
 if ('serviceWorker' in navigator) {
@@ -13802,7 +13906,7 @@ function ajustarAlturaListaMotivos() {
     setTimeout(verificarEnderecosPendentes, 3000);
     setTimeout(solicitarPermissaoNotificacao, 2000);
     setTimeout(verificarENotificarEsquecidos, 5000);
-    setTimeout(() => { if (('Notification' in window) && Notification.permission === 'granted') { _salvarDadosNotifSW(); _checarGatilhoMetaAtrasada(); _agendarNotifDiaria(); } }, 4000);
+    setTimeout(() => { if (('Notification' in window) && Notification.permission === 'granted') { _salvarDadosNotifSW(); _agendarNotifDiaria(); } }, 4000);
     // Deep-link de notificação (app aberto do zero via clique)
     try {
       const acaoParam = new URLSearchParams(location.search).get('acao');

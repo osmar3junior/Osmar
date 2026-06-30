@@ -788,7 +788,7 @@ if ('serviceWorker' in navigator) {
       </div>
       <div class="resumo-card vermelho" onclick="abrirFiltrado('urgentes')">
         <span class="resumo-card-icone">🔔</span>
-        <div class="resumo-label">Retomar hoje</div>
+        <div class="resumo-label">Visitas atrasadas</div>
         <div class="resumo-numero" id="num-urgentes">0</div>
         <div class="resumo-link">Ver lista →</div>
       </div>
@@ -1663,6 +1663,8 @@ if ('serviceWorker' in navigator) {
 
 <!-- MODAL DADOS DO PEDIDO -->
 <div class="modal-overlay" id="modal-pedido" style="z-index:210;">
+  <input type="date" id="picker-data-pedido" onchange="_onPickerDataPedido(this.value)"
+    style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;top:-9999px;">
   <div class="modal-box" style="max-height:90vh;overflow-y:hidden;display:flex;flex-direction:column;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
       <div class="modal-titulo" style="margin-bottom:0;">✅ Dados do pedido</div>
@@ -8524,6 +8526,39 @@ function _selecionarDataCt(diasAtras, el) {
   }
 }
 
+function _abrirPickerDataPedido() {
+  const picker = document.getElementById('picker-data-pedido');
+  if (!picker) return;
+  picker.max = new Date().toISOString().split('T')[0];
+  const min = new Date(); min.setFullYear(min.getFullYear() - 3);
+  picker.min = min.toISOString().split('T')[0];
+  const atual = _dataContatoSelecionada || new Date();
+  picker.value = atual.toISOString().split('T')[0];
+  picker.click();
+}
+
+function _onPickerDataPedido(value) {
+  if (!value) return;
+  const d = new Date(value + 'T12:00:00');
+  _dataContatoSelecionada = d;
+  // Sincroniza também o seletor de data da tela anterior
+  const label = document.getElementById('data-ct-label');
+  if (label) {
+    label.textContent = '📅 ' + d.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+    label.style.display = 'block';
+  }
+  document.querySelectorAll('.chip-data-ct').forEach(b => b.classList.remove('ativo'));
+  const chipPicker = document.getElementById('chip-data-picker');
+  if (chipPicker) chipPicker.classList.add('ativo');
+  _atualizarDataChipsPedido();
+}
+
+function _atualizarDataChipsPedido() {
+  const d = _dataContatoSelecionada || new Date();
+  const txt = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  document.querySelectorAll('[id^="data-chip-txt-"]').forEach(el => { el.textContent = txt; });
+}
+
 function _abrirPickerCt() {
   const picker = document.getElementById('input-data-ct-picker');
   picker.max = new Date().toISOString().split('T')[0];
@@ -12075,15 +12110,18 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
     const selectAttr = temMeta
       ? `disabled style="font-size:14px;padding:10px 12px;opacity:.6;cursor:not-allowed;background:var(--bg2);"`
       : `style="font-size:14px;padding:10px 12px;"`;
-    const numLabel = marcas.length > 1 ? `<span style="font-size:10px;color:var(--texto3);margin-left:6px;">${i+1} de ${marcas.length}</span>` : '';
+    const numLabel = marcas.length > 1 ? `<span style="font-size:10px;color:var(--texto3);">${i+1} de ${marcas.length}</span>` : '';
     return `
     <div class="bloco-marca-pedido" id="bloco-marca-${i}" style="${i > 0 ? 'margin-top:10px;' : ''}">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
-        ${marca ? `<div style="display:inline-flex;align-items:center;font-size:13px;font-weight:800;color:#FFC043;background:rgba(255,192,67,.12);border:1px solid rgba(255,192,67,.35);border-radius:8px;padding:4px 11px;font-family:'Syne',sans-serif;">🏷 ${marca}</div>` : '<div></div>'}
-        <div style="display:flex;align-items:center;gap:4px;">${numLabel}<span id="check-marca-${i}" style="opacity:0;font-size:12px;color:#4ade80;transition:opacity .2s;">✓</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px;">
+        ${marca ? `<div style="display:inline-flex;align-items:center;font-size:13px;font-weight:800;color:#FFC043;background:rgba(255,192,67,.12);border:1px solid rgba(255,192,67,.35);border-radius:8px;padding:4px 11px;font-family:'DM Sans',sans-serif;flex-shrink:0;">🏷 ${marca}</div>` : '<div></div>'}
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+          <button type="button" id="data-chip-${i}" onclick="_abrirPickerDataPedido()" style="display:inline-flex;align-items:center;gap:4px;background:rgba(124,142,240,.1);border:1px solid rgba(124,142,240,.3);border-radius:7px;padding:3px 9px;color:#7C8EF0;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">📅 <span id="data-chip-txt-${i}"></span></button>
+          ${numLabel}<span id="check-marca-${i}" style="opacity:0;font-size:12px;color:#4ade80;transition:opacity .2s;">✓</span>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <div style="font-size:10px;color:var(--texto3);margin-bottom:6px;line-height:1.45;">👆 <strong style="color:var(--texto2);">Como foi este pedido?</strong> Marque abaixo — ajuda o Gestor IA a sugerir a melhor rota e identificar clientes para abordar à distância.</div>
+      <div style="font-size:11px;color:var(--texto3);margin-bottom:9px;line-height:1.5;font-family:'DM Sans',sans-serif;">👆 Para uma melhor experiência, informe se o pedido foi <strong style="color:var(--texto2);">presencial ou não presencial</strong> — ajuda a IA a otimizar sua rota.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
         <button type="button" class="canal-pedido-btn pulsa-canal-a" id="canal-visit-${i}" onclick="setPedidoCanal(${i},'visita')">📍 Pedido<br>Presencial</button>
         <button type="button" class="canal-pedido-btn pulsa-canal-b" id="canal-wpp-${i}" onclick="setPedidoCanal(${i},'wpp')">💬 Pedido<br>Não Presencial</button>
       </div>
@@ -12118,6 +12156,7 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
     popularUnidadesPedido(skuDefault, 'pedido-unidade-' + i);
   });
   atualizarProgressoPedido();
+  _atualizarDataChipsPedido();
 }
 
 function calcPrecoMedioPedido(i) {

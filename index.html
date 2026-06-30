@@ -937,7 +937,7 @@ if ('serviceWorker' in navigator) {
       <div class="esquecidos-banner-desc" id="banner-esquecidos-desc">Você tem clientes sem contato há muito tempo. Toque para ver.</div>
     </div>
 
-    <div class="secao-titulo">🔴 Retomar agora</div>
+    <div class="secao-titulo">🔴 Visitas atrasadas - Urgente</div>
     <div class="alerta-lista" id="lista-urgentes">
       <div class="empty-state"><div class="empty-icon">✅</div><div class="empty-titulo">Tudo em dia!</div><div class="empty-desc">Nenhum cliente precisa de atenção agora.</div></div>
     </div>
@@ -1994,6 +1994,12 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div id="rota-hoje-lista"></div>
+
+    <!-- Clientes do período que ficaram de fora da rota por falta de GPS -->
+    <div id="rota-sem-gps-lista-wrap" style="display:none;margin-top:18px;">
+      <div style="font-size:12px;font-weight:700;color:var(--amarelo);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📍 Fora da rota por falta de localização</div>
+      <div id="rota-sem-gps-lista"></div>
+    </div>
 
     <!-- Botão iniciar rota -->
     <div id="rota-hoje-acoes" style="display:none;margin-top:16px;display:flex;flex-direction:column;gap:8px;">
@@ -5855,7 +5861,7 @@ function atualizarDashboard() {
         <div class="alerta-item" onclick="abrirDetalhe('${cliente.id}','dashboard')">
           <div class="alerta-dot dot-vermelho"></div>
           <div class="alerta-info">
-            <div class="alerta-nome">${esc(cliente.nome)}</div>
+            <div class="alerta-nome">${esc(cliente.nome)}${(!cliente.lat || !cliente.lng) ? ' <span style="font-size:10px;font-weight:700;color:#FFC043;" title="Sem localização salva — não aparece na Rota de hoje">📍 sem GPS</span>' : ''}</div>
             <div class="alerta-detalhe">${esc(cliente.loja)} · ${cliente.dataRetornoCustom ? '📌 Data personalizada' : getMotivoLabel(cliente.historico[0].motivo)}</div>
           </div>
           <div class="alerta-seta">›</div>
@@ -5959,6 +5965,7 @@ let periodoRota = 'hoje';        // 'hoje' | 'proximos' | 'atrasados'
 let ordemRota = 'data';          // 'data' (urgência) | 'proximidade' (GPS) | 'foco' (marcas vencidas × potencial)
 let _rotaSelecionados = new Set(); // ids dos clientes marcados para rota personalizada
 let _rotaClientesGPS = [];       // clientes com GPS + histórico (cache da abertura)
+let _rotaClientesSemGPS = [];    // clientes elegíveis pra rota mas sem GPS (caem fora da lista otimizada)
 let _rotaPos = null;             // posição do representante {lat, lng} ou null
 
 function filtrarPorPeriodo(clientes, periodo) {
@@ -6035,6 +6042,7 @@ function trocarOrdemRota(modo) {
 
 function renderizarRotaPeriodo() {
   const lista = filtrarPorPeriodo(_rotaClientesGPS, periodoRota);
+  _renderizarSemGPSDoPeriodo();
   if (lista.length === 0) {
     document.getElementById('rota-hoje-resumo').style.display = 'none';
     document.getElementById('rota-hoje-acoes').style.display = 'none';
@@ -6046,6 +6054,36 @@ function renderizarRotaPeriodo() {
   }
   montarRota(lista, _rotaPos ? _rotaPos.lat : null, _rotaPos ? _rotaPos.lng : null);
   if (window._rotaAnimacaoPendente) { window._rotaAnimacaoPendente = false; setTimeout(_animarBotoesOrdemRota, 600); }
+}
+
+// Lista (fora da rota otimizada) os clientes do período atual que não entram por falta de GPS
+function _renderizarSemGPSDoPeriodo() {
+  const wrap = document.getElementById('rota-sem-gps-lista-wrap');
+  const cont = document.getElementById('rota-sem-gps-lista');
+  if (!wrap || !cont) return;
+  const lista = filtrarPorPeriodo(_rotaClientesSemGPS, periodoRota);
+  if (lista.length === 0) { wrap.style.display = 'none'; cont.innerHTML = ''; return; }
+  lista.sort((a, b) => (getDiffDiasCliente(a) ?? 999) - (getDiffDiasCliente(b) ?? 999));
+  wrap.style.display = 'block';
+  cont.innerHTML = lista.map(c => {
+    const diff = getDiffDiasCliente(c);
+    const urg = getUrgenciaCor(diff !== null ? diff : -999);
+    const urgLabel = diff === null ? 'Esquecido' : getUrgenciaLabel(diff);
+    const temEndereco = !!(c.enderecoPendente || c.endereco);
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:${urg.bg};border:1.5px dashed ${urg.borda};border-radius:12px;margin-bottom:8px;cursor:pointer;" onclick="fecharModal('modal-rota-hoje');setTimeout(()=>abrirDetalhe('${c.id}','mapa'),200)">
+        <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">📍</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:14px;color:${urg.textColor};">${esc(c.nome)}</div>
+          <div style="font-size:11px;color:${urg.textColor};opacity:.7;">${esc(c.loja)}${c.cidade?' · '+esc(c.cidade):''}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:3px;">
+            <span style="font-size:10px;color:${urg.hex};font-weight:600;">${urg.dot} ${urgLabel}</span>
+            <span style="font-size:10px;color:var(--amarelo);font-weight:600;">${temEndereco ? '📍 sem coordenada' : '📍 sem endereço'}</span>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--texto2);flex-shrink:0;">${temEndereco ? 'Buscar ↑' : 'Completar ›'}</div>
+      </div>`;
+  }).join('');
 }
 
 function _animarBotoesOrdemRota() {
@@ -6075,6 +6113,7 @@ function abrirRotaDeHoje() {
   const clientes = getClientesAtivos();
   const comGPS = clientes.filter(c => c.lat && c.lng && ((c.historico && c.historico.length > 0) || c.dataRetornoCustom));
   _rotaClientesGPS = comGPS;
+  _rotaClientesSemGPS = clientes.filter(c => !(c.lat && c.lng) && ((c.historico && c.historico.length > 0) || c.dataRetornoCustom));
   _rotaPos = null;
   periodoRota = 'hoje';
   ordemRota = 'foco';
@@ -6189,6 +6228,7 @@ async function geocodificarTodosPendentes() {
 
   // Recarrega o cache da rota e re-renderiza o que estiver visível na tela
   _rotaClientesGPS = getClientes().filter(c => c.lat && c.lng && ((c.historico && c.historico.length > 0) || c.dataRetornoCustom));
+  _rotaClientesSemGPS = getClientes().filter(c => !(c.lat && c.lng) && ((c.historico && c.historico.length > 0) || c.dataRetornoCustom));
   atualizarBannerSemGps();
   if (document.getElementById('modal-rota-hoje')?.classList.contains('aberto')) renderizarRotaPeriodo();
   if (document.getElementById('tela-mapa')?.classList.contains('ativa')) renderizarMapa();
@@ -8168,6 +8208,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
       const pedidoInfo = h.motivo === 'fechou_pedido' && h.pedidos && h.pedidos.length >= 1
         ? h.pedidos.map(p => `
            <div style="display:inline-flex;align-items:center;gap:6px;margin-top:4px;margin-right:6px;background:rgba(0,200,150,.08);border:1px solid rgba(0,200,150,.2);border-radius:8px;padding:4px 10px;">
+            ${p.canal ? `<span style="font-size:11px;font-weight:700;color:${p.canal==='wpp'?'#4ade80':'#FFC043'};">${p.canal==='wpp'?'💬 Não presencial':'📍 Presencial'}</span><span style="color:var(--borda);">·</span>` : ''}
             ${p.marca ? `<span style="font-size:12px;font-weight:700;color:var(--texto);">🏷️ ${p.marca}</span><span style="color:var(--borda);">·</span>` : ''}
             ${p.qtd ? `<span style="font-size:12px;font-weight:600;color:var(--verde);">📦 ${p.qtd} ${p.unidade || 'peças'}</span>` : ''}
             ${p.qtd && p.valor ? '<span style="color:var(--borda);">·</span>' : ''}
@@ -8694,6 +8735,24 @@ function salvarContato() {
       }
       return;
     }
+    // Valida: todo pedido com valor/qtd preenchido precisa informar o canal (presencial/não presencial)
+    const idxSemCanal = marcas.findIndex((_, i) => {
+      const valorEl = document.getElementById('pedido-valor-' + i);
+      const qtdEl = document.getElementById('pedido-quantidade-' + i);
+      const temDado = (valorEl && valorParaFloat(valorEl.value) > 0) || (qtdEl && parseFloat(qtdEl.value) > 0);
+      const canal = window._pedidoCanais && window._pedidoCanais[i];
+      return temDado && !canal;
+    });
+    if (idxSemCanal !== -1) {
+      document.getElementById('modal-pedido').classList.add('aberto');
+      toast('📍 Informe se o pedido foi presencial ou não presencial antes de salvar');
+      const bloco = document.getElementById('bloco-marca-' + idxSemCanal);
+      if (bloco) bloco.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const bv = document.getElementById('canal-visit-' + idxSemCanal);
+      const bw = document.getElementById('canal-wpp-' + idxSemCanal);
+      [bv, bw].forEach(b => { if (b) { b.style.borderColor = '#FF4D6A'; setTimeout(() => { b.style.borderColor = ''; }, 2500); } });
+      return;
+    }
     const pedidos = [];
     let valorTotal = 0;
     marcas.forEach((marca, i) => {
@@ -8741,17 +8800,22 @@ function salvarContato() {
       const hoje = new Date();
       let menorRetorno = null;
       todasMarcas.forEach(marca => {
-        if (marcasVendidas.has(marca)) return; // vendeu esta — sem alerta
         const metaCfg = (cfg.metas || []).find(m => m.marca === marca);
         if (!metaCfg?.cicloIdeal) return;
-        // Busca última compra desta marca
-        let ultimaCompra = null;
-        clientes[idx].historico.slice(1).forEach(h => {
-          if (h.motivo !== 'fechou_pedido') return;
-          const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : false;
-          if (tem && (!ultimaCompra || new Date(h.data) > ultimaCompra)) ultimaCompra = new Date(h.data);
-        });
-        const base = ultimaCompra || hoje;
+        let base;
+        if (marcasVendidas.has(marca)) {
+          // acabou de comprar agora — próximo giro ideal conta a partir desta compra
+          base = new Date(contato.data);
+        } else {
+          // não vendeu esta marca neste pedido — usa a última compra registrada (ou hoje, se nunca comprou)
+          let ultimaCompra = null;
+          clientes[idx].historico.slice(1).forEach(h => {
+            if (h.motivo !== 'fechou_pedido') return;
+            const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : false;
+            if (tem && (!ultimaCompra || new Date(h.data) > ultimaCompra)) ultimaCompra = new Date(h.data);
+          });
+          base = ultimaCompra || hoje;
+        }
         const retorno = new Date(base.getTime() + metaCfg.cicloIdeal * 86400000);
         if (!menorRetorno || retorno < menorRetorno.data) menorRetorno = { data: retorno, marca };
       });
@@ -9349,7 +9413,7 @@ function _onbRenderMetas() {
         <input type="number" min="1" max="365" class="campo-input onb-meta-giro" placeholder="dias" value="${ex.cicloIdeal || 30}" style="flex:1;padding:5px 8px;font-size:13px;">
         <span style="font-size:12px;color:var(--texto2);white-space:nowrap;">dias entre compras</span>
       </div>
-      <div style="font-size:11px;color:var(--texto3);line-height:1.5;margin-top:5px;padding:0 2px;">💡 O giro ideal controla o <strong style="color:var(--texto2);">retorno automático</strong> quando a marca não é vendida na visita — sem depender do giro padrão do representante.</div>
+      <div style="font-size:11px;color:var(--texto3);line-height:1.5;margin-top:5px;padding:0 2px;">💡 Importante preencher. Se você vende várias marcas pro mesmo cliente e numa visita ele só comprou uma, o giro ideal é o que indica o momento certo de voltar pra oferecer as outras.</div>
     </div>`;
   }).join('');
 }
@@ -11444,6 +11508,8 @@ function abrirPedidoExistente(clienteId, dataStr) {
     if (valorEl) { valorEl.value = val > 0 ? val.toFixed(2).replace('.', ',') : ''; mascaraMoeda(valorEl); }
     if (qtdEl)   { qtdEl.value   = qtd > 0 ? qtd : ''; }
     if (unidEl)  { unidEl.value  = uni; }
+    const canal = pedMarca ? pedMarca.canal : h.pedidos?.[0]?.canal;
+    if (canal) setPedidoCanal(i, canal);
   });
 
   // Muda título e botão para modo edição
@@ -11464,6 +11530,25 @@ function salvarEdicaoPedido() {
 
   const cliente = clientes[ci];
   const marcas  = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
+
+  // Valida: todo pedido com valor/qtd preenchido precisa informar o canal (presencial/não presencial)
+  const idxSemCanal = marcas.findIndex((_, i) => {
+    const valorEl = document.getElementById('pedido-valor-' + i);
+    const qtdEl   = document.getElementById('pedido-quantidade-' + i);
+    const temDado = (valorEl && valorParaFloat(valorEl.value) > 0) || (qtdEl && parseFloat(qtdEl.value) > 0);
+    const canal   = window._pedidoCanais && window._pedidoCanais[i];
+    return temDado && !canal;
+  });
+  if (idxSemCanal !== -1) {
+    toast('📍 Informe se o pedido foi presencial ou não presencial antes de salvar');
+    const bloco = document.getElementById('bloco-marca-' + idxSemCanal);
+    if (bloco) bloco.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const bv = document.getElementById('canal-visit-' + idxSemCanal);
+    const bw = document.getElementById('canal-wpp-' + idxSemCanal);
+    [bv, bw].forEach(b => { if (b) { b.style.borderColor = '#FF4D6A'; setTimeout(() => { b.style.borderColor = ''; }, 2500); } });
+    return;
+  }
+
   const pedidos = [];
   let valorTotal = 0;
 
@@ -11474,7 +11559,8 @@ function salvarEdicaoPedido() {
     const valor   = valorParaFloat(valorEl ? valorEl.value : '');
     const qtd     = parseInt(qtdEl ? qtdEl.value : '') || 0;
     const unidade = unidEl ? unidEl.value : '';
-    if (valor > 0 || qtd > 0) { pedidos.push({ marca: marca || '', valor, qtd, unidade }); valorTotal += valor; }
+    const canal   = (window._pedidoCanais && window._pedidoCanais[i]) || undefined;
+    if (valor > 0 || qtd > 0) { pedidos.push({ marca: marca || '', valor, qtd, unidade, canal }); valorTotal += valor; }
   });
 
   if (!pedidos.length) { toast('Informe pelo menos um valor'); return; }
@@ -11739,6 +11825,7 @@ function renderizarMetasConfig(cfg) {
             </div>
           </div>
         </div>
+        <div style="font-size:10px;line-height:1.5;color:var(--texto3);margin-top:6px;">🔄 <strong style="color:#A78BFA;">Giro ideal:</strong> importante preencher. Se você vende várias marcas pro mesmo cliente e numa visita ele só comprou uma, o giro ideal é o que indica o momento certo de voltar pra oferecer as outras.</div>
         <div style="font-size:10px;color:var(--texto3);margin-top:6px;">📊 O histórico de compra do cliente será exibido em <strong style="color:var(--texto2);">${(meta.sku === 'reais' || meta.sku === 'faturamento') ? 'R$' : _skuLabel(meta.sku)}</strong> — igual ao SKU da meta.</div>
       </div>
     </div>`;
@@ -13416,7 +13503,6 @@ function abrirModalPedido() {
 function salvarPedidoDireto() {
   if (_histEditandoClienteId) { salvarEdicaoPedido(); return; }
   motivoSelecionado = 'fechou_pedido';
-  fecharModalPedido();
   salvarContato();
 }
 function fecharModalPedido() {

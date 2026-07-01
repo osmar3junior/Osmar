@@ -1676,6 +1676,7 @@ if ('serviceWorker' in navigator) {
       <div class="modal-titulo" style="margin-bottom:0;">✅ Dados do pedido</div>
       <button onclick="fecharModalPedido()" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
     </div>
+    <div id="pedido-marca-nav" style="display:none;flex-shrink:0;margin-bottom:12px;"></div>
     <div id="campos-pedido-blocos" style="overflow-y:auto;flex:1;min-height:0;padding-right:4px;"></div>
     <div style="flex-shrink:0;margin-top:12px;">
       <div id="pedido-progress-row" style="display:none;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -9237,6 +9238,7 @@ function salvarContato() {
     if (idxSemCanal !== -1) {
       document.getElementById('modal-pedido').classList.add('aberto');
       toast('📍 Informe se o pedido foi presencial ou não presencial antes de salvar');
+      _pedidoRevelarMarca(idxSemCanal, false);
       const bloco = document.getElementById('bloco-marca-' + idxSemCanal);
       if (bloco) bloco.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const bv = document.getElementById('canal-visit-' + idxSemCanal);
@@ -9257,6 +9259,7 @@ function salvarContato() {
       if (idxSemEntrega !== -1) {
         document.getElementById('modal-pedido').classList.add('aberto');
         toast('🚚 Informe o prazo de entrega antes de salvar');
+        _pedidoRevelarMarca(idxSemEntrega, false);
         const bloco = document.getElementById('bloco-marca-' + idxSemEntrega);
         if (bloco) bloco.scrollIntoView({ behavior: 'smooth', block: 'center' });
         const secao = bloco ? bloco.querySelector('.entrega-section-card') : null;
@@ -12269,6 +12272,9 @@ function abrirPedidoExistente(clienteId, dataStr) {
     if (canal) setPedidoCanal(i, canal);
   });
 
+  // Marcas já preenchidas aparecem abertas (não ficam escondidas atrás das etiquetas)
+  _pedidoAutoRevelarPreenchidos();
+
   // Muda título e botão para modo edição
   const titulo = document.querySelector('#modal-pedido .modal-titulo');
   const btnSalvar = document.getElementById('btn-salvar-pedido-final');
@@ -12298,6 +12304,7 @@ function salvarEdicaoPedido() {
   });
   if (idxSemCanal !== -1) {
     toast('📍 Informe se o pedido foi presencial ou não presencial antes de salvar');
+    _pedidoRevelarMarca(idxSemCanal, false);
     const bloco = document.getElementById('bloco-marca-' + idxSemCanal);
     if (bloco) bloco.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const bv = document.getElementById('canal-visit-' + idxSemCanal);
@@ -13065,6 +13072,76 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
   });
   atualizarProgressoPedido();
   _atualizarDataChipsPedido();
+  _pedidoMontarNavMarcas(marcas);
+}
+
+// ===== NAV DE MARCAS (atalho no topo do modal de pedido) =====
+// Com 2+ marcas, mostra as etiquetas amarelas lado a lado no topo. O rep toca
+// na marca que vendeu e o bloco correspondente aparece logo abaixo (sem rolar
+// a lista inteira). Blocos escondidos ficam no DOM vazios e são pulados no save.
+function _pedidoMontarNavMarcas(marcas) {
+  const nav = document.getElementById('pedido-marca-nav');
+  if (!nav) return;
+  window._pedidoMarcaSel = new Set();
+  const marcasReais = marcas.filter(m => m);
+  if (marcasReais.length < 2) {
+    // 1 marca (ou cliente sem marca): fluxo normal, bloco já visível
+    nav.style.display = 'none';
+    nav.innerHTML = '';
+    marcas.forEach((_, i) => { const b = document.getElementById('bloco-marca-' + i); if (b) b.style.display = ''; });
+    return;
+  }
+  // Esconde todos até o rep escolher a marca vendida
+  marcas.forEach((_, i) => { const b = document.getElementById('bloco-marca-' + i); if (b) b.style.display = 'none'; });
+  const chips = marcas.map((marca, i) => marca ? `
+    <button type="button" id="marca-chip-${i}" onclick="_pedidoToggleMarca(${i})"
+      style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:800;color:#FFC043;background:rgba(255,192,67,.12);border:1.5px solid rgba(255,192,67,.35);border-radius:9px;padding:7px 13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap;">🏷 ${esc(marca)}</button>` : '').join('');
+  nav.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--texto2);margin-bottom:8px;font-family:'DM Sans',sans-serif;">👆 Toque na marca que você vendeu</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;">${chips}</div>`;
+  nav.style.display = 'block';
+}
+
+function _pedidoRevelarMarca(i, scroll) {
+  const sel = window._pedidoMarcaSel || (window._pedidoMarcaSel = new Set());
+  const bloco = document.getElementById('bloco-marca-' + i);
+  const chip  = document.getElementById('marca-chip-' + i);
+  if (!bloco) return;
+  sel.add(i);
+  bloco.style.display = '';
+  if (chip) { chip.style.background = '#FFC043'; chip.style.borderColor = '#FFC043'; chip.style.color = '#1a1a1a'; chip.style.boxShadow = '0 0 0 3px rgba(255,192,67,.18)'; }
+  if (scroll) bloco.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function _pedidoEsconderMarca(i) {
+  const sel = window._pedidoMarcaSel || (window._pedidoMarcaSel = new Set());
+  const bloco = document.getElementById('bloco-marca-' + i);
+  const chip  = document.getElementById('marca-chip-' + i);
+  sel.delete(i);
+  if (bloco) bloco.style.display = 'none';
+  if (chip) { chip.style.background = 'rgba(255,192,67,.12)'; chip.style.borderColor = 'rgba(255,192,67,.35)'; chip.style.color = '#FFC043'; chip.style.boxShadow = ''; }
+}
+
+function _pedidoToggleMarca(i) {
+  const sel = window._pedidoMarcaSel || (window._pedidoMarcaSel = new Set());
+  if (sel.has(i)) _pedidoEsconderMarca(i);
+  else _pedidoRevelarMarca(i, true);
+}
+
+// Revela automaticamente as marcas que já vêm preenchidas (usado na edição de pedido)
+function _pedidoAutoRevelarPreenchidos() {
+  const nav = document.getElementById('pedido-marca-nav');
+  if (!nav || nav.style.display === 'none') return;
+  const canais = window._pedidoCanais || [];
+  document.querySelectorAll('#campos-pedido-blocos > .bloco-marca-pedido').forEach((b) => {
+    const m = b.id.match(/bloco-marca-(\d+)/);
+    if (!m) return;
+    const i = parseInt(m[1], 10);
+    const valorEl = document.getElementById('pedido-valor-' + i);
+    const qtdEl   = document.getElementById('pedido-quantidade-' + i);
+    const temDado = (valorEl && valorParaFloat(valorEl.value) > 0) || (qtdEl && parseFloat(qtdEl.value) > 0) || canais[i];
+    if (temDado) _pedidoRevelarMarca(i, false);
+  });
 }
 
 function calcPrecoMedioPedido(i) {

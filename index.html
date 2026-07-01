@@ -1573,34 +1573,6 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
 
-    <div class="config-secao">
-      <div class="config-secao-titulo">🔔 Resumo diário</div>
-      <div class="config-secao-sub">Configure o horário e receba seu resumo todo dia — clientes de hoje, prospectos e status das metas.</div>
-
-      <!-- Horário -->
-      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--borda);border-radius:11px;padding:12px 14px;margin-bottom:10px;">
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--texto);">⏰ Horário do resumo</div>
-          <div style="font-size:11px;color:var(--texto3);margin-top:2px;">O app avisa você neste horário todo dia</div>
-        </div>
-        <input type="time" id="cfg-horario-notif" value="07:30" style="background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:7px 10px;color:var(--texto);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;outline:none;">
-      </div>
-
-      <!-- Toggle WhatsApp -->
-      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--borda);border-radius:11px;padding:12px 14px;margin-bottom:12px;">
-        <div style="flex:1;min-width:0;margin-right:12px;">
-          <div style="font-size:13px;font-weight:700;color:var(--texto);">💬 Enviar resumo pro WhatsApp</div>
-          <div style="font-size:11px;color:var(--texto3);margin-top:2px;line-height:1.4;">No horário configurado, abre o WhatsApp com o resumo do dia pronto para enviar para você mesmo</div>
-        </div>
-        <button id="cfg-notif-wpp-toggle" onclick="toggleNotifWpp()" style="width:48px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;background:#333;flex-shrink:0;">
-          <span id="cfg-notif-wpp-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#888;transition:left .2s,background .2s;"></span>
-        </button>
-      </div>
-
-      <div id="notif-status-box" style="margin-bottom:10px;"></div>
-      <button onclick="ativarNotificacoes()" id="btn-ativar-notif" style="width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.4);border-radius:11px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔔 Ativar lembretes</button>
-    </div>
-
     <button class="btn-primario" onclick="salvarConfig()">Salvar configurações</button>
 
     <div class="config-secao" style="margin-top:8px;background:linear-gradient(135deg,rgba(0,214,143,.05),rgba(56,189,248,.05));border:1px solid rgba(0,214,143,.2);border-radius:16px;padding:18px;">
@@ -4493,7 +4465,6 @@ async function fazerLogin() {
     _sbAuth(email, senha);
     setTimeout(_checarOnboarding, 2500); // espera o pull da nuvem antes de decidir mostrar o assistente
     setTimeout(_checarPlanoMes, 4000);   // no 1º acesso do mês, convida a planejar (não empilha sobre o onboarding)
-    setTimeout(() => { if (Notification.permission === 'granted') { _salvarDadosNotifSW(); _agendarNotifDiaria(); } }, 3000);
   } else {
     // Cache foi limpo — tenta recuperar pelo Supabase
     toast('🔄 Recuperando dados da nuvem...');
@@ -9601,7 +9572,6 @@ function salvarNovoCliente() {
 
 // ===== CONFIG =====
 function carregarConfig() {
-  _atualizarStatusNotif();
   const cfg = getConfig();
   Object.keys(MOTIVOS_BASE).forEach(k => {
     const el = document.getElementById('cfg-' + k);
@@ -9609,9 +9579,6 @@ function carregarConfig() {
   });
   document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 50;
   document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
-  const horEl = document.getElementById('cfg-horario-notif');
-  if (horEl) horEl.value = cfg.horarioNotif || '07:30';
-  _renderNotifWppToggle(cfg.notifWpp !== false);
   _renderNotifEntregaToggle(cfg.notificacaoEntrega || null);
   _renderGatilhoConfig(cfg);
   _renderOnbToggle(cfg.onboardingFeito);
@@ -9802,8 +9769,6 @@ function salvarConfig() {
   cfg.skusCustom = (cfg.skusCustom || []).filter(v => (v || '').trim());
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
-  cfg.horarioNotif = document.getElementById('cfg-horario-notif')?.value || '07:30';
-  cfg.notifWpp = document.getElementById('cfg-notif-wpp-toggle')?.dataset.ativo === 'true';
   cfg.notificacaoEntrega = document.getElementById('cfg-notif-entrega-todas-toggle')?.dataset.ativo === 'true' ? 'todas'
     : document.getElementById('cfg-notif-entrega-escolher-toggle')?.dataset.ativo === 'true' ? 'escolher' : null;
   cfg.gatilhoAnticAtivo = document.getElementById('cfg-gatilho-toggle')?.dataset.ativo === 'true';
@@ -9814,7 +9779,6 @@ function salvarConfig() {
   cfg.bufferMeta = _bufEl ? Number(_bufEl.value) : 20;
   salvarConfigData(cfg);
   atualizarSemaforoDash();
-  if (Notification.permission === 'granted') _agendarNotifDiaria();
   toast('Configurações salvas!');
 }
 
@@ -10287,6 +10251,7 @@ async function _salvarDadosNotifSW() {
     reg.active?.postMessage({ tipo: 'salvarDadosNotif', dados });
   } catch(e) {}
 }
+
 
 async function _dispararNotificacaoLocal() {
   if (Notification.permission !== 'granted') return;
@@ -14551,7 +14516,6 @@ function ajustarAlturaListaMotivos() {
     setTimeout(verificarEnderecosPendentes, 3000);
     setTimeout(solicitarPermissaoNotificacao, 2000);
     setTimeout(verificarENotificarEsquecidos, 5000);
-    setTimeout(() => { if (('Notification' in window) && Notification.permission === 'granted') { _salvarDadosNotifSW(); _agendarNotifDiaria(); } }, 4000);
     // Deep-link de notificação (app aberto do zero via clique)
     try {
       const acaoParam = new URLSearchParams(location.search).get('acao');

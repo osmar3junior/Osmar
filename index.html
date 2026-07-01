@@ -602,20 +602,20 @@ if ('serviceWorker' in navigator) {
 
   /* METAS */
   .meta-card {
-    background:linear-gradient(135deg,rgba(249,115,22,.04),rgba(30,30,30,0));
-    border:1px solid rgba(249,115,22,.25);
-    border-top:2.5px solid rgba(249,115,22,.5);
-    border-radius:14px;
+    background:linear-gradient(160deg,rgba(249,115,22,.08),rgba(28,28,30,.65) 55%,rgba(20,20,22,.85));
+    border:1.5px solid rgba(249,115,22,.38);
+    border-top:3px solid rgba(249,115,22,.75);
+    border-radius:16px;
     padding:0;
-    margin-bottom:14px;
+    margin-bottom:16px;
     overflow:hidden;
-    box-shadow:0 2px 12px rgba(0,0,0,.18);
+    box-shadow:0 6px 20px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
   }
   .meta-card-header {
     display:flex; align-items:center; justify-content:space-between;
     padding:12px 14px 10px;
-    background:rgba(249,115,22,.06);
-    border-bottom:1px solid rgba(249,115,22,.15);
+    background:rgba(249,115,22,.1);
+    border-bottom:1px solid rgba(249,115,22,.22);
     margin-bottom:0;
   }
   .meta-card-body { padding:12px 14px 14px; }
@@ -9651,6 +9651,7 @@ function salvarSkuCustomNovo() {
   salvarConfigData(cfg);
   _renderSkuCustom();
   renderizarSkuGrid(cfg);
+  renderizarMetasConfig(cfg);
   toast('✅ ' + val + ' adicionada!');
 }
 
@@ -9662,6 +9663,7 @@ function excluirSkuCustom(val) {
   salvarConfigData(cfg);
   _renderSkuCustom();
   renderizarSkuGrid(cfg);
+  renderizarMetasConfig(cfg);
   toast('Unidade "' + val + '" removida');
 }
 
@@ -9760,7 +9762,9 @@ function salvarConfig() {
     if (el) cfg['custom_' + i] = parseInt(el.value) || 30;
   });
   cfg.skus = Array.from(document.querySelectorAll('#sku-grid .sku-chip.ativo')).map(el => el.dataset.sku);
-  cfg.skusCustom = Array.from({length:6}, (_, i) => (document.getElementById('sku-custom-'+i)?.value||'').trim());
+  // skusCustom é gerenciado pelos próprios botões (salvarSkuCustomNovo/excluirSkuCustom)
+  // e já persiste na hora — apenas preserva o que está salvo (não sobrescrever com campos inexistentes).
+  cfg.skusCustom = (cfg.skusCustom || []).filter(v => (v || '').trim());
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
   cfg.horarioNotif = document.getElementById('cfg-horario-notif')?.value || '07:30';
@@ -12284,7 +12288,7 @@ function renderizarMetasConfig(cfg) {
   if (!lista) return;
   const metas  = cfg.metas || [];
   const marcas = (cfg.marcas || []).filter(Boolean);
-  const skusDisponiveis = [...(cfg.skus || ['peças']), ...(cfg.skusCustom || []).filter(Boolean), 'reais'];
+  const skusDisponiveis = [...new Set([...(cfg.skus || ['peças']), ...(cfg.skusCustom || []).filter(Boolean), 'reais'])];
 
   if (!marcas.length) {
     lista.innerHTML = `<div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:14px 16px;line-height:1.6;">
@@ -12714,6 +12718,12 @@ function toggleSkuChip(el) {
   const ativos = document.querySelectorAll('#sku-grid .sku-chip.ativo');
   if (el.classList.contains('ativo') && ativos.length <= 1) { toast('Mantenha pelo menos uma unidade ativa'); return; }
   el.classList.toggle('ativo');
+  // Persiste na hora e reflete em TODAS as metas — cada unidade ativada fica
+  // disponível na seleção de SKU de qualquer marca imediatamente.
+  const cfg = getConfig();
+  cfg.skus = Array.from(document.querySelectorAll('#sku-grid .sku-chip.ativo')).map(e => e.dataset.sku);
+  salvarConfigData(cfg);
+  renderizarMetasConfig(cfg);
 }
 function getUnidadesDisponiveis() {
   const cfg = getConfig();

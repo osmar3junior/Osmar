@@ -6623,7 +6623,7 @@ function _renderForaDaRota() {
   cont.innerHTML = lista.map((x, i) => {
     const cor = x.nota >= 7 ? 'var(--verde)' : x.nota >= 4.5 ? 'var(--amarelo)' : 'var(--texto2)';
     const ordemTag = _foraRotaOrdemRota ? `<div style="font-size:11px;color:#38BDF8;font-weight:700;margin-bottom:2px;">#${i + 1} na rota</div>` : '';
-    const rationale = _foraRotaOrdemRota ? _rationaleForaRota(x.cliente, x.notaInfo) : null;
+    const rationale = _rationaleForaRota(x.cliente, x.notaInfo);
     const rationaleLine = rationale ? `<div style="font-size:11px;color:${rationale.cor};margin-top:3px;font-style:italic;">${rationale.texto}</div>` : '';
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--borda);border-radius:12px;cursor:pointer;" onclick="fecharModal('modal-fora-rota');setTimeout(()=>abrirDetalhe('${x.cliente.id}','clientes'),200)">

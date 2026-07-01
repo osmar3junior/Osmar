@@ -9040,7 +9040,7 @@ function editarContato(idx) {
   if (h.motivo === 'fechou_pedido') {
     camposPedido.style.display = 'block';
     renderizarCamposPedido(cliente, null);
-    const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
+    const marcas = _marcasDoPedido(cliente);
     const pedidos = h.pedidos || [{ marca: marcas[0], valor: h.pedidoValor, qtd: h.pedidoQtd, unidade: h.pedidoUnidade }];
     marcas.forEach((marca, i) => {
       const p = pedidos.find(pp => pp.marca === marca) || pedidos[i] || {};
@@ -9051,6 +9051,7 @@ function editarContato(idx) {
       popularUnidadesPedido(p.unidade, 'pedido-unidade-' + i);
       if (p.canal) setPedidoCanal(i, p.canal);
     });
+    _pedidoAutoRevelarPreenchidos();
     atualizarResumoPedido();
   } else {
     camposPedido.style.display = 'none';
@@ -9202,7 +9203,7 @@ function salvarContato() {
   // Salva dados do pedido se for fechamento
   if (motivoSelecionado === 'fechou_pedido') {
     const cliente = clientes[idx];
-    const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
+    const marcas = _marcasDoPedido(cliente);
     // Valida: pelo menos uma marca com valor preenchido
     const temValor = marcas.some((_, i) => {
       const el = document.getElementById('pedido-valor-' + i);
@@ -9306,6 +9307,11 @@ function salvarContato() {
       if (valorTotal > 0) contato.pedidoValor = valorTotal;
       if (pedidos[0].qtd) contato.pedidoQtd = pedidos[0].qtd;
       if (pedidos[0].unidade) contato.pedidoUnidade = pedidos[0].unidade;
+      // Vendeu uma marca ainda não atribuída a este cliente? Atribui agora.
+      const _marcasVend = pedidos.map(p => p.marca).filter(Boolean);
+      if (_marcasVend.length) {
+        clientes[idx].marcas = [...new Set([...(clientes[idx].marcas || []), ..._marcasVend])];
+      }
     }
   }
 
@@ -12254,7 +12260,7 @@ function abrirPedidoExistente(clienteId, dataStr) {
   renderizarCamposPedido(cliente, unidadePadrao);
 
   // Pré-preenche com os valores já salvos
-  const marcas = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
+  const marcas = _marcasDoPedido(cliente);
   marcas.forEach((marca, i) => {
     const pedMarca = h.pedidos ? h.pedidos.find(p => (p.marca || '') === (marca || '')) : null;
     const valorEl  = document.getElementById('pedido-valor-'    + i);
@@ -12292,7 +12298,7 @@ function salvarEdicaoPedido() {
   if (hi === -1) return;
 
   const cliente = clientes[ci];
-  const marcas  = (cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
+  const marcas  = _marcasDoPedido(cliente);
 
   // Valida: todo pedido com valor/qtd preenchido precisa informar o canal (presencial/não presencial)
   const idxSemCanal = marcas.findIndex((_, i) => {
@@ -12331,6 +12337,11 @@ function salvarEdicaoPedido() {
 
   clientes[ci].historico[hi].pedidos    = pedidos;
   clientes[ci].historico[hi].pedidoValor = valorTotal;
+  // Vendeu uma marca ainda não atribuída a este cliente? Atribui agora.
+  const _marcasVend = pedidos.map(p => p.marca).filter(Boolean);
+  if (_marcasVend.length) {
+    clientes[ci].marcas = [...new Set([...(clientes[ci].marcas || []), ..._marcasVend])];
+  }
   salvarClientes(clientes);
 
   fecharModalPedido();
@@ -12986,10 +12997,21 @@ function toggleMarcaChip(el, containerId) {
 function getMarcasSelecionadas(containerId) {
   return Array.from(document.querySelectorAll('#' + containerId + ' .sku-chip.ativo')).map(el => el.dataset.marca);
 }
+// Marcas que aparecem no modal de pedido: TODAS as marcas do rep (cfg.marcas),
+// mais qualquer marca que o cliente já tenha e não esteja na config (não some nada).
+// Usada por renderizarCamposPedido E por todos os pontos que leem os campos por
+// índice — a lista PRECISA ser idêntica em todos, senão os índices desalinham.
+function _marcasDoPedido(cliente) {
+  const cfgM = (getConfig().marcas || []).filter(Boolean);
+  const cliM = (cliente && cliente.marcas) ? cliente.marcas.filter(Boolean) : [];
+  const uni = [...new Set([...cfgM, ...cliM])];
+  return uni.length ? uni : [null];
+}
+
 function renderizarCamposPedido(cliente, unidadePadrao) {
   const cont = document.getElementById('campos-pedido-blocos');
   if (!cont) return;
-  const marcas = (cliente && cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
+  const marcas = _marcasDoPedido(cliente);
   const metas = (getConfig().metas || []);
   window._pedidoCanais     = new Array(marcas.length).fill(null);
   const _notifEntrega      = getConfig().notificacaoEntrega || null;

@@ -10652,7 +10652,7 @@ function _coletarDadosRep() {
       const vA = (c.historico||[]).filter(h=>h.motivo==='fechou_pedido'&&new Date(h.data)>=inicioMes).reduce((s,h)=>s+(h.pedidoValor||0),0);
       const vB = (c.historico||[]).filter(h=>h.motivo==='fechou_pedido'&&new Date(h.data)>=inicioMesAnt&&new Date(h.data)<=fimMesAnt).reduce((s,h)=>s+(h.pedidoValor||0),0);
       return vB>0 && vA < vB*0.7;
-    }).slice(0,3).map(c=>c.nome);
+    }).slice(0,3).map(c=>`${c.nome}${c.cidade?' ('+c.cidade+')':''}`);
 
     const status = falta<=0?'META BATIDA':pct>=90?'no ritmo':pct>=60?'atenção':'CRÍTICO';
     return {
@@ -10672,7 +10672,7 @@ function _coletarDadosRep() {
   // --- Pareto da carteira ---
   const ranking = ativos.map(c => {
     const tot = (c.historico||[]).filter(h=>h.motivo==='fechou_pedido'&&new Date(h.data)>=inicioMes).reduce((s,h)=>s+(h.pedidoValor||0),0);
-    return { nome:c.nome, tot };
+    return { nome:c.nome, cidade:c.cidade||'', tot };
   }).filter(x=>x.tot>0).sort((a,b)=>b.tot-a.tot);
   const totalGeral = ranking.reduce((s,x)=>s+x.tot,0);
   const top20pct = ranking.slice(0,Math.max(1,Math.round(ranking.length*0.2))).reduce((s,x)=>s+x.tot,0);
@@ -10700,7 +10700,7 @@ function _coletarDadosRep() {
 
   // --- Top 20% Pareto nomeado ---
   const top20lista = ranking.slice(0, Math.max(1, Math.round(ranking.length*0.2)));
-  const top20nomes = top20lista.map(c => `${c.nome}: ${fmtR(c.tot)}`);
+  const top20nomes = top20lista.map(c => `${c.nome}${c.cidade?' ('+c.cidade+')':''}: ${fmtR(c.tot)}`);
 
   // --- Cidades da carteira (para análise de rota) ---
   const cidadeFreq = {};
@@ -10710,14 +10710,14 @@ function _coletarDadosRep() {
   // --- Clientes que já compram remoto (candidatos a abordar via WhatsApp) ---
   const compramRemoto = ativos.filter(c =>
     (c.historico||[]).some(h => h.motivo==='fechou_pedido' && (h.pedidos||[]).some(p=>p.canal==='wpp'))
-  ).map(c=>c.nome).slice(0,5);
+  ).map(c=>`${c.nome}${c.cidade?' ('+c.cidade+')':''}`).slice(0,5);
 
   // --- Clientes de alto potencial que nunca compraram remoto ---
   const potRemoto = ranking.slice(0, Math.round(ranking.length*0.3)).filter(c => {
     const cli = ativos.find(x=>x.nome===c.nome);
     if (!cli) return false;
     return !(cli.historico||[]).some(h => h.motivo==='fechou_pedido' && (h.pedidos||[]).some(p=>p.canal==='wpp'));
-  }).map(c=>c.nome).slice(0,5);
+  }).map(c=>`${c.nome}${c.cidade?' ('+c.cidade+')':''}`).slice(0,5);
 
   return {
     rep: usuarioAtual?.nome || 'Representante',
@@ -10745,7 +10745,7 @@ function _coletarDadosRep() {
     entregas: (() => {
       const postVenda = _calcularPostVendaEntregas();
       const readyParaRecompra = postVenda.map(({ c, p }) =>
-        `${c.nome}${p.marca ? ' · ' + p.marca : ''}`).slice(0, 5);
+        `${c.nome}${c.cidade ? ' (' + c.cidade + ')' : ''}${p.marca ? ' · ' + p.marca : ''}`).slice(0, 5);
       const todosComEntrega = ativos.flatMap(c =>
         (c.historico || []).flatMap(h =>
           (h.pedidos || []).filter(p => p.prazoEntregaDias).map(p => p.prazoEntregaDias)
@@ -10786,6 +10786,8 @@ async function gerarAnaliseGerente(forcar=false) {
   const prompt = `Você é o GESTOR IA: um mentor sênior para representantes comerciais no Brasil, que combina DUAS visões complementares sobre o negócio do rep. Tom direto, provocativo (estimula ação e pensamento crítico), profissional e orientado a dados. Use termos do setor quando fizer sentido: sell-in, sell-out, ruptura, positivação, mix, cobertura, giro, share, ticket médio, Pareto.
 
 Fale DIRETAMENTE com o representante na 2ª pessoa ("você"), pelo primeiro nome. Nada de saudação genérica nem de repetir os números crus — interprete-os e provoque a ação.
+
+Ao citar qualquer cliente, use SEMPRE o formato: Nome da Loja (Cidade). Nunca apenas o nome isolado — isso evita confusão entre clientes homônimos em cidades diferentes.
 
 DADOS REAIS DO REPRESENTANTE (use só o que estiver aqui, não invente números):
 ${JSON.stringify(dados, null, 2)}
@@ -12768,7 +12770,7 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
       : `style="font-size:14px;padding:10px 12px;"`;
     const numLabel = marcas.length > 1 ? `<span style="font-size:10px;color:var(--texto3);">${i+1} de ${marcas.length}</span>` : '';
     return `
-    <div class="bloco-marca-pedido" id="bloco-marca-${i}" style="${i > 0 ? 'margin-top:10px;' : ''}">
+    <div class="bloco-marca-pedido" id="bloco-marca-${i}" style="background:var(--bg2);border:1.5px solid var(--borda);border-radius:14px;padding:14px 13px;${i > 0 ? 'margin-top:12px;' : ''}">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px;">
         ${marca ? `<div style="display:inline-flex;align-items:center;font-size:13px;font-weight:800;color:#FFC043;background:rgba(255,192,67,.12);border:1px solid rgba(255,192,67,.35);border-radius:8px;padding:4px 11px;font-family:'DM Sans',sans-serif;flex-shrink:0;">🏷 ${marca}</div>` : '<div></div>'}
         <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">

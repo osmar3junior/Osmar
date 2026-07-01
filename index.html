@@ -2339,6 +2339,16 @@ if ('serviceWorker' in navigator) {
         <div id="gerente-acoes-texto" style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;white-space:pre-wrap;"></div>
       </div>
 
+      <!-- Seção 4: O que atualizar em Configurações -->
+      <div id="gerente-config-bloco" style="display:none;background:rgba(56,189,248,.06);border:1.5px solid rgba(56,189,248,.28);border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:16px;">⚙️</span>
+          <span style="font-size:12px;font-weight:700;color:#38BDF8;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;">Ajuste nas configurações</span>
+        </div>
+        <div id="gerente-config-texto" style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;white-space:pre-wrap;"></div>
+        <button onclick="fecharModal('modal-gerente');abrirConfiguracoes()" style="margin-top:12px;width:100%;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.35);border-radius:10px;padding:10px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">⚙️ Abrir Configurações</button>
+      </div>
+
       <!-- Botões de compartilhamento -->
       <div style="display:flex;gap:8px;">
         <button onclick="compartilharGerenteWpp()" style="flex:2;background:rgba(34,197,94,.12);border:1.5px solid rgba(34,197,94,.4);border-radius:12px;padding:13px;color:#4ade80;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">💬 Enviar no WhatsApp</button>
@@ -2355,6 +2365,30 @@ if ('serviceWorker' in navigator) {
       <button onclick="abrirConfiguracoes()" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 16px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⚙️ Configurar chave Groq</button>
     </div>
 
+  </div>
+</div>
+
+<!-- MODAL VIRADA DE MÊS (plano do mês novo) -->
+<div class="modal-overlay" id="modal-plano-mes" style="z-index:335;">
+  <div class="modal-box" style="max-height:92vh;overflow-y:auto;">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:46px;line-height:1;margin-bottom:8px;">🗓️</div>
+      <div style="font-size:18px;font-weight:800;color:var(--texto);font-family:'DM Sans',sans-serif;" id="plano-mes-titulo">Novo mês começou!</div>
+      <div style="font-size:13px;color:var(--texto2);font-family:'DM Sans',sans-serif;margin-top:6px;line-height:1.6;" id="plano-mes-sub">Hora de planejar. Vamos começar o mês no controle.</div>
+    </div>
+
+    <!-- Checklist do que atualizar antes de gerar o plano -->
+    <div id="plano-mes-checklist" style="background:rgba(56,189,248,.06);border:1.5px solid rgba(56,189,248,.28);border-radius:14px;padding:13px 15px;margin-bottom:16px;display:none;">
+      <div style="font-size:11px;font-weight:700;color:#38BDF8;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">⚙️ Antes de começar, atualize</div>
+      <div id="plano-mes-checklist-itens" style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;"></div>
+    </div>
+    <div id="plano-mes-tudo-ok" style="background:rgba(0,214,143,.07);border:1.5px solid rgba(0,214,143,.28);border-radius:14px;padding:13px 15px;margin-bottom:16px;display:none;">
+      <div style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.6;">✅ Suas metas deste mês já estão configuradas. Bora traçar o plano e atacar!</div>
+    </div>
+
+    <button onclick="_planoMesGerar()" class="btn-primario" style="width:100%;margin-bottom:9px;font-family:'DM Sans',sans-serif;">📊 Gerar meu plano do mês</button>
+    <button onclick="_planoMesAtualizarMetas()" style="width:100%;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.35);border-radius:12px;padding:12px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:9px;">⚙️ Atualizar metas primeiro</button>
+    <button onclick="_planoMesAgoraNao()" style="width:100%;background:transparent;border:none;color:var(--texto3);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;padding:6px;">Agora não</button>
   </div>
 </div>
 
@@ -4458,6 +4492,7 @@ async function fazerLogin() {
     irPara('dashboard');
     _sbAuth(email, senha);
     setTimeout(_checarOnboarding, 2500); // espera o pull da nuvem antes de decidir mostrar o assistente
+    setTimeout(_checarPlanoMes, 4000);   // no 1º acesso do mês, convida a planejar (não empilha sobre o onboarding)
     setTimeout(() => { if (Notification.permission === 'granted') { _salvarDadosNotifSW(); _agendarNotifDiaria(); } }, 3000);
   } else {
     // Cache foi limpo — tenta recuperar pelo Supabase
@@ -10612,6 +10647,88 @@ function abrirGerenteVirtual() {
   gerarAnaliseGerente(false);
 }
 
+// ===== VIRADA DE MÊS — plano do mês novo (dispara sozinho no 1º acesso do mês) =====
+function _mesAtualStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+// Levantamento rápido (sem IA) do que falta para o mês/coleção atual.
+function _planoMesPendencias() {
+  const cfg = getConfig();
+  const metas = getMetasConfig();
+  const marcasCad = (cfg.marcas || []).filter(Boolean);
+  const marcasComMeta = metas.map(m => (m.marca||'').trim().toLowerCase());
+  const mes = _mesAtualStr();
+  const pend = [];
+  const semMeta = marcasCad.filter(m => !marcasComMeta.includes(m.trim().toLowerCase()));
+  if (semMeta.length) pend.push(`• ${semMeta.length} marca(s) sem meta: ${semMeta.join(', ')}`);
+  const desatual = metas.filter(m => m.tipoPeriodo!=='colecao' && m.mes && m.mes < mes).map(m => m.marca);
+  if (desatual.length) pend.push(`• Meta do mês novo em: ${desatual.join(', ')}`);
+  const semValor = metas.filter(m => !(m.valor>0)).map(m => m.marca || '(sem marca)');
+  if (semValor.length) pend.push(`• Valor da meta em branco: ${semValor.join(', ')}`);
+  const semComissao = metas.filter(m => !(m.comissao>0)).map(m => m.marca || '(sem marca)');
+  if (semComissao.length) pend.push(`• Comissão não preenchida: ${semComissao.join(', ')}`);
+  if (!(cfg.wppRep||'').trim()) pend.push('• Seu WhatsApp (para receber os planos)');
+  return pend;
+}
+
+// Chamada no 1º acesso de cada mês: mostra o convite p/ planejar o mês.
+function _checarPlanoMes() {
+  if (!usuarioAtual) return;
+  const cfg = getConfig();
+  if (!cfg.onboardingFeito) return;                       // rep novo ainda no onboarding
+  const onb = document.getElementById('onboarding');
+  if (onb && onb.style.display === 'flex') return;        // não empilhar sobre o onboarding
+  if (document.querySelector('.modal-overlay.aberto')) return; // não empilhar sobre outro modal
+  const mes = _mesAtualStr();
+  if (cfg.planoMesVisto === mes) return;                  // já visto neste mês
+
+  // Monta o conteúdo
+  const nm = (usuarioAtual?.nome || '').trim().split(' ')[0] || '';
+  const nomeMes = new Date().toLocaleDateString('pt-BR',{month:'long'});
+  const titulo = document.getElementById('plano-mes-titulo');
+  const sub = document.getElementById('plano-mes-sub');
+  if (titulo) titulo.textContent = `${nomeMes.charAt(0).toUpperCase()+nomeMes.slice(1)} começou! 🚀`;
+  if (sub) sub.textContent = nm ? `${nm}, hora de planejar o mês e começar no controle.` : 'Hora de planejar o mês e começar no controle.';
+
+  const pend = _planoMesPendencias();
+  const checklist = document.getElementById('plano-mes-checklist');
+  const tudoOk = document.getElementById('plano-mes-tudo-ok');
+  const itens = document.getElementById('plano-mes-checklist-itens');
+  if (pend.length) {
+    if (itens) itens.textContent = pend.join('\n');
+    if (checklist) checklist.style.display = 'block';
+    if (tudoOk) tudoOk.style.display = 'none';
+  } else {
+    if (checklist) checklist.style.display = 'none';
+    if (tudoOk) tudoOk.style.display = 'block';
+  }
+
+  document.getElementById('modal-plano-mes').classList.add('aberto');
+}
+
+function _planoMesMarcarVisto() {
+  const cfg = getConfig();
+  cfg.planoMesVisto = _mesAtualStr();
+  salvarConfigData(cfg);
+}
+function _planoMesGerar() {
+  _planoMesMarcarVisto();
+  fecharModal('modal-plano-mes');
+  _gerenteAnaliseCache = null; _gerenteCacheData = null; // força análise nova do mês
+  setTimeout(abrirGerenteVirtual, 220);
+}
+function _planoMesAtualizarMetas() {
+  _planoMesMarcarVisto();
+  fecharModal('modal-plano-mes');
+  setTimeout(() => irPara('config'), 220);
+}
+function _planoMesAgoraNao() {
+  _planoMesMarcarVisto();
+  fecharModal('modal-plano-mes');
+}
+
 function _coletarDadosRep() {
   const cfg = getConfig();
   const metas = getMetasConfig();
@@ -10628,12 +10745,22 @@ function _coletarDadosRep() {
     const real = calcularRealMarca(meta);
     const falta = meta.valor - real;
     const pct = meta.valor > 0 ? Math.round((real/meta.valor)*100) : 0;
-    const { fim } = _periodoMeta(meta);
+    const { inicio, fim } = _periodoMeta(meta);
     const diasR = _diasUteisRestantes(hoje, fim);
     const taxa = calcularTaxaConversaoMarca(meta.marca);
     const positiv = Math.round(taxa*100);
     const skuL = _skuLabel(meta.sku);
     const somenteVal = meta.sku==='reais'||meta.sku==='faturamento';
+
+    // --- Temporalidade da meta (mês vs coleção, ritmo, projeção) ---
+    const _DIA = 86400000;
+    const ehColecao = meta.tipoPeriodo === 'colecao';
+    const diasTotaisPer = Math.max(1, Math.round((fim - inicio)/_DIA) + 1);
+    const diasCorridosPer = Math.min(diasTotaisPer, Math.max(0, Math.round((hoje - inicio)/_DIA) + 1));
+    const pctDecorrido = Math.round((diasCorridosPer/diasTotaisPer)*100);
+    const projFinal = pctDecorrido>0 ? Math.round(real/(pctDecorrido/100)) : real;
+    const projPct = meta.valor>0 ? Math.round((projFinal/meta.valor)*100) : 0;
+    const ritmoNec = (falta>0 && diasR>0) ? `${fmtR(Math.ceil(falta/diasR))} ${skuL}/dia útil` : (falta<=0 ? 'meta já batida' : 'sem dias úteis restantes no período');
 
     // Clientes com potencial que não compraram no mês
     const marcaNorm = meta.marca.trim().toLowerCase();
@@ -10666,7 +10793,13 @@ function _coletarDadosRep() {
       pct: `${pct}%`,
       status,
       falta: falta>0?`${fmtR(falta)} ${skuL}`:'0',
+      tipoPeriodo: ehColecao ? 'coleção (por período)' : 'mês',
+      periodo: _labelPeriodo(meta),
+      periodoDecorrido: `${pctDecorrido}% decorrido (dia ${diasCorridosPer} de ${diasTotaisPer})`,
       diasUteis: diasR,
+      ritmoNecessario: ritmoNec,
+      projecaoNoRitmoAtual: `${fmtR(projFinal)} ${skuL} (~${projPct}% da meta)`,
+      foraDoRitmo: pct < (pctDecorrido - 5),
       positivacao: `${positiv}%`,
       topPotencial: pot.map(p=>`${p.nome}${p.cidade?' ('+p.cidade+')':''}: ~${fmtR(p.potAvg)}`).join('; ')||'sem dados',
       clientesEmQueda: queda.join(', ')||'nenhum'
@@ -10723,9 +10856,42 @@ function _coletarDadosRep() {
     return !(cli.historico||[]).some(h => h.motivo==='fechou_pedido' && (h.pedidos||[]).some(p=>p.canal==='wpp'));
   }).map(c=>`${c.nome}${c.cidade?' ('+c.cidade+')':''}`).slice(0,5);
 
+  // --- Temporalidade global (virada de mês / momento do período) ---
+  const totalDiasMes = new Date(Y, M+1, 0).getDate();
+  const diasRestMes  = totalDiasMes - D;
+  const temColecao   = metas.some(m => m.tipoPeriodo === 'colecao');
+  const temporalidade = {
+    hoje: hoje.toLocaleDateString('pt-BR'),
+    diaDoMes: D,
+    totalDiasNoMes: totalDiasMes,
+    diasRestantesNoMes: diasRestMes,
+    momento: D <= 4 ? 'VIRADA DE MES (comeco) — hora de PLANEJAR o mes: definir prioridade de marcas, ritmo diario e rota desde o dia 1'
+           : diasRestMes <= 5 ? 'RETA FINAL do mes — hora de FECHAR a meta com foco nos pedidos que faltam'
+           : 'MEIO do mes — hora de CORRIGIR a rota e recuperar quem esta fora do ritmo',
+    temMetaPorColecao: temColecao
+  };
+
+  // --- Saúde da configuração (o que atualizar em Configurações) ---
+  const marcasCad     = (cfg.marcas || []).filter(Boolean);
+  const marcasComMeta = metas.map(m => (m.marca||'').trim().toLowerCase());
+  const mesAtualStr   = `${Y}-${String(M+1).padStart(2,'0')}`;
+  const saudeConfiguracao = {
+    marcasCadastradas: marcasCad.length,
+    metasCadastradas: metas.length,
+    marcasSemMeta: marcasCad.filter(m => !marcasComMeta.includes(m.trim().toLowerCase())),
+    metasSemValor: metas.filter(m => !(m.valor>0)).map(m => m.marca || '(sem marca)'),
+    metasSemComissao: metas.filter(m => !(m.comissao>0)).map(m => m.marca || '(sem marca)'),
+    metasSemGiroIdeal: metas.filter(m => !(m.cicloIdeal>0)).map(m => m.marca || '(sem marca)'),
+    metasMensaisDesatualizadas: metas.filter(m => m.tipoPeriodo!=='colecao' && m.mes && m.mes < mesAtualStr).map(m => `${m.marca} (meta de ${m.mes})`),
+    whatsappRepConfigurado: !!(cfg.wppRep||'').trim(),
+    emailRepConfigurado: !!(cfg.emailRep||'').trim()
+  };
+
   return {
     rep: usuarioAtual?.nome || 'Representante',
     mes: hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}),
+    temporalidade,
+    saudeConfiguracao,
     marcas: dadosMarcas,
     carteira: {
       totalClientes: ativos.length,
@@ -10793,10 +10959,16 @@ Fale DIRETAMENTE com o representante na 2ª pessoa ("você"), pelo primeiro nome
 
 Ao citar qualquer cliente, use SEMPRE o formato: Nome da Loja (Cidade). Nunca apenas o nome isolado — isso evita confusão entre clientes homônimos em cidades diferentes.
 
+CONSCIÊNCIA DE TEMPO (campo "temporalidade" + campos de cada marca): AJUSTE seu direcionamento ao momento do mês/período.
+- Se "momento" for VIRADA DE MÊS (começo): o rep está começando o mês/período do zero. NÃO cobre resultado — PLANEJE. Diga por onde começar: quais marcas atacar primeiro (potencial x comissão), qual o RITMO DIÁRIO necessário em cada marca ("ritmoNecessario"), e como montar a rota da 1ª semana. Dê uma largada motivadora.
+- Se for MEIO do mês: corrija a rota. Compare "pct" (quanto já vendeu) com "periodoDecorrido" (quanto do tempo passou). Marcas com "foraDoRitmo":true estão atrasadas — foque nelas e diga o ritmo para recuperar.
+- Se for RETA FINAL: foco total em fechar. Priorize os pedidos que faltam com maior chance de fechar no prazo.
+- METAS POR COLEÇÃO ("tipoPeriodo":"coleção"): trate pelo período inteiro dela (use "periodo" e "periodoDecorrido"), NÃO pelo mês calendário. Uma coleção pode ter ritmo e prazos diferentes do mês.
+
 DADOS REAIS DO REPRESENTANTE (use só o que estiver aqui, não invente números):
 ${JSON.stringify(dados, null, 2)}
 
-Gere uma análise em JSON com EXATAMENTE 3 campos:
+Gere uma análise em JSON com EXATAMENTE 4 campos:
 
 1. "marca" — PERSONA GUARDIÃO DO MARKET SHARE (gerente de marca da indústria):
 Foco em positivação, cobertura e mix. Identifique quais marcas estão críticas e onde há dinheiro na mesa (clientes de alto potencial sem compra, mix incompleto). Analise os dados de canal: se há pedidos não presenciais, destaque quais clientes já compram por WhatsApp e sugira usar esse canal para ampliar positivação sem visita — especialmente em cidades com 1-2 clientes onde o deslocamento não compensa. Se houver clientes em "entregas.clientesReadyParaRecompra", cite-os como oportunidade quente — pedido entregue, cliente satisfeito e no momento ideal para o próximo pedido. Provoque o rep a ligar para o gerente comercial da marca pedindo verba de sell-out, prazo especial ou material de PDV. Cite nomes de clientes e marcas dos dados. Máx 240 palavras.
@@ -10806,15 +10978,17 @@ Foco em rentabilidade, produtividade, Pareto e inteligência de rota. Onde está
 
 3. "acoes" — EXATAMENTE 3 ações concretas e executáveis ESTA SEMANA, priorizando impacto máximo no menor tempo. Pelo menos 1 ação deve envolver abordagem remota (WhatsApp) com cliente específico do top potencial, e pelo menos 1 deve ser uma decisão de rota ou concentração geográfica. Cada ação em 1 linha começando com verbo no imperativo, citando nomes reais dos dados. Formato literal: "1. [ação]\\n2. [ação]\\n3. [ação]"
 
+4. "configuracao" — SEMPRE presente. Baseado em "saudeConfiguracao", diga em 1 a 3 linhas curtas o que o rep precisa ATUALIZAR EM CONFIGURAÇÕES para ter um mês excelente e para a IA analisar melhor. Priorize nesta ordem: (a) "metasMensaisDesatualizadas" — na virada de mês, mande criar/atualizar a meta do mês novo (sem meta atual, não há como medir nada); (b) "marcasSemMeta" — marca sem meta fica invisível na análise; (c) "metasSemValor"; (d) "metasSemComissao" — sem % não dá pra calcular o ganho real dele; (e) "metasSemGiroIdeal" — sem giro não dá pra saber a hora certa de voltar no cliente; (f) WhatsApp/e-mail do rep não configurados. Se estiver tudo preenchido, PARABENIZE em 1 linha e sugira 1 refinamento fino. Tom prático, começando com verbo no imperativo. Cada item em 1 linha, formato: "• [orientação]".
+
 Responda APENAS com JSON válido, sem texto antes ou depois:
-{"marca":"...","negocio":"...","acoes":"1. ...\\n2. ...\\n3. ..."}`;
+{"marca":"...","negocio":"...","acoes":"1. ...\\n2. ...\\n3. ...","configuracao":"• ...\\n• ..."}`;
 
   try {
     const body = {
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: 1900,
       response_format: { type: 'json_object' }
     };
 
@@ -10849,6 +11023,7 @@ Responda APENAS com JSON válido, sem texto antes ou depois:
     if (!m) throw new Error('Resposta inesperada da IA. Tente novamente.');
     const analise = JSON.parse(m[0]);
     if (!analise.marca || !analise.negocio || !analise.acoes) throw new Error('Resposta incompleta. Tente novamente.');
+    if (!analise.configuracao) analise.configuracao = '';
 
     _gerenteAnaliseCache = analise;
     _gerenteCacheData = Date.now();
@@ -10868,6 +11043,12 @@ function _exibirAnaliseGerente(analise, doCache) {
   document.getElementById('gerente-marca-texto').textContent = analise.marca;
   document.getElementById('gerente-negocio-texto').textContent = analise.negocio;
   document.getElementById('gerente-acoes-texto').textContent = analise.acoes;
+  const _cfgBloco = document.getElementById('gerente-config-bloco');
+  const _cfgTxt = (analise.configuracao || '').trim();
+  if (_cfgBloco) {
+    _cfgBloco.style.display = _cfgTxt ? 'block' : 'none';
+    if (_cfgTxt) document.getElementById('gerente-config-texto').textContent = _cfgTxt;
+  }
   const aviso = document.getElementById('gerente-cache-aviso');
   if (doCache && _gerenteCacheData) {
     const h = Math.round((Date.now()-_gerenteCacheData)/3600000);
@@ -10888,6 +11069,9 @@ function compartilharGerenteWpp() {
   msg += `🏷️ *VISÃO DAS MARCAS*\n${_gerenteAnaliseCache.marca}\n\n`;
   msg += `💼 *VISÃO DO SEU NEGÓCIO*\n${_gerenteAnaliseCache.negocio}\n\n`;
   msg += `⚡ *3 AÇÕES PARA ESTA SEMANA*\n${_gerenteAnaliseCache.acoes}\n\n`;
+  if ((_gerenteAnaliseCache.configuracao || '').trim()) {
+    msg += `⚙️ *AJUSTE NAS CONFIGURAÇÕES*\n${_gerenteAnaliseCache.configuracao}\n\n`;
+  }
   msg += `_Gerado pelo Carteira Viva — seu copiloto na estrada 🚗_`;
 
   const url = wpp
@@ -14363,6 +14547,7 @@ function ajustarAlturaListaMotivos() {
     usuarioAtual = session;
     irPara('dashboard');
     setTimeout(_checarOnboarding, 2500); // mostra o assistente se ainda não foi concluído
+    setTimeout(_checarPlanoMes, 4000);   // no 1º acesso do mês, convida a planejar o mês novo
     setTimeout(verificarEnderecosPendentes, 3000);
     setTimeout(solicitarPermissaoNotificacao, 2000);
     setTimeout(verificarENotificarEsquecidos, 5000);

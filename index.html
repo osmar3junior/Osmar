@@ -6517,13 +6517,13 @@ function _rationaleForaRota(c, notaInfo) {
   if (entregaConfirmadaRecente)
     return { texto: `Pedido chegou há ${diasDesdeEntregaConfirmada}d · momento ideal para recompra`, cor: 'var(--verde)' };
   if (taxaConversao !== null && taxaConversao >= 0.7)
-    return { texto: 'Toda vez que visita, fecha pedido', cor: 'var(--verde)' };
+    return { texto: 'Toda vez que visita, fecha pedido · alta conversão', cor: 'var(--verde)' };
   if (compraNoMesAtual)
-    return { texto: `Comprou em ${mesNome} em anos anteriores`, cor: '#38BDF8' };
+    return { texto: `Comprou em ${mesNome} em anos anteriores · época favorável`, cor: '#38BDF8' };
   if (ticketCrescendo)
-    return { texto: 'Ticket crescendo nos últimos pedidos', cor: 'var(--verde)' };
+    return { texto: 'Ticket crescendo nos últimos pedidos · pronto para subir', cor: 'var(--verde)' };
   if (dias !== null && cicloIdeal && dias >= cicloIdeal * 2)
-    return { texto: `Marca vencida há ${dias} dias`, cor: 'var(--amarelo)' };
+    return { texto: `Marca vencida há ${dias} dias · hora de agir`, cor: 'var(--amarelo)' };
   if (dias !== null && cicloIdeal && dias >= cicloIdeal)
     return { texto: pv.avg > 0 ? 'Marca atrasada · bom potencial' : 'Marca atrasada · hora de visitar', cor: 'var(--amarelo)' };
   if ((pv.max || 0) >= 5000)
@@ -6913,15 +6913,15 @@ function _rationaleOportunidades(o) {
   if (entregaConfirmadaRecente)
     return { texto: `Pedido chegou há ${diasDesdeEntregaConfirmada}d · hora da recompra`, cor: 'var(--verde)' };
   if (taxaConversao !== null && taxaConversao >= 0.7)
-    return { texto: 'Fecha pedido em quase toda visita', cor: 'var(--verde)' };
+    return { texto: 'Fecha pedido em quase toda visita · alta conversão', cor: 'var(--verde)' };
   if (compraNoMesAtual)
-    return { texto: `Comprou em ${mesNome} em anos anteriores`, cor: '#38BDF8' };
+    return { texto: `Comprou em ${mesNome} em anos anteriores · época favorável`, cor: '#38BDF8' };
   if (ticketCrescendo)
-    return { texto: 'Ticket crescendo nos últimos pedidos', cor: 'var(--verde)' };
+    return { texto: 'Ticket crescendo nos últimos pedidos · pronto para subir', cor: 'var(--verde)' };
   if (dias !== null && ciclo && dias >= ciclo * 2)
     return { texto: `Marca vencida há ${dias} dias · hora de agir`, cor: 'var(--amarelo)' };
   if (dias !== null && ciclo && dias >= ciclo)
-    return { texto: 'No ponto ideal de recompra', cor: 'var(--amarelo)' };
+    return { texto: 'No ponto ideal de recompra · timing perfeito', cor: 'var(--amarelo)' };
   if (totalPedidos === 0)
     return { texto: 'Potencial confirmado · ainda não comprou', cor: 'var(--texto2)' };
   if (totalPedidos >= 5)

@@ -1489,6 +1489,36 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="config-secao">
+      <div class="config-secao-titulo">🚚 Acompanhamento de entregas</div>
+      <div class="config-secao-sub">Saiba quando cada pedido chega no cliente. Ative e escolha como quer ser notificado — nenhuma entrega passa em branco.</div>
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);margin-bottom:3px;">📦 Notificar todas as entregas</div>
+          <div style="font-size:12px;color:var(--texto2);line-height:1.5;">Toda venda lançada gera automaticamente um acompanhamento. O app avisa com badge na tela principal quando o prazo de entrega chegar — nenhuma entrega passa em branco.</div>
+        </div>
+        <button id="cfg-notif-entrega-todas-toggle" onclick="toggleNotifEntrega('todas')" style="width:48px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;background:#333;flex-shrink:0;margin-top:2px;">
+          <span id="cfg-notif-entrega-todas-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#888;transition:left .2s,background .2s;"></span>
+        </button>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);margin-bottom:3px;">🎯 Notificar só os que eu escolher</div>
+          <div style="font-size:12px;color:var(--texto2);line-height:1.5;">Ao lançar uma venda, você decide pedido a pedido se quer acompanhar aquela entrega específica. Ideal para quem prefere focar nos pedidos mais importantes.</div>
+        </div>
+        <button id="cfg-notif-entrega-escolher-toggle" onclick="toggleNotifEntrega('escolher')" style="width:48px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;background:#333;flex-shrink:0;margin-top:2px;">
+          <span id="cfg-notif-entrega-escolher-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#888;transition:left .2s,background .2s;"></span>
+        </button>
+      </div>
+
+      <div style="background:linear-gradient(135deg,rgba(0,214,143,.06),rgba(56,189,248,.04));border:1px solid rgba(0,214,143,.18);border-radius:12px;padding:13px 14px;">
+        <div style="font-size:20px;margin-bottom:6px;">🏆</div>
+        <div style="font-size:12px;color:var(--texto2);line-height:1.65;font-family:'DM Sans',sans-serif;"><strong style="color:var(--verde);">Representante que acompanha entrega, vende de novo mais rápido.</strong> Saber que o pedido chegou é o gatilho certo para voltar no cliente — e quem chega primeiro na recompra, fecha antes da concorrência.</div>
+      </div>
+    </div>
+
+    <div class="config-secao">
       <div class="config-secao-titulo">🔐 Senha de acesso</div>
       <div class="config-secao-sub">Troque sua senha quando quiser. Informe a senha atual, escolha a nova e confirme.</div>
       <input type="password" class="campo-input" id="cfg-senha-atual" placeholder="Senha atual" autocomplete="current-password" style="margin-top:4px;">
@@ -4636,6 +4666,36 @@ function abrirNotificacoes() {
     });
   }
 
+  // Pós-venda de entregas
+  const postVenda = _calcularPostVendaEntregas();
+  if (postVenda.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#38BDF8;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🚚 Pós-venda de entrega</div>`;
+    postVenda.forEach(({ c, p, diasApos, dataEntrega }) => {
+      const dtFmt = dataEntrega.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+      const diasTxt = diasApos === 2 ? 'chegou há 2 dias' : `chegou há ${diasApos} dias`;
+      const marcaTxt = p.marca ? ` · ${p.marca}` : '';
+      const cfg = getConfig();
+      const wppCliente = (c.wpp || c.telefone || '').replace(/\D/g,'');
+      const nomeCliente = (c.nome || '').split(' ')[0];
+      const marcaMsg = p.marca ? ` da ${p.marca}` : '';
+      const msgWpp = encodeURIComponent(`Oi ${nomeCliente}! 👋 Passando para saber se o pedido${marcaMsg} chegou direitinho. Qualquer dúvida é só me chamar! 😊`);
+      const urlWpp = wppCliente
+        ? `https://wa.me/55${wppCliente}?text=${msgWpp}`
+        : `https://wa.me/?text=${msgWpp}`;
+      html += `<div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.25);border-radius:12px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+          <span style="font-size:20px;flex-shrink:0;">📦</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--texto);">${esc(c.nome)}${c.loja?' — '+esc(c.loja):''}</div>
+            <div style="font-size:11px;color:var(--texto2);margin-top:2px;">Pedido de ${dtFmt}${marcaTxt} · ${diasTxt}</div>
+            <div style="font-size:11px;color:#38BDF8;margin-top:2px;font-style:italic;">Pergunte se chegou tudo certo — é o momento ideal para o próximo pedido</div>
+          </div>
+        </div>
+        <button onclick="fecharModal('modal-notificacoes');_wppAbrir('Oi ${nomeCliente.replace(/'/g,"\\'")}! 👋 Passando para saber se o pedido${marcaMsg.replace(/'/g,"\\'")} chegou direitinho. Qualquer dúvida é só me chamar! 😊')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Enviar mensagem de pós-venda</button>
+      </div>`;
+    });
+  }
+
   if (!html) {
     html = `<div style="text-align:center;padding:32px 16px;">
       <div style="font-size:32px;margin-bottom:12px;">✅</div>
@@ -4677,7 +4737,8 @@ function _atualizarBadgeNotif() {
   const urgentes = getClientesAtivos().filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; });
   const gatilhos = calcularGatilhosAntecipacao().filter(g => g.urgencia === 'ultima');
   const atrasadas = _getMetasAtrasadas();
-  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length;
+  const postVendaCount = _calcularPostVendaEntregas().length;
+  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length + postVendaCount;
   const badge = document.getElementById('notif-badge');
   const btn = badge?.parentElement;
   if (!badge) return;
@@ -6307,29 +6368,171 @@ function _scoreFoco(c) {
 }
 
 // ===== PEDIDO FORA DA ROTA =====
-// Nota (0-10): mistura "quão atrasada está a marca em relação ao giro ideal" com o potencial de venda dela.
-function _notaForaRota(c) {
-  const metas = getConfig().metas || [];
-  const pot = calcularPotencialCliente(c);
-  let melhor = null;
-  (c.marcas && c.marcas.length ? c.marcas : ['_']).forEach(marca => {
-    const m = metas.find(mm => mm.marca === marca);
+let _foraRotaAnchorId = null;
+let _foraRotaRaio = 20;
+let _foraRotaOrdemRota = false;
+
+// ===== DADOS COMERCIAIS CENTRALIZADOS =====
+// Extrai todos os sinais de um cliente num único passo.
+// Usado por _calcularOportunidades, _notaForaRota e _coletarDadosRep.
+function _dadosComerciais(c) {
+  const hist    = c.historico || [];
+  const metas   = getConfig().metas || [];
+  const hoje    = new Date(); hoje.setHours(0,0,0,0);
+  const mesAtual = hoje.getMonth();
+
+  // --- Histórico resumido ---
+  const totalVisitas = hist.filter(h => h.tipo === 'visita').length;
+  const totalPedidos = hist.filter(h => h.motivo === 'fechou_pedido').length;
+  const taxaConversao = totalVisitas >= 2 ? totalPedidos / totalVisitas : null;
+
+  // --- Sazonalidade: comprou no mesmo mês em anos anteriores ---
+  const compraNoMesAtual = hist.some(h => {
+    if (h.motivo !== 'fechou_pedido') return false;
+    const d = new Date(h.data);
+    return d.getMonth() === mesAtual && d.getFullYear() < hoje.getFullYear();
+  });
+
+  // --- Tendência de ticket: últimos 2 vs 2 anteriores ---
+  const pedOrdenados = hist.filter(h => h.motivo === 'fechou_pedido')
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+  let ticketCrescendo = false;
+  if (pedOrdenados.length >= 4) {
+    const soma = ps => ps.reduce((s, h) => s + (h.pedidos ? h.pedidos.reduce((t, p) => t + (p.valor || 0), 0) : (h.pedidoValor || 0)), 0);
+    ticketCrescendo = soma(pedOrdenados.slice(0, 2)) > soma(pedOrdenados.slice(2, 4));
+  }
+
+  // --- Canal dominante ---
+  let pedPresencial = 0, pedWpp = 0;
+  hist.forEach(h => {
+    if (h.motivo !== 'fechou_pedido') return;
+    (h.pedidos || []).forEach(p => { if (p.canal === 'visita') pedPresencial++; else if (p.canal === 'wpp') pedWpp++; });
+  });
+
+  // --- Entrega ---
+  let prazosSomados = 0, prazosCount = 0;
+  let entregaConfirmadaRecente = false; // pedido entregue e ready to reorder (>= prazo + 2d)
+  let diasDesdeEntregaConfirmada = null;
+  let marcaEntregaRecente = null;
+  hist.forEach(h => {
+    if (h.motivo !== 'fechou_pedido') return;
+    const diasDesdeVisita = Math.floor((hoje - new Date(h.data).setHours(0,0,0,0)) / 86400000);
+    if (diasDesdeVisita > 120) return;
+    (h.pedidos || []).forEach(p => {
+      if (p.prazoEntregaDias) { prazosSomados += p.prazoEntregaDias; prazosCount++; }
+      if (p.dataEntregaPrevista) {
+        const dataEnt = new Date(p.dataEntregaPrevista + 'T00:00:00');
+        const diasApos = Math.floor((hoje - dataEnt) / 86400000);
+        if (diasApos >= 2 && diasApos <= 45) {
+          entregaConfirmadaRecente = true;
+          if (diasDesdeEntregaConfirmada === null || diasApos < diasDesdeEntregaConfirmada) {
+            diasDesdeEntregaConfirmada = diasApos;
+            marcaEntregaRecente = p.marca || null;
+          }
+        }
+      }
+    });
+  });
+  const prazoMedioEntrega = prazosCount > 0 ? Math.round(prazosSomados / prazosCount) : null;
+
+  // --- Giro por marca ---
+  const giroPorMarca = {};
+  (c.marcas || []).forEach(marca => {
+    const meta = metas.find(m => m.marca === marca);
     let ult = null;
-    (c.historico || []).forEach(h => {
+    hist.forEach(h => {
       if (h.motivo !== 'fechou_pedido') return;
       const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : (c.marcas||[])[0] === marca;
       if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
     });
-    const dias = ult ? Math.floor((new Date() - ult) / 86400000) : null;
-    const cicloIdeal = m?.cicloIdeal || 60;
+    const dias = ult ? Math.floor((hoje - ult) / 86400000) : null;
+    const ciclo = meta?.cicloIdeal || 60;
+    giroPorMarca[marca] = { dias, ciclo, vencida: dias !== null && dias >= ciclo };
+  });
+
+  // --- Motivo negativo recente (últimos 60 dias) ---
+  let ultimoMotivoNegativo = null;
+  const negativos = ['comprou_concorrente','inadimplente','nao_vai_comprar'];
+  const recentes = hist.filter(h => Math.floor((hoje - new Date(h.data)) / 86400000) <= 60);
+  for (const h of recentes) {
+    if (negativos.includes(h.motivo)) { ultimoMotivoNegativo = h.motivo; break; }
+  }
+
+  return {
+    totalVisitas, totalPedidos, taxaConversao,
+    compraNoMesAtual, ticketCrescendo,
+    pedPresencial, pedWpp,
+    entregaConfirmadaRecente, diasDesdeEntregaConfirmada, marcaEntregaRecente,
+    prazoMedioEntrega,
+    giroPorMarca,
+    ultimoMotivoNegativo,
+  };
+}
+
+// Nota (0-10): mistura "quão atrasada está a marca em relação ao giro ideal" com o potencial de venda dela.
+function _notaForaRota(c) {
+  const dc    = _dadosComerciais(c);
+  const metas = getConfig().metas || [];
+  const pot   = calcularPotencialCliente(c);
+  let melhor  = null;
+  (c.marcas && c.marcas.length ? c.marcas : ['_']).forEach(marca => {
+    const m   = metas.find(mm => mm.marca === marca);
+    const g   = dc.giroPorMarca[marca] || {};
+    const dias = g.dias ?? null;
+    const cicloIdeal = g.ciclo || 60;
     const atrasoScore = dias === null ? 0.4 : Math.min(1, dias / cicloIdeal);
-    const pv = pot[marca] || {};
+    const pv  = pot[marca] || {};
     const potencial = pv.max || pv.avg || 0;
     const potencialScore = Math.min(1, potencial / 1000);
-    const nota = Math.min(10, atrasoScore * 6 + potencialScore * 4);
-    if (!melhor || nota > melhor.nota) melhor = { marca: marca === '_' ? (c.marcas?.[0] || 'Sem marca') : marca, nota };
+
+    // Bônus por sinais comportamentais (invisíveis ao rep)
+    let bonus = 1;
+    if (dc.entregaConfirmadaRecente) bonus *= 1.5;
+    if (dc.taxaConversao !== null && dc.taxaConversao >= 0.7) bonus *= 1.35;
+    if (dc.compraNoMesAtual) bonus *= 1.2;
+    if (dc.ticketCrescendo) bonus *= 1.1;
+    if (dc.ultimoMotivoNegativo === 'inadimplente') bonus *= 0.4;
+    if (dc.ultimoMotivoNegativo === 'comprou_concorrente') bonus *= 0.7;
+
+    const nota = Math.min(10, (atrasoScore * 6 + potencialScore * 4) * Math.min(bonus, 1.8));
+    if (!melhor || nota > melhor.nota)
+      melhor = { marca: marca === '_' ? (c.marcas?.[0] || 'Sem marca') : marca, nota, dias, cicloIdeal, potencial, pv, dc };
   });
-  return melhor || { marca: 'Sem marca', nota: 0 };
+  return melhor || { marca: 'Sem marca', nota: 0, dias: null, cicloIdeal: 60, potencial: 0, pv: {}, dc };
+}
+
+// Frase curta justificando a nota — calculada localmente, sem IA, sem latência.
+function _rationaleForaRota(c, notaInfo) {
+  const dc = notaInfo.dc || _dadosComerciais(c);
+  const { taxaConversao, entregaConfirmadaRecente, diasDesdeEntregaConfirmada,
+          marcaEntregaRecente, compraNoMesAtual, ticketCrescendo,
+          totalPedidos, ultimoMotivoNegativo } = dc;
+  const { dias, cicloIdeal, pv } = notaInfo;
+  const mesNome = new Date().toLocaleDateString('pt-BR', { month: 'long' });
+
+  if (ultimoMotivoNegativo === 'inadimplente')
+    return { texto: 'Inadimplente recente · aborde com cuidado', cor: 'var(--amarelo)' };
+  if (ultimoMotivoNegativo === 'comprou_concorrente')
+    return { texto: 'Comprou concorrente recentemente · precisa de argumento', cor: 'var(--amarelo)' };
+  if (entregaConfirmadaRecente)
+    return { texto: `Pedido chegou há ${diasDesdeEntregaConfirmada}d · momento ideal para recompra`, cor: 'var(--verde)' };
+  if (taxaConversao !== null && taxaConversao >= 0.7)
+    return { texto: 'Toda vez que visita, fecha pedido', cor: 'var(--verde)' };
+  if (compraNoMesAtual)
+    return { texto: `Comprou em ${mesNome} em anos anteriores`, cor: '#38BDF8' };
+  if (ticketCrescendo)
+    return { texto: 'Ticket crescendo nos últimos pedidos', cor: 'var(--verde)' };
+  if (dias !== null && cicloIdeal && dias >= cicloIdeal * 2)
+    return { texto: `Marca vencida há ${dias} dias`, cor: 'var(--amarelo)' };
+  if (dias !== null && cicloIdeal && dias >= cicloIdeal)
+    return { texto: pv.avg > 0 ? 'Marca atrasada · bom potencial' : 'Marca atrasada · hora de visitar', cor: 'var(--amarelo)' };
+  if ((pv.max || 0) >= 5000)
+    return { texto: `Ticket máximo R$ ${Math.round(pv.max).toLocaleString('pt-BR')}`, cor: 'var(--verde)' };
+  if (totalPedidos >= 5)
+    return { texto: `Cliente fiel · ${totalPedidos} pedidos registrados`, cor: 'var(--verde)' };
+  if (totalPedidos === 0)
+    return { texto: 'Nunca comprou · potencial a confirmar', cor: 'var(--texto3)' };
+  return null;
 }
 
 function _candidatosForaDaRota(anchor, raioKm) {
@@ -6337,8 +6540,8 @@ function _candidatosForaDaRota(anchor, raioKm) {
     .filter(c => c.id !== anchor.id && c.lat && c.lng)
     .map(c => {
       const dist = calcularDistancia(parseFloat(anchor.lat), parseFloat(anchor.lng), parseFloat(c.lat), parseFloat(c.lng));
-      const { marca, nota } = _notaForaRota(c);
-      return { cliente: c, dist, marca, nota };
+      const notaInfo = _notaForaRota(c);
+      return { cliente: c, dist, marca: notaInfo.marca, nota: notaInfo.nota, notaInfo };
     })
     .filter(x => x.dist <= raioKm);
 }
@@ -6346,32 +6549,44 @@ function _candidatosForaDaRota(anchor, raioKm) {
 function abrirForaDaRota() {
   const cliente = getClientes().find(c => c.id === clienteAtualId);
   if (!cliente || !cliente.lat || !cliente.lng) { toast('Este cliente precisa ter localização salva.'); return; }
-  window._foraRotaAnchorId = cliente.id;
-  window._foraRotaRaio = 20;
-  window._foraRotaOrdemRota = false;
+  _foraRotaAnchorId = cliente.id;
+  _foraRotaRaio = 20;
+  _foraRotaOrdemRota = false;
   document.getElementById('fr-subtitulo').textContent = `Clientes perto de ${cliente.nome}`;
   document.getElementById('fr-raio-slider').value = 20;
-  document.getElementById('fr-btn-ordem').textContent = '➤ Ver rota com prioridade';
+  const btnOrdem = document.getElementById('fr-btn-ordem');
+  if (btnOrdem) { btnOrdem.textContent = '➤ Ver rota com prioridade'; btnOrdem.style.background = 'rgba(56,189,248,.1)'; btnOrdem.style.borderColor = 'rgba(56,189,248,.35)'; }
   document.getElementById('modal-fora-rota').classList.add('aberto');
   _renderForaDaRota();
 }
 
 function _foraRotaSliderInput(valor) {
-  window._foraRotaRaio = Number(valor);
+  _foraRotaRaio = Number(valor);
   _renderForaDaRota();
 }
 
 function _foraRotaToggleOrdem() {
-  window._foraRotaOrdemRota = !window._foraRotaOrdemRota;
-  document.getElementById('fr-btn-ordem').textContent = window._foraRotaOrdemRota ? '⭐ Ver por potencial' : '➤ Ver rota com prioridade';
+  _foraRotaOrdemRota = !_foraRotaOrdemRota;
+  const btn = document.getElementById('fr-btn-ordem');
+  if (_foraRotaOrdemRota) {
+    btn.textContent = '⭐ Ver por potencial';
+    btn.style.background = 'rgba(167,139,250,.15)';
+    btn.style.borderColor = 'rgba(167,139,250,.5)';
+    btn.style.color = '#A78BFA';
+  } else {
+    btn.textContent = '➤ Ver rota com prioridade';
+    btn.style.background = 'rgba(56,189,248,.1)';
+    btn.style.borderColor = 'rgba(56,189,248,.35)';
+    btn.style.color = '#38BDF8';
+  }
   _renderForaDaRota();
 }
 
 function _foraRotaListaAtual() {
-  const anchor = getClientes().find(c => c.id === window._foraRotaAnchorId);
+  const anchor = getClientes().find(c => c.id === _foraRotaAnchorId);
   if (!anchor) return { anchor: null, lista: [] };
-  let lista = _candidatosForaDaRota(anchor, window._foraRotaRaio);
-  if (window._foraRotaOrdemRota) {
+  let lista = _candidatosForaDaRota(anchor, _foraRotaRaio);
+  if (_foraRotaOrdemRota) {
     const ordenados = _nearestNeighbor(lista.map(x => x.cliente), parseFloat(anchor.lat), parseFloat(anchor.lng));
     lista = ordenados.map(c => lista.find(x => x.cliente.id === c.id));
   } else {
@@ -6381,7 +6596,7 @@ function _foraRotaListaAtual() {
 }
 
 function _renderForaDaRota() {
-  const raio = window._foraRotaRaio || 20;
+  const raio = _foraRotaRaio || 20;
   document.getElementById('fr-raio-out').textContent = raio + ' km';
 
   const segWrap = document.getElementById('fr-segmentos');
@@ -6407,14 +6622,17 @@ function _renderForaDaRota() {
 
   cont.innerHTML = lista.map((x, i) => {
     const cor = x.nota >= 7 ? 'var(--verde)' : x.nota >= 4.5 ? 'var(--amarelo)' : 'var(--texto2)';
-    const ordemTag = window._foraRotaOrdemRota ? `<div style="font-size:11px;color:#38BDF8;font-weight:700;margin-bottom:2px;">#${i + 1} na rota</div>` : '';
+    const ordemTag = _foraRotaOrdemRota ? `<div style="font-size:11px;color:#38BDF8;font-weight:700;margin-bottom:2px;">#${i + 1} na rota</div>` : '';
+    const rationale = _foraRotaOrdemRota ? _rationaleForaRota(x.cliente, x.notaInfo) : null;
+    const rationaleLine = rationale ? `<div style="font-size:11px;color:${rationale.cor};margin-top:3px;font-style:italic;">${rationale.texto}</div>` : '';
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--borda);border-radius:12px;cursor:pointer;" onclick="fecharModal('modal-fora-rota');setTimeout(()=>abrirDetalhe('${x.cliente.id}','clientes'),200)">
-        <div style="width:38px;height:38px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${cor};flex-shrink:0;">${x.nota.toFixed(1)}</div>
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${cor};flex-shrink:0;font-family:'DM Sans',sans-serif;">${x.nota.toFixed(1)}</div>
         <div style="flex:1;min-width:0;">
           ${ordemTag}
           <div style="font-weight:600;font-size:14px;color:var(--texto);">${esc(x.cliente.nome)}</div>
           <div style="font-size:11px;color:var(--texto2);">${x.dist.toFixed(1)} km · sugestão: ${esc(x.marca)}</div>
+          ${rationaleLine}
         </div>
       </div>`;
   }).join('');
@@ -6429,7 +6647,10 @@ function _foraRotaWhatsApp() {
   const dataTxt = hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
   let msg = `📦 *PEDIDO FORA DA ROTA*\n_Perto de ${anchor.nome} — ${dataTxt}_\n_Gerado pelo Carteira Viva_\n`;
   lista.forEach((x, i) => {
-    msg += `\n${i + 1}. 🏪 *${x.cliente.nome.toUpperCase()}*${x.cliente.cidade ? ' · ' + x.cliente.cidade : ''}\n   📏 ${x.dist.toFixed(1)} km · ⭐ nota ${x.nota.toFixed(1)} · 🏷️ ${x.marca}\n`;
+    const rationale = _rationaleForaRota(x.cliente, x.notaInfo);
+    msg += `\n${i + 1}. 🏪 *${x.cliente.nome.toUpperCase()}*${x.cliente.cidade ? ' · ' + x.cliente.cidade : ''}\n   📏 ${x.dist.toFixed(1)} km · ⭐ nota ${x.nota.toFixed(1)} · 🏷️ ${x.marca}`;
+    if (rationale) msg += `\n   💡 ${rationale.texto}`;
+    msg += '\n';
   });
   msg += `\n_${lista.length} cliente${lista.length>1?'s':''} encontrado${lista.length>1?'s':''} · Carteira Viva_`;
   fecharModal('modal-fora-rota');
@@ -6630,16 +6851,21 @@ function confirmarConversaoParaCliente() {
 function _calcularOportunidades(lat, lng) {
   const clientes = getClientesAtivos();
   const metas = (getConfig().metas || []);
+  const mesAtual = new Date().getMonth();
   const opps = [];
   clientes.forEach(c => {
     const marcas = c.marcas || [];
+    const hist = c.historico || [];
     const pot = calcularPotencialCliente(c);
-    let melhorScore = 0, melhorMarca = null, melhorMat = 0, melhorPot = 0;
+
+    const dc = _dadosComerciais(c);
+
+    let melhorScore = 0, melhorMarca = null, melhorMat = 0, melhorPot = 0, melhorDias = null, melhorCiclo = 60;
     marcas.forEach(marca => {
       const m = metas.find(m => m.marca === marca);
       if (!m?.cicloIdeal) return;
       let ult = null;
-      (c.historico || []).forEach(h => {
+      hist.forEach(h => {
         if (h.motivo !== 'fechou_pedido') return;
         const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : marcas[0] === marca;
         if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
@@ -6654,15 +6880,53 @@ function _calcularOportunidades(lat, lng) {
         const dist = calcularDistancia(lat, lng, parseFloat(c.lat), parseFloat(c.lng));
         distFator = Math.max(0.1, 1 - dist / 80);
       }
-      const score = mat * potVal * distFator;
-      if (score > melhorScore) { melhorScore = score; melhorMarca = marca; melhorMat = mat; melhorPot = potVal; }
+      let bonus = 1;
+      if (dc.taxaConversao !== null && dc.taxaConversao >= 0.7) bonus *= 1.4;
+      if (dc.compraNoMesAtual) bonus *= 1.25;
+      if (dc.ticketCrescendo) bonus *= 1.15;
+      if (dc.entregaConfirmadaRecente) bonus *= 1.5;
+      if (dc.ultimoMotivoNegativo === 'inadimplente') bonus *= 0.3;
+      if (dc.ultimoMotivoNegativo === 'comprou_concorrente') bonus *= 0.6;
+      const score = mat * potVal * distFator * Math.min(bonus, 2.2);
+      if (score > melhorScore) {
+        melhorScore = score; melhorMarca = marca; melhorMat = mat; melhorPot = potVal;
+        melhorDias = diasSem; melhorCiclo = m.cicloIdeal;
+      }
     });
     if (melhorScore > 0) {
       const dist = (lat && c.lat && c.lng) ? calcularDistancia(lat, lng, parseFloat(c.lat), parseFloat(c.lng)) : null;
-      opps.push({ c, marca: melhorMarca, score: melhorScore, mat: melhorMat, potVal: melhorPot, dist });
+      opps.push({ c, marca: melhorMarca, score: melhorScore, mat: melhorMat, potVal: melhorPot, dist,
+        _sig: { ...dc, dias: melhorDias, ciclo: melhorCiclo } });
     }
   });
   return opps.sort((a, b) => b.score - a.score).slice(0, 7);
+}
+
+function _rationaleOportunidades(o) {
+  const { taxaConversao, entregaConfirmadaRecente, diasDesdeEntregaConfirmada,
+          marcaEntregaRecente, compraNoMesAtual, ticketCrescendo,
+          totalPedidos, ultimoMotivoNegativo, dias, ciclo } = o._sig;
+  const mesNome = new Date().toLocaleDateString('pt-BR', { month: 'long' });
+
+  if (ultimoMotivoNegativo === 'inadimplente')
+    return { texto: 'Inadimplente recente · visite com cuidado', cor: 'var(--amarelo)' };
+  if (entregaConfirmadaRecente)
+    return { texto: `Pedido chegou há ${diasDesdeEntregaConfirmada}d · hora da recompra`, cor: 'var(--verde)' };
+  if (taxaConversao !== null && taxaConversao >= 0.7)
+    return { texto: 'Fecha pedido em quase toda visita', cor: 'var(--verde)' };
+  if (compraNoMesAtual)
+    return { texto: `Comprou em ${mesNome} em anos anteriores`, cor: '#38BDF8' };
+  if (ticketCrescendo)
+    return { texto: 'Ticket crescendo nos últimos pedidos', cor: 'var(--verde)' };
+  if (dias !== null && ciclo && dias >= ciclo * 2)
+    return { texto: `Marca vencida há ${dias} dias · hora de agir`, cor: 'var(--amarelo)' };
+  if (dias !== null && ciclo && dias >= ciclo)
+    return { texto: 'No ponto ideal de recompra', cor: 'var(--amarelo)' };
+  if (totalPedidos === 0)
+    return { texto: 'Potencial confirmado · ainda não comprou', cor: 'var(--texto2)' };
+  if (totalPedidos >= 5)
+    return { texto: `Cliente fiel · ${totalPedidos} pedidos no histórico`, cor: 'var(--verde)' };
+  return null;
 }
 
 function abrirOportunidades() {
@@ -6677,17 +6941,21 @@ function abrirOportunidades() {
     }
     const semGPS = lat === null;
     lista.innerHTML = (semGPS ? '<div style="font-size:11px;color:var(--amarelo);background:rgba(255,192,67,.08);border:1px solid rgba(255,192,67,.2);border-radius:8px;padding:8px 10px;margin-bottom:12px;">📍 GPS não disponível — ordenado por giro e potencial, sem considerar distância</div>' : '') +
-    opps.map((o, i) => {
+    opps.map((o) => {
       const pot = calcularPotencialCliente(o.c);
       const pv = pot[o.marca] || {};
       const pctBarra = Math.min(100, Math.round((o.mat / 3) * 100));
       const corBarra = o.mat >= 1 ? 'var(--verde)' : o.mat >= 0.7 ? 'var(--amarelo)' : 'var(--texto3)';
       const labelMat = o.mat >= 1 ? '✅ Pronto para comprar' : o.mat >= 0.7 ? '🟡 Quase no ponto' : '⏳ Chegando lá';
       const distTxt = o.dist !== null ? (o.dist < 1 ? `${Math.round(o.dist*1000)}m` : `${o.dist.toFixed(1)}km`) : '';
+      const rationale = _rationaleOportunidades(o);
+      const rationaleLine = rationale
+        ? `<div style="font-size:11px;color:${rationale.cor};margin-top:5px;font-style:italic;font-family:'DM Sans',sans-serif;">${rationale.texto}</div>`
+        : '';
       return `<div onclick="fecharOportunidades();setTimeout(()=>abrirDetalhe('${o.c.id}','clientes'),200)" style="background:var(--bg3);border:1px solid ${o.mat>=1?'rgba(0,214,143,.25)':'var(--borda)'};border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
           <div style="min-width:0;">
-            <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(o.c.nome)}</div>
+            <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(o.c.nome)}</div>
             <div style="font-size:11px;color:var(--texto2);">${esc(o.c.loja||'')}${distTxt?' · <strong style="color:var(--texto);">'+distTxt+'</strong>':''}</div>
           </div>
           <div style="text-align:right;flex-shrink:0;">
@@ -6703,6 +6971,7 @@ function abrirOportunidades() {
         <div style="background:rgba(255,255,255,.06);border-radius:6px;height:4px;overflow:hidden;">
           <div style="background:${corBarra};height:100%;width:${pctBarra}%;border-radius:6px;"></div>
         </div>
+        ${rationaleLine}
       </div>`;
     }).join('');
   };
@@ -8787,6 +9056,11 @@ function _atualizarDataChipsPedido() {
   const d = _dataContatoSelecionada || new Date();
   const txt = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
   document.querySelectorAll('[id^="data-chip-txt-"]').forEach(el => { el.textContent = txt; });
+  // Oculta seção de entrega se pedido for retroativo (> 30 dias atrás)
+  const isRetroativo = (new Date() - d) > 30 * 86400000;
+  document.querySelectorAll('.entrega-section-card').forEach(el => {
+    el.style.display = isRetroativo ? 'none' : 'block';
+  });
 }
 
 function _abrirPickerCt() {
@@ -8926,9 +9200,24 @@ function salvarContato() {
       const valor = valorParaFloat(valorEl ? valorEl.value : '');
       const qtd = parseInt(qtdEl ? qtdEl.value : '');
       const unidade = unidadeEl ? unidadeEl.value : '';
-      const canal = (window._pedidoCanais && window._pedidoCanais[i]) || null;
+      const canal        = (window._pedidoCanais     && window._pedidoCanais[i])     || null;
+      const entregaInfo  = (window._pedidoEntregas   && window._pedidoEntregas[i])   || null;
+      const acompanhar   = (window._pedidoAcompanhar && window._pedidoAcompanhar[i]) || false;
       if (valor > 0 || qtd > 0) {
-        pedidos.push({ marca, valor: valor > 0 ? valor : undefined, qtd: qtd > 0 ? qtd : undefined, unidade: unidade || undefined, canal: canal || undefined });
+        const p = { marca, valor: valor > 0 ? valor : undefined, qtd: qtd > 0 ? qtd : undefined, unidade: unidade || undefined, canal: canal || undefined };
+        if (entregaInfo) {
+          if (typeof entregaInfo === 'object' && entregaInfo.iso) {
+            p.prazoEntregaDias    = entregaInfo.dias;
+            p.dataEntregaPrevista = entregaInfo.iso;
+          } else {
+            const dataEnt = new Date();
+            dataEnt.setDate(dataEnt.getDate() + entregaInfo);
+            p.prazoEntregaDias    = entregaInfo;
+            p.dataEntregaPrevista = dataEnt.toISOString().slice(0, 10);
+          }
+          if (acompanhar) p.acompanharEntrega = true;
+        }
+        pedidos.push(p);
         if (valor > 0) valorTotal += valor;
       }
     });
@@ -9288,6 +9577,7 @@ function carregarConfig() {
   const horEl = document.getElementById('cfg-horario-notif');
   if (horEl) horEl.value = cfg.horarioNotif || '07:30';
   _renderNotifWppToggle(cfg.notifWpp !== false);
+  _renderNotifEntregaToggle(cfg.notificacaoEntrega || null);
   _renderGatilhoConfig(cfg);
   _renderOnbToggle(cfg.onboardingFeito);
   document.getElementById('cfg-wpp-rep').value = cfg.wppRep ? cfg.wppRep.replace(/^55/, '') : '';
@@ -9475,6 +9765,8 @@ function salvarConfig() {
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
   cfg.horarioNotif = document.getElementById('cfg-horario-notif')?.value || '07:30';
   cfg.notifWpp = document.getElementById('cfg-notif-wpp-toggle')?.dataset.ativo === 'true';
+  cfg.notificacaoEntrega = document.getElementById('cfg-notif-entrega-todas-toggle')?.dataset.ativo === 'true' ? 'todas'
+    : document.getElementById('cfg-notif-entrega-escolher-toggle')?.dataset.ativo === 'true' ? 'escolher' : null;
   cfg.gatilhoAnticAtivo = document.getElementById('cfg-gatilho-toggle')?.dataset.ativo === 'true';
   cfg.gatilhoDias = [...document.querySelectorAll('.cfg-gatilho-dia.ativo')].map(b => Number(b.dataset.dias));
   cfg.wppRep = (document.getElementById('cfg-wpp-rep')?.value || '').replace(/\D/g,'');
@@ -9706,6 +9998,94 @@ function toggleNotifWpp() {
   salvarConfigData(cfg);
 }
 
+function _renderNotifEntregaToggle(modo) {
+  ['todas', 'escolher'].forEach(tipo => {
+    const btn  = document.getElementById(`cfg-notif-entrega-${tipo}-toggle`);
+    const knob = document.getElementById(`cfg-notif-entrega-${tipo}-knob`);
+    if (!btn || !knob) return;
+    const ativo = modo === tipo;
+    btn.dataset.ativo  = ativo ? 'true' : 'false';
+    btn.style.background = ativo ? '#00D68F' : '#333';
+    knob.style.left      = ativo ? '25px' : '3px';
+    knob.style.background = ativo ? '#fff' : '#888';
+  });
+}
+
+function toggleNotifEntrega(tipo) {
+  const btn = document.getElementById(`cfg-notif-entrega-${tipo}-toggle`);
+  if (!btn) return;
+  const novoModo = btn.dataset.ativo === 'true' ? null : tipo;
+  _renderNotifEntregaToggle(novoModo);
+  const cfg = getConfig();
+  cfg.notificacaoEntrega = novoModo;
+  salvarConfigData(cfg);
+}
+
+function _setEntregaDias(idx, dias) {
+  window._pedidoEntregas = window._pedidoEntregas || [];
+  window._pedidoEntregas[idx] = dias;
+  const DIAS = [3,7,15,20,30,45,60,75,90,120];
+  DIAS.forEach(d => {
+    const b = document.getElementById(`entrega-btn-${idx}-${d}`);
+    if (!b) return;
+    const ativo = d === dias;
+    b.style.background   = ativo ? 'rgba(56,189,248,.15)' : 'var(--bg2)';
+    b.style.borderColor  = ativo ? 'rgba(56,189,248,.5)'  : 'var(--borda)';
+    b.style.color        = ativo ? '#38BDF8' : 'var(--texto2)';
+  });
+  const cal = document.getElementById(`entrega-cal-${idx}`);
+  if (cal) { cal.style.display = 'none'; cal.value = ''; }
+  const dataEnt = new Date();
+  dataEnt.setDate(dataEnt.getDate() + dias);
+  _mostrarConfirmacaoEntrega(idx, dataEnt);
+}
+
+function _abrirCalEntrega(idx) {
+  const cal = document.getElementById(`entrega-cal-${idx}`);
+  if (!cal) return;
+  const aberto = cal.style.display !== 'none';
+  cal.style.display = aberto ? 'none' : 'block';
+  if (!aberto) cal.focus();
+}
+
+function _setEntregaData(idx, isoDate) {
+  if (!isoDate) return;
+  window._pedidoEntregas = window._pedidoEntregas || [];
+  const d = new Date(isoDate + 'T00:00:00');
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const dias = Math.max(0, Math.round((d - hoje) / 86400000));
+  window._pedidoEntregas[idx] = { iso: isoDate, dias };
+  const DIAS = [3,7,15,20,30,45,60,75,90,120];
+  DIAS.forEach(dd => {
+    const b = document.getElementById(`entrega-btn-${idx}-${dd}`);
+    if (b) { b.style.background = 'var(--bg2)'; b.style.borderColor = 'var(--borda)'; b.style.color = 'var(--texto2)'; }
+  });
+  _mostrarConfirmacaoEntrega(idx, d);
+}
+
+function _mostrarConfirmacaoEntrega(idx, dataObj) {
+  const conf = document.getElementById(`entrega-confirmada-${idx}`);
+  if (!conf) return;
+  const dtFmt = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+  conf.textContent = `✓ Entrega prevista: ${dtFmt}`;
+  conf.style.display = 'flex';
+}
+
+function _toggleAcompEntrega(idx) {
+  const btn  = document.getElementById(`acomp-tog-${idx}`);
+  const knob = document.getElementById(`acomp-knob-${idx}`);
+  const lbl  = document.getElementById(`acomp-label-${idx}`);
+  if (!btn || !knob || !lbl) return;
+  const novo = btn.dataset.ativo !== 'true';
+  btn.dataset.ativo    = novo ? 'true' : 'false';
+  btn.style.background = novo ? '#00D68F' : '#333';
+  knob.style.left      = novo ? '17px' : '3px';
+  lbl.textContent      = novo ? '✓ Acompanhando entrega' : 'Acompanhar entrega';
+  lbl.style.color      = novo ? 'var(--verde)' : 'var(--texto2)';
+  window._pedidoAcompanhar = window._pedidoAcompanhar || [];
+  window._pedidoAcompanhar[idx] = novo;
+}
+
 function _gerarResumoDiarioWpp() {
   const cfg = getConfig();
   const clientes = getClientesAtivos();
@@ -9897,6 +10277,29 @@ async function _dispararNotificacaoLocal() {
 }
 
 // Retorna marcas que passaram da metade do período e estão abaixo do ritmo necessário
+function _calcularPostVendaEntregas() {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const resultado = [];
+  getClientesAtivos().forEach(c => {
+    (c.historico || []).forEach(h => {
+      if (h.motivo !== 'fechou_pedido' || !h.pedidos) return;
+      const dataVisita = new Date(h.data); dataVisita.setHours(0,0,0,0);
+      const diasDesdeVisita = Math.floor((hoje - dataVisita) / 86400000);
+      if (diasDesdeVisita > 120) return; // não mostra histórico muito antigo
+      h.pedidos.forEach(p => {
+        if (!p.acompanharEntrega || !p.dataEntregaPrevista) return;
+        const dataEntrega = new Date(p.dataEntregaPrevista + 'T00:00:00');
+        const diasApos = Math.floor((hoje - dataEntrega) / 86400000);
+        const diasMinNotif = (p.prazoEntregaDias || 0) > 30 ? 5 : 3;
+        if (diasApos < diasMinNotif) return;
+        if (diasApos > 30) return; // janela de 30 dias para mostrar o pós-venda
+        resultado.push({ c, h, p, diasApos, dataEntrega });
+      });
+    });
+  });
+  return resultado;
+}
+
 function _getMetasAtrasadas() {
   const metas = getMetasConfig();
   const atrasadas = [];
@@ -10338,7 +10741,28 @@ function _coletarDadosRep() {
       clientesQueJaCompramRemoto: compramRemoto,
       topClientesSemCompraRemota: potRemoto,
       notaRota: 'Sugira concentrar visitas presenciais nas cidades com mais clientes e usar WhatsApp para clientes de cidades isoladas ou de alto potencial que já demonstraram abertura remota.'
-    }
+    },
+    entregas: (() => {
+      const postVenda = _calcularPostVendaEntregas();
+      const readyParaRecompra = postVenda.map(({ c, p }) =>
+        `${c.nome}${p.marca ? ' · ' + p.marca : ''}`).slice(0, 5);
+      const todosComEntrega = ativos.flatMap(c =>
+        (c.historico || []).flatMap(h =>
+          (h.pedidos || []).filter(p => p.prazoEntregaDias).map(p => p.prazoEntregaDias)
+        )
+      );
+      const prazoMedio = todosComEntrega.length
+        ? Math.round(todosComEntrega.reduce((s, d) => s + d, 0) / todosComEntrega.length)
+        : null;
+      return {
+        clientesReadyParaRecompra: readyParaRecompra,
+        totalAguardandoPosVenda: postVenda.length,
+        prazoMedioEntregaDias: prazoMedio,
+        observacao: readyParaRecompra.length
+          ? 'Esses clientes receberam o pedido recentemente e estão prontos para recompra — prioridade máxima de contato.'
+          : 'Nenhuma entrega recente confirmada ainda.'
+      };
+    })()
   };
 }
 
@@ -10369,10 +10793,10 @@ ${JSON.stringify(dados, null, 2)}
 Gere uma análise em JSON com EXATAMENTE 3 campos:
 
 1. "marca" — PERSONA GUARDIÃO DO MARKET SHARE (gerente de marca da indústria):
-Foco em positivação, cobertura e mix. Identifique quais marcas estão críticas e onde há dinheiro na mesa (clientes de alto potencial sem compra, mix incompleto). Analise os dados de canal: se há pedidos não presenciais, destaque quais clientes já compram por WhatsApp e sugira usar esse canal para ampliar positivação sem visita — especialmente em cidades com 1-2 clientes onde o deslocamento não compensa. Provoque o rep a ligar para o gerente comercial da marca pedindo verba de sell-out, prazo especial ou material de PDV. Cite nomes de clientes e marcas dos dados. Máx 230 palavras.
+Foco em positivação, cobertura e mix. Identifique quais marcas estão críticas e onde há dinheiro na mesa (clientes de alto potencial sem compra, mix incompleto). Analise os dados de canal: se há pedidos não presenciais, destaque quais clientes já compram por WhatsApp e sugira usar esse canal para ampliar positivação sem visita — especialmente em cidades com 1-2 clientes onde o deslocamento não compensa. Se houver clientes em "entregas.clientesReadyParaRecompra", cite-os como oportunidade quente — pedido entregue, cliente satisfeito e no momento ideal para o próximo pedido. Provoque o rep a ligar para o gerente comercial da marca pedindo verba de sell-out, prazo especial ou material de PDV. Cite nomes de clientes e marcas dos dados. Máx 240 palavras.
 
 2. "negocio" — PERSONA CFO DO REPRESENTANTE (gestor do próprio negócio) + ESTRATEGISTA DE ROTA:
-Foco em rentabilidade, produtividade, Pareto e inteligência de rota. Onde está o lucro real? Qual marca priorizar AGORA para maximizar comissão? Analise a geografia da carteira (cidades com mais clientes) e dê uma recomendação de rota: vale concentrar dias inteiros nas cidades mais densas e usar WhatsApp para cidades isoladas? Ou o rep deve fazer um "tiro de ponta a ponta" para alcançar clientes de alto potencial antes de fechar o período? Aponte quem são os top 20% pelo nome e quanto representam. Identifique clientes de alto potencial que nunca compraram remotamente e que poderiam ser abordados por WhatsApp para liberar dias de rota para novos territórios. Aponte desperdício de energia: clientes esquecidos, prospectos parados, visitas em clientes de baixo retorno. Máx 250 palavras.
+Foco em rentabilidade, produtividade, Pareto e inteligência de rota. Onde está o lucro real? Qual marca priorizar AGORA para maximizar comissão? Analise a geografia da carteira (cidades com mais clientes) e dê uma recomendação de rota: vale concentrar dias inteiros nas cidades mais densas e usar WhatsApp para cidades isoladas? Ou o rep deve fazer um "tiro de ponta a ponta" para alcançar clientes de alto potencial antes de fechar o período? Aponte quem são os top 20% pelo nome e quanto representam. Identifique clientes de alto potencial que nunca compraram remotamente e que poderiam ser abordados por WhatsApp para liberar dias de rota para novos territórios. Aponte desperdício de energia: clientes esquecidos, prospectos parados, visitas em clientes de baixo retorno. Se "entregas.totalAguardandoPosVenda" > 0, inclua isso como oportunidade de pós-venda — cliente que recebeu o pedido e ainda não foi contatado é dinheiro na mesa. Máx 260 palavras.
 
 3. "acoes" — EXATAMENTE 3 ações concretas e executáveis ESTA SEMANA, priorizando impacto máximo no menor tempo. Pelo menos 1 ação deve envolver abordagem remota (WhatsApp) com cliente específico do top potencial, e pelo menos 1 deve ser uma decisão de rota ou concentração geográfica. Cada ação em 1 linha começando com verbo no imperativo, citando nomes reais dos dados. Formato literal: "1. [ação]\\n2. [ação]\\n3. [ação]"
 
@@ -12325,7 +12749,13 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
   if (!cont) return;
   const marcas = (cliente && cliente.marcas && cliente.marcas.length) ? cliente.marcas : [null];
   const metas = (getConfig().metas || []);
-  window._pedidoCanais = new Array(marcas.length).fill(null);
+  window._pedidoCanais     = new Array(marcas.length).fill(null);
+  const _notifEntrega      = getConfig().notificacaoEntrega || null;
+  window._pedidoEntregas   = new Array(marcas.length).fill(null);
+  window._pedidoAcompanhar = new Array(marcas.length).fill(_notifEntrega === 'todas');
+  // Pedidos retroativos (> 30 dias atrás) não recebem seção de entrega — rep está só construindo histórico
+  const _dataBase = _dataContatoSelecionada || new Date();
+  const _isRetroativo = (new Date() - _dataBase) > 30 * 86400000;
   cont.innerHTML = marcas.map((marca, i) => {
     const metaCfg = metas.find(m => m.marca === marca);
     const skuMeta = metaCfg ? metaCfg.sku : null;
@@ -12373,6 +12803,21 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
         <select class="campo-input" id="pedido-unidade-${i}" ${selectAttr}></select>
         ${temMeta ? `<div style="font-size:10px;color:var(--texto3);margin-top:4px;">🔒 Definida pela meta — não editável</div>` : ''}
       </div>
+      ${_isRetroativo ? '' : `<div class="entrega-section-card" style="background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.18);border-radius:10px;padding:10px 12px;margin:10px 0 0;">
+        <div style="font-size:11px;font-weight:700;color:#38BDF8;margin-bottom:7px;font-family:'DM Sans',sans-serif;">🚚 Prazo de entrega do pedido no cliente</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;">
+          ${[3,7,15,20,30,45,60,75,90,120].map(d => `<button type="button" id="entrega-btn-${i}-${d}" onclick="_setEntregaDias(${i},${d})" style="padding:5px 9px;border-radius:7px;border:1px solid var(--borda);background:var(--bg2);color:var(--texto2);font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;">${d}d</button>`).join('')}
+        </div>
+        <input type="date" id="entrega-cal-${i}" style="display:none;width:100%;background:var(--bg2);border:1px solid var(--borda);border-radius:9px;padding:9px 11px;color:var(--texto);font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:6px;" oninput="_setEntregaData(${i},this.value)">
+        <button type="button" onclick="_abrirCalEntrega(${i})" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;border:1px dashed var(--borda);background:transparent;color:var(--texto2);font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;width:100%;justify-content:center;cursor:pointer;margin-bottom:4px;">📅 Escolher data no calendário</button>
+        <div id="entrega-confirmada-${i}" style="display:none;font-size:11px;color:#38BDF8;font-family:'DM Sans',sans-serif;align-items:center;gap:4px;margin-bottom:4px;"></div>
+        ${_notifEntrega ? `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.03);border:1px solid var(--borda);border-radius:8px;padding:8px 11px;margin-top:4px;">
+          <span id="acomp-label-${i}" style="font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;color:${_notifEntrega === 'todas' ? 'var(--verde)' : 'var(--texto2)'};">${_notifEntrega === 'todas' ? '✓ Acompanhando entrega' : 'Acompanhar entrega'}</span>
+          <button type="button" id="acomp-tog-${i}" onclick="_toggleAcompEntrega(${i})" data-ativo="${_notifEntrega === 'todas' ? 'true' : 'false'}" style="width:38px;height:22px;border-radius:99px;border:none;cursor:pointer;position:relative;transition:background .2s;background:${_notifEntrega === 'todas' ? '#00D68F' : '#333'};flex-shrink:0;">
+            <span id="acomp-knob-${i}" style="position:absolute;top:3px;left:${_notifEntrega === 'todas' ? '17px' : '3px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;pointer-events:none;"></span>
+          </button>
+        </div>` : ''}
+      </div>`}
       <button type="button" onclick="salvarPedidoDireto()" style="width:100%;margin-top:12px;background:rgba(0,200,150,.1);border:1.5px solid rgba(0,200,150,.35);border-radius:10px;padding:11px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">💾 Salvar venda</button>
     </div>`;
   }).join('');

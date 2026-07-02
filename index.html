@@ -12432,10 +12432,35 @@ function _coletarVendas(desde, ate) {
         const cc = h.pedidos.find(p => p.canal);
         if (cc) canal = cc.canal;
       }
-      vendas.push({ cliente: c, nome: c.nome, loja: c.loja || '', data: h.data, valor: val, qtd, canal });
+      vendas.push({ cliente: c, nome: c.nome, loja: c.loja || '', data: h.data, valor: val, qtd, canal, pedidos: h.pedidos || null });
     });
   });
   return vendas.sort((a, b) => new Date(b.data) - new Date(a.data));
+}
+
+// Recorta as vendas para UMA marca: mantém só as visitas que venderam a marca
+// e troca valor/qtd/canal pelo que foi vendido DAQUELA marca — não o total da
+// visita. Venda antiga sem detalhe por marca só entra se o cliente tiver
+// exatamente essa única marca (senão não dá para atribuir; fica só no Geral).
+function _vendasDaMarca(vendas, marca) {
+  if (!marca) return vendas;
+  const norm = marca.trim().toLowerCase();
+  const out = [];
+  vendas.forEach(v => {
+    if (v.pedidos && v.pedidos.length) {
+      const meus = v.pedidos.filter(p => (p.marca || '').trim().toLowerCase() === norm);
+      if (!meus.length) return;
+      const valor = meus.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+      const qtd   = meus.reduce((s, p) => s + (Number(p.qtd) || 0), 0);
+      if (valor <= 0 && qtd <= 0) return;
+      const canal = (meus.find(p => p.canal) || {}).canal || v.canal;
+      out.push(Object.assign({}, v, { valor, qtd, canal }));
+    } else {
+      const doCliente = (v.cliente.marcas || []).filter(Boolean);
+      if (doCliente.length === 1 && doCliente[0].trim().toLowerCase() === norm) out.push(v);
+    }
+  });
+  return out;
 }
 
 function _somaVendas(desde, ate) {
@@ -12473,13 +12498,8 @@ function renderRelVendas() {
   else if (_relPeriodoVendas === 'semana') { desde = new Date(hoje); desde.setDate(desde.getDate() - 7); }
   else { desde = new Date(hoje.getFullYear(), hoje.getMonth(), 1); }
 
-  // Coleta vendas filtradas por marca
-  const marcaNorm = _relMarcaVendas ? _relMarcaVendas.trim().toLowerCase() : null;
-  let todasVendas = _coletarVendas(desde, null);
-  const vendas = !marcaNorm ? todasVendas : todasVendas.filter(v => {
-    if (v.pedidos && v.pedidos.length) return v.pedidos.some(p => (p.marca||'').trim().toLowerCase() === marcaNorm);
-    return (v.cliente.marcas||[]).some(m => (m||'').trim().toLowerCase() === marcaNorm);
-  });
+  // Coleta vendas recortadas pela marca (valor = só o que foi vendido DA marca)
+  const vendas = _vendasDaMarca(_coletarVendas(desde, null), _relMarcaVendas);
 
   const total = vendas.reduce((s, v) => s + v.valor, 0);
   const nClientes = new Set(vendas.map(v => v.cliente.id)).size;
@@ -12675,12 +12695,7 @@ function _montarTextoRelVendas() {
   else                                     { desde = new Date(hoje.getFullYear(), hoje.getMonth(), 1); }
   const periodoLabel = _relPeriodoVendas==='hoje'?'Hoje':_relPeriodoVendas==='semana'?'Últimos 7 dias':'Este mês';
   const marcaLabel = _relMarcaVendas || 'Geral';
-  const marcaNorm  = _relMarcaVendas ? _relMarcaVendas.trim().toLowerCase() : null;
-  let todas = _coletarVendas(desde, null);
-  const vendas = !marcaNorm ? todas : todas.filter(v =>
-    v.pedidos?.some(p=>(p.marca||'').trim().toLowerCase()===marcaNorm) ||
-    (v.cliente.marcas||[]).some(m=>(m||'').trim().toLowerCase()===marcaNorm)
-  );
+  const vendas = _vendasDaMarca(_coletarVendas(desde, null), _relMarcaVendas);
   const total  = vendas.reduce((s,v)=>s+v.valor,0);
   const nCli   = new Set(vendas.map(v=>v.cliente.id)).size;
   const ticket = vendas.length ? total/vendas.length : 0;
@@ -12740,12 +12755,7 @@ function abrirRelVendasHtml() {
   else                                     { desde = new Date(hoje.getFullYear(), hoje.getMonth(), 1); }
   const periodoLabel = _relPeriodoVendas==='hoje'?'Hoje':_relPeriodoVendas==='semana'?'Últimos 7 dias':'Este mês';
   const marcaLabel = _relMarcaVendas || 'Geral';
-  const marcaNorm  = _relMarcaVendas ? _relMarcaVendas.trim().toLowerCase() : null;
-  let todas = _coletarVendas(desde, null);
-  const vendas = !marcaNorm ? todas : todas.filter(v =>
-    v.pedidos?.some(p=>(p.marca||'').trim().toLowerCase()===marcaNorm) ||
-    (v.cliente.marcas||[]).some(m=>(m||'').trim().toLowerCase()===marcaNorm)
-  );
+  const vendas = _vendasDaMarca(_coletarVendas(desde, null), _relMarcaVendas);
   const total   = vendas.reduce((s,v)=>s+v.valor,0);
   const nCli    = new Set(vendas.map(v=>v.cliente.id)).size;
   const ticket  = vendas.length ? total/vendas.length : 0;
@@ -12816,13 +12826,7 @@ function enviarRelVendasEmail() {
 
   const periodoLabel = _relPeriodoVendas === 'hoje' ? 'Hoje' : _relPeriodoVendas === 'semana' ? 'Últimos 7 dias' : 'Este mês';
   const marcaLabel   = _relMarcaVendas || 'Geral';
-  const marcaNorm    = _relMarcaVendas ? _relMarcaVendas.trim().toLowerCase() : null;
-
-  let todasVendas = _coletarVendas(desde, null);
-  const vendas = !marcaNorm ? todasVendas : todasVendas.filter(v =>
-    v.pedidos?.some(p => (p.marca||'').trim().toLowerCase() === marcaNorm) ||
-    (v.cliente.marcas||[]).some(m => (m||'').trim().toLowerCase() === marcaNorm)
-  );
+  const vendas = _vendasDaMarca(_coletarVendas(desde, null), _relMarcaVendas);
 
   const total    = vendas.reduce((s,v) => s+v.valor, 0);
   const nCli     = new Set(vendas.map(v=>v.cliente.id)).size;

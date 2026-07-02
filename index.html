@@ -6074,8 +6074,10 @@ function getSegLabel(seg) { return SEGMENTOS_LABEL[seg] || '🏪 Geral'; }
 
 function getUrgenciaLabel(d) {
   if (d <= 0) return 'Retomar agora';
-  if (d === 1) return 'Retomar amanhã';
-  return `Retomar em ${d} dias`;
+  const dt = new Date(); dt.setDate(dt.getDate() + d);
+  const dts = dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  if (d === 1) return `Retomar amanhã (${dts})`;
+  return `Retomar em ${dts} (${d}d)`;
 }
 
 // ===== DASHBOARD =====
@@ -7275,6 +7277,12 @@ function abrirOportunidades() {
   document.getElementById('opp-lista').innerHTML = '<div style="text-align:center;padding:32px;color:var(--texto2);">📍 Calculando oportunidades...</div>';
   const render = (lat, lng) => {
     const opps = _calcularOportunidades(lat, lng);
+    // Nota 0-10 (mesma da Rota Manual) — normaliza o potencial pela carteira
+    _rmMaxPot = 0;
+    getClientesAtivos().forEach(c => {
+      const potC = calcularPotencialCliente(c);
+      Object.values(potC).forEach(pv => { _rmMaxPot = Math.max(_rmMaxPot, pv.max || pv.avg || 0); });
+    });
     const lista = document.getElementById('opp-lista');
     if (!opps.length) {
       lista.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--texto2);font-size:13px;line-height:1.6;">Configure o <strong style="color:var(--texto);">giro ideal</strong> nas metas de cada marca para o app calcular as oportunidades.</div>';
@@ -7295,9 +7303,12 @@ function abrirOportunidades() {
         : '';
       return `<div onclick="fecharOportunidades();setTimeout(()=>abrirDetalhe('${o.c.id}','clientes'),200)" style="background:var(--bg3);border:1px solid ${o.mat>=1?'rgba(0,214,143,.25)':'var(--borda)'};border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
-          <div style="min-width:0;">
-            <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(o.c.nome)}</div>
-            <div style="font-size:11px;color:var(--texto2);">${esc(o.c.loja||'')}${distTxt?' · <strong style="color:var(--texto);">'+distTxt+'</strong>':''}</div>
+          <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+            ${_badgeNotaRM(notaClienteRM(o.c))}
+            <div style="min-width:0;">
+              <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(o.c.nome)}</div>
+              <div style="font-size:11px;color:var(--texto2);">${esc(o.c.loja||'')}${distTxt?' · <strong style="color:var(--texto);">'+distTxt+'</strong>':''}</div>
+            </div>
           </div>
           <div style="text-align:right;flex-shrink:0;">
             <div style="font-size:12px;font-weight:700;color:var(--verde);">máx ${fmtK(pv.max||pv.avg||0)}</div>
@@ -9785,7 +9796,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
         // Verifica se tem data personalizada, senão usa a calculada
         const temCustom = carregarDataRetorno(cliente);
         if (!temCustom) {
-          document.getElementById('det-proxima-data').textContent = getUrgenciaLabel(proxima.diffDias) + ' · ' + formatarData(proxima.data);
+          document.getElementById('det-proxima-data').textContent = getUrgenciaLabel(proxima.diffDias) + (proxima.diffDias <= 0 ? ' · era ' + formatarData(proxima.data) : '');
         }
         const primeiroNome = cliente.nome.split(' ')[0];
         const msgs = proxima.getMsgs(primeiroNome);
@@ -10075,7 +10086,7 @@ function limparDataRetorno() {
   const cliente = clientes[idx];
   if (cliente.historico && cliente.historico.length > 0) {
     const proxima = calcularProximaAcao(cliente.historico[0]);
-    if (proxima) document.getElementById('det-proxima-data').textContent = getUrgenciaLabel(proxima.diffDias) + ' · ' + formatarData(proxima.data);
+    if (proxima) document.getElementById('det-proxima-data').textContent = getUrgenciaLabel(proxima.diffDias) + (proxima.diffDias <= 0 ? ' · era ' + formatarData(proxima.data) : '');
   } else {
     document.getElementById('det-proxima-data').textContent = '-';
   }
@@ -11938,6 +11949,17 @@ let _relExpPeriodo = 'mes'; // mes | tri | ano
 // ===== GERENTE VIRTUAL =====
 let _gerenteAnaliseCache = null;
 let _gerenteCacheData = null;
+let _gerenteCacheCfgHash = null;
+
+// Impressão digital do que a análise cobra em "configuracao": se o rep ajustar
+// metas/marcas/contatos depois da análise, o cache é descartado — sem isso o
+// Gestor continuava lembrando de pendência que o rep JÁ resolveu.
+function _gerenteCfgHash() {
+  const cfg = getConfig();
+  try {
+    return JSON.stringify({ metas: cfg.metas, marcas: cfg.marcas, wpp: cfg.wppRep, email: cfg.emailRep, buffer: cfg.bufferMeta });
+  } catch (e) { return String(Date.now()); }
+}
 
 function abrirGerenteVirtual() {
   document.getElementById('modal-gerente').classList.add('aberto');
@@ -11948,9 +11970,10 @@ function abrirGerenteVirtual() {
   const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
   document.getElementById('gerente-data-label').textContent = hoje;
 
-  // Verifica cache de 24h
+  // Cache de 24h — só vale se a configuração não mudou desde a análise
   const agora = Date.now();
-  if (_gerenteAnaliseCache && _gerenteCacheData && (agora - _gerenteCacheData) < 86400000) {
+  if (_gerenteAnaliseCache && _gerenteCacheData && (agora - _gerenteCacheData) < 86400000
+      && _gerenteCacheCfgHash === _gerenteCfgHash()) {
     _exibirAnaliseGerente(_gerenteAnaliseCache, true);
     return;
   }
@@ -12263,6 +12286,42 @@ async function gerarAnaliseGerente(forcar=false) {
 
   const dados = _coletarDadosRep();
 
+  // Enriquecimento: nota 0-10 dos melhores alvos + janela de coleção (confecção)
+  try {
+    const ativos = getClientesAtivos();
+    _rmMaxPot = 0;
+    ativos.forEach(c => {
+      const potC = calcularPotencialCliente(c);
+      Object.values(potC).forEach(pv => { _rmMaxPot = Math.max(_rmMaxPot, pv.max || pv.avg || 0); });
+    });
+    dados.topOportunidades = ativos
+      .map(c => ({ c, nota: notaClienteRM(c) }))
+      .sort((a, b) => b.nota - a.nota)
+      .slice(0, 8)
+      .map(x => {
+        const prog = _programadoAte(x.c);
+        const o = { cliente: `${x.c.nome} (${x.c.cidade || '—'})`, nota: +x.nota.toFixed(1) };
+        const venc = _marcasVencidasDe(x.c);
+        if (venc.length) o.marcasNoPontoDeRecompra = venc;
+        if (prog) o.programadoAte = prog.toLocaleDateString('pt-BR');
+        return o;
+      });
+    const col = _colecaoAtual();
+    if (col) {
+      const confec = ativos.filter(_ehConfeccao);
+      if (confec.length) {
+        const pend = confec.filter(c => !_temPedidoDaColecao(c, col));
+        dados.sazonalConfeccao = {
+          janelaAberta: col.nome,
+          fechaEm: Math.ceil((col.fim - new Date()) / 86400000) + ' dias',
+          clientesDeModa: confec.length,
+          totalSemPedidoDaColecao: pend.length,
+          semPedidoDaColecao: pend.slice(0, 8).map(c => `${c.nome} (${c.cidade || '—'})`)
+        };
+      }
+    }
+  } catch (e) {}
+
   const prompt = `Você é o GESTOR IA: um mentor sênior para representantes comerciais no Brasil, que combina DUAS visões complementares sobre o negócio do rep. Tom direto, provocativo (estimula ação e pensamento crítico), profissional e orientado a dados. Use termos do setor quando fizer sentido: sell-in, sell-out, ruptura, positivação, mix, cobertura, giro, share, ticket médio, Pareto.
 
 Fale DIRETAMENTE com o representante na 2ª pessoa ("você"), pelo primeiro nome. Nada de saudação genérica nem de repetir os números crus — interprete-os e provoque a ação.
@@ -12274,6 +12333,16 @@ CONSCIÊNCIA DE TEMPO (campo "temporalidade" + campos de cada marca): AJUSTE seu
 - Se for MEIO do mês: corrija a rota. Compare "pct" (quanto já vendeu) com "periodoDecorrido" (quanto do tempo passou). Marcas com "foraDoRitmo":true estão atrasadas — foque nelas e diga o ritmo para recuperar.
 - Se for RETA FINAL: foco total em fechar. Priorize os pedidos que faltam com maior chance de fechar no prazo.
 - METAS POR COLEÇÃO ("tipoPeriodo":"coleção"): trate pelo período inteiro dela (use "periodo" e "periodoDecorrido"), NÃO pelo mês calendário. Uma coleção pode ter ritmo e prazos diferentes do mês.
+
+NOTA 0-10 ("topOportunidades"): é a MESMA nota que o app mostra ao rep nas telas de rota e oportunidades (timing de recompra × potencial na carteira; 7+ = quente, 4-7 = morno). Use esses nomes ao indicar quem atacar primeiro. "marcasNoPontoDeRecompra" = marcas com ciclo de giro vencido nesse cliente. Cliente com "programadoAte" está coberto por entregas programadas até essa data — NÃO empurre venda antes; no máximo visita de acompanhamento de entrega.
+
+JANELA DE COLEÇÃO ("sazonalConfeccao", se presente): a janela citada está ABERTA e fecha em "fechaEm". Os clientes em "semPedidoDaColecao" ainda NÃO compraram a coleção atual — prioridade máxima de cobrança antes de a janela fechar (depois disso a venda é perdida para a concorrência até a próxima coleção).
+
+ESTRATÉGIAS DO SETOR DE CONFECÇÃO (repertório validado por reps veteranos — recomende 1 ou 2 quando houver clientes de moda e a situação pedir, citando o cliente-alvo):
+1. TROCA DESCONTO×PRAZO: negociar com o gerente comercial reduzir o desconto e AUMENTAR o prazo médio (para cliente com caixa apertado que precisa de fôlego) ou aumentar o desconto e REDUZIR o prazo (para cliente capitalizado focado em preço). Custa pouco para a indústria e destrava pedido parado.
+2. MINI-PACOTES CURVA A: montar pacotes fechados só com os produtos curva A de venda comprovada — oferta enxuta, giro garantido, ideal para destravar venda quando o mercado está difícil ou o cliente está inseguro.
+3. FORA DE LINHA/COLEÇÃO: solicitar à indústria peças fora de linha ou de coleção passada com desconto agressivo, direcionadas aos clientes focados em preço — vira venda incremental sem queimar a tabela vigente.
+4. FATURAMENTO ANTECIPADO COM DATA-BASE SALVA (pedido programado): negociar faturar antes da data programada MANTENDO a data-base de pagamento original — o cliente ganha prazo extra de forma indireta, sem mexer em tabela nem desconto. Argumento forte para antecipar receita da indústria e fidelizar o lojista.
 
 DADOS REAIS DO REPRESENTANTE (use só o que estiver aqui, não invente números):
 ${JSON.stringify(dados, null, 2)}
@@ -12337,6 +12406,7 @@ Responda APENAS com JSON válido, sem texto antes ou depois:
 
     _gerenteAnaliseCache = analise;
     _gerenteCacheData = Date.now();
+    _gerenteCacheCfgHash = _gerenteCfgHash();
     _exibirAnaliseGerente(analise, false);
 
   } catch(err) {

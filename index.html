@@ -2106,7 +2106,10 @@ if ('serviceWorker' in navigator) {
         <button onclick="fecharModal('modal-semana-manual');setTimeout(()=>abrirRotaManual(),150)" title="Voltar para escolher clientes" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
         <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">📅 Minha semana</div>
       </div>
-      <button onclick="fecharModal('modal-semana-manual')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button onclick="apagarSemanaRM()" title="Apagar a semana inteira" style="display:flex;align-items:center;gap:4px;background:rgba(255,77,106,.08);border:1px solid rgba(255,77,106,.35);border-radius:9px;padding:6px 10px;color:var(--vermelho);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">🗑️ Apagar</button>
+        <button onclick="fecharModal('modal-semana-manual')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+      </div>
     </div>
     <div class="modal-sub" id="sm-sub" style="margin-bottom:12px;"></div>
 
@@ -2125,6 +2128,34 @@ if ('serviceWorker' in navigator) {
       Disparar rota no meu WhatsApp
     </button>
     <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-top:6px;">Abre o WhatsApp com a semana pronta — horários, marcas e cidades</div>
+  </div>
+</div>
+
+<!-- MODAL HORÁRIO FIXO (rota manual) -->
+<div class="modal-overlay" id="modal-hora-rm">
+  <div class="modal-box" style="padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">🕐 Horário com o cliente</div>
+      <button onclick="fecharModal('modal-hora-rm')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div class="modal-sub" id="hora-rm-sub" style="margin-bottom:14px;"></div>
+    <input type="time" class="campo-input" id="hora-rm-input" style="margin-bottom:12px;">
+    <button onclick="confirmarHoraRM()" style="width:100%;background:linear-gradient(135deg,#38BDF8,#0284C7);border:none;border-radius:12px;padding:13px;color:#04202E;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">🔒 Fixar horário</button>
+    <button id="hora-rm-remover" onclick="removerHoraRM()" style="width:100%;background:rgba(255,77,106,.08);border:1px solid rgba(255,77,106,.35);border-radius:12px;padding:12px;color:var(--vermelho);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Remover horário fixo</button>
+    <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-top:8px;">Clientes sem horário fixo são encaixados nas lacunas pelo app.</div>
+  </div>
+</div>
+
+<!-- MODAL ENCAIXE (rota manual — quando a visita não cabe no dia) -->
+<div class="modal-overlay" id="modal-encaixe-rm">
+  <div class="modal-box" style="padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">⚠️ Encaixar visita</div>
+      <button onclick="fecharModal('modal-encaixe-rm')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div id="encaixe-rm-msg" style="background:rgba(255,77,106,.08);border:1px solid rgba(255,77,106,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--texto);line-height:1.5;"></div>
+    <div style="font-size:11px;color:var(--texto3);margin-bottom:6px;">Onde o app consegue encaixar:</div>
+    <div id="encaixe-rm-opcoes"></div>
   </div>
 </div>
 
@@ -7477,7 +7508,7 @@ function renderizarListaRM() {
     const exist = _rmEntradaDo(c.id);
     const aberto = _rmExpandido === c.id;
     const sub = `${esc(c.loja || '')}${c.cidade ? ' · ' + esc(c.cidade) : ''}${c.tipo === 'prospect' ? ' · <span style="color:var(--amarelo);">prospecção</span>' : ''}`;
-    const naRota = exist ? `<div style="font-size:10.5px;color:var(--verde);font-weight:600;margin-top:2px;">✓ na rota de ${RM_ABREV[exist.dia]} · ${_fmtMinRM(exist.item.tempo || 30)}</div>` : '';
+    const naRota = exist ? `<div style="font-size:10.5px;color:var(--verde);font-weight:600;margin-top:2px;">✓ na rota de ${RM_ABREV[exist.dia]} · ${_fmtMinRM(exist.item.tempo || 30)}${exist.item.hora ? ' · 🔒 ' + exist.item.hora : ''}</div>` : '';
     const icone = exist
       ? '<span style="width:26px;height:26px;border-radius:50%;background:var(--verde);display:flex;align-items:center;justify-content:center;color:#04231A;font-size:14px;font-weight:800;flex-shrink:0;">✓</span>'
       : '<span style="width:26px;height:26px;border-radius:50%;border:2px solid var(--texto3);display:flex;align-items:center;justify-content:center;color:var(--texto3);font-size:16px;flex-shrink:0;">+</span>';
@@ -7566,13 +7597,80 @@ function adicionarClienteRM(id) {
   if (!c) return;
   const marcas = Object.keys(_rmMarcasSel).filter(m => _rmMarcasSel[m]);
   const tempo = _tempoSelecionadoRM();
+  // Simula o dia com a visita nova: se estourar a jornada ou atrasar um
+  // horário fixo, abre o modal de encaixe com as alternativas que cabem.
+  const sim = _simulaAddRM(id, marcas, tempo, _rmDia);
+  if (sim.estoura || sim.conflitos > 0) { _abrirEncaixeRM(c, marcas, tempo, sim); return; }
+  _finalizarAddRM(id, marcas, tempo, _rmDia, c.nome);
+}
+
+function _simulaAddRM(id, marcas, tempo, dia) {
+  const rm = JSON.parse(JSON.stringify(getRotaManual()));
+  RM_DIAS.forEach(d => rm.dias[d] = rm.dias[d].filter(x => x.id !== id));
+  rm.dias[dia].push({ id, marcas, tempo });
+  return _calcDiaRM(dia, rm);
+}
+
+function _addRMCore(id, marcas, tempo, dia) {
   const rm = getRotaManual();
-  RM_DIAS.forEach(d => rm.dias[d] = rm.dias[d].filter(x => x.id !== id)); // um cliente só entra em um dia
-  rm.dias[_rmDia].push({ id, marcas, tempo });
+  let horaExistente = null; // preserva o 🔒 se o cliente já estava na rota
+  RM_DIAS.forEach(d => {
+    const ex = rm.dias[d].find(x => x.id === id);
+    if (ex && ex.hora) horaExistente = ex.hora;
+    rm.dias[d] = rm.dias[d].filter(x => x.id !== id);
+  });
+  const item = { id, marcas, tempo };
+  if (horaExistente) item.hora = horaExistente;
+  rm.dias[dia].push(item);
   salvarRotaManual(rm);
+}
+
+function _finalizarAddRM(id, marcas, tempo, dia, nome) {
+  _addRMCore(id, marcas, tempo, dia);
   _rmExpandido = null;
-  toast(`✅ ${c.nome} na ${RM_NOMES[_rmDia].toLowerCase()} · ${_fmtMinRM(tempo)}`);
+  toast(`✅ ${nome} na ${RM_NOMES[dia].toLowerCase()} · ${_fmtMinRM(tempo)}`);
   renderizarDiasRM(); renderizarListaRM(); atualizarFooterRM();
+  if (document.getElementById('modal-semana-manual')?.classList.contains('aberto')) renderizarSemanaManual();
+}
+
+let _encaixePendente = null;
+function _abrirEncaixeRM(c, marcas, tempo, sim) {
+  _encaixePendente = { id: c.id, marcas, tempo, nome: c.nome };
+  const cfg = getConfig();
+  let msg;
+  if (sim.conflitos > 0) {
+    msg = `Colocando <b>${esc(c.nome)}</b> (visita de ${_fmtMinRM(tempo)}) na ${RM_NOMES[_rmDia].toLowerCase()}, ${sim.conflitos > 1 ? 'horários fixos 🔒 atrasam' : 'um horário fixo 🔒 atrasa'} — não dá tempo de chegar.`;
+  } else {
+    msg = `Colocando <b>${esc(c.nome)}</b> (visita de ${_fmtMinRM(tempo)}) na ${RM_NOMES[_rmDia].toLowerCase()}, o dia termina ~${_minParaHHMM(sim.termina)} — passa ${_fmtMinRM(sim.termina - sim.fim)} da sua jornada.`;
+  }
+  document.getElementById('encaixe-rm-msg').innerHTML = '⚠️ ' + msg;
+  const dias = cfg.sabAtivo ? RM_DIAS : RM_DIAS.slice(0, 5);
+  const opcoes = [];
+  dias.forEach(d => {
+    if (d === _rmDia) return;
+    const s2 = _simulaAddRM(c.id, marcas, tempo, d);
+    if (!s2.estoura && !s2.conflitos) opcoes.push({ d, folga: s2.fim - s2.termina, termina: s2.termina, n: s2.items.length });
+  });
+  opcoes.sort((a, b) => b.folga - a.folga);
+  const html = opcoes.slice(0, 3).map((o, i) => `
+    <button onclick="confirmarEncaixeRM('${o.d}')" style="width:100%;text-align:left;background:${i === 0 ? 'rgba(56,189,248,.08)' : 'var(--bg3)'};border:1.5px solid ${i === 0 ? 'rgba(56,189,248,.5)' : 'var(--borda)'};border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+        <span style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">${RM_NOMES[o.d]}</span>
+        ${i === 0 ? '<span style="font-size:10px;font-weight:700;color:#7DD3FC;background:rgba(56,189,248,.12);border-radius:6px;padding:2px 8px;font-family:\'DM Sans\',sans-serif;">melhor opção</span>' : ''}
+      </div>
+      <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${o.n} visita${o.n > 1 ? 's' : ''} no dia · termina ~${_minParaHHMM(o.termina)} · folga de ${_fmtMinRM(o.folga)}</div>
+    </button>`).join('');
+  document.getElementById('encaixe-rm-opcoes').innerHTML =
+    (html || '<div style="font-size:12px;color:var(--texto3);margin-bottom:8px;">Nenhum outro dia da semana comporta essa visita sem apertar.</div>')
+    + `<button onclick="confirmarEncaixeRM('${_rmDia}')" style="width:100%;background:rgba(255,77,106,.08);border:1.5px solid rgba(255,77,106,.4);border-radius:10px;padding:10px 12px;color:var(--vermelho);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Colocar na ${RM_NOMES[_rmDia].toLowerCase()} mesmo assim</button>`;
+  document.getElementById('modal-encaixe-rm').classList.add('aberto');
+}
+
+function confirmarEncaixeRM(dia) {
+  fecharModal('modal-encaixe-rm');
+  if (!_encaixePendente) return;
+  const p = _encaixePendente; _encaixePendente = null;
+  _finalizarAddRM(p.id, p.marcas, p.tempo, dia, p.nome);
 }
 
 function _removerRMCore(id) {
@@ -7602,30 +7700,79 @@ function atualizarFooterRM() {
 }
 
 // ---- Passo 2: minha semana ----
+// Monta a linha do tempo do dia: clientes com horário fixo (🔒) são âncoras
+// imóveis; os sem horário fluem preenchendo as lacunas entre elas, sempre
+// descontando o deslocamento. Retorna cada visita com início/fim calculados.
 function _calcDiaRM(dia, rm) {
   rm = rm || getRotaManual();
   const cfg = getConfig();
   const map = {}; getClientes().forEach(c => map[c.id] = c);
-  const items = rm.dias[dia].map(it => ({ it, c: map[it.id] })).filter(x => x.c && !x.c._del);
-  const tempoVis = items.reduce((s, x) => s + (x.it.tempo || 30), 0);
-  let dist = 0, prev = null, semGps = 0;
-  items.forEach(x => {
-    const c = x.c;
-    if (c.lat && c.lng) { if (prev) dist += calcularDistancia(+prev.lat, +prev.lng, +c.lat, +c.lng); prev = c; }
-    else semGps++;
-  });
-  const desloc = Math.round((dist / 40) * 60); // média de 40 km/h na estrada
-  const tempoTotal = tempoVis + desloc;
+  const brutos = rm.dias[dia].map(it => ({ it, c: map[it.id] })).filter(x => x.c && !x.c._del);
   const sab = dia === 'sab';
   const ini = _hhmmParaMin(sab ? (cfg.sabIni || '08:00') : (cfg.jornadaIni || '08:00'));
   const fim = _hhmmParaMin(sab ? (cfg.sabFim || '12:00') : (cfg.jornadaFim || '18:00'));
-  return { items, tempoVis, dist, desloc, tempoTotal, ini, fim, jornadaMin: Math.max(0, fim - ini), semGps, termina: ini + tempoTotal };
+
+  const viagemMin = (a, b) => (a && b && a.lat && a.lng && b.lat && b.lng)
+    ? Math.round((calcularDistancia(+a.lat, +a.lng, +b.lat, +b.lng) / 40) * 60) : 0;
+
+  const ancoras = brutos.filter(x => x.it.hora).sort((a, b) => _hhmmParaMin(a.it.hora) - _hhmmParaMin(b.it.hora));
+  const fila = brutos.filter(x => !x.it.hora); // flutuantes, na ordem salva
+
+  const linha = [];
+  let cursor = ini, prev = null;
+  const colocarFlutuante = (x, inicio) => {
+    const t = x.it.tempo || 30;
+    linha.push({ it: x.it, c: x.c, inicio, fimV: inicio + t, fixo: false, atraso: 0 });
+    cursor = inicio + t; prev = x.c;
+  };
+
+  ancoras.forEach(a => {
+    const horaA = _hhmmParaMin(a.it.hora);
+    // Preenche a lacuna antes da âncora com flutuantes que caibam (visita + estrada)
+    while (fila.length) {
+      const f = fila[0];
+      const inicioF = cursor + viagemMin(prev, f.c);
+      const fimF = inicioF + (f.it.tempo || 30);
+      if (fimF + viagemMin(f.c, a.c) <= horaA) colocarFlutuante(fila.shift(), inicioF);
+      else break;
+    }
+    // Âncora entra no horário fixo — ou atrasada, se não dá tempo de chegar
+    const chegada = cursor + viagemMin(prev, a.c);
+    const atraso = Math.max(0, chegada - horaA);
+    const inicioA = Math.max(horaA, chegada);
+    const t = a.it.tempo || 30;
+    linha.push({ it: a.it, c: a.c, inicio: inicioA, fimV: inicioA + t, fixo: true, atraso });
+    cursor = inicioA + t; prev = a.c;
+  });
+  fila.forEach(f => colocarFlutuante(f, cursor + viagemMin(prev, f.c)));
+
+  // Distância total seguindo a ordem da linha do tempo
+  let dist = 0, anterior = null, semGps = 0;
+  linha.forEach(x => {
+    if (x.c.lat && x.c.lng) {
+      if (anterior) dist += calcularDistancia(+anterior.lat, +anterior.lng, +x.c.lat, +x.c.lng);
+      anterior = x.c;
+    } else semGps++;
+  });
+
+  const tempoVis = linha.reduce((s, x) => s + (x.it.tempo || 30), 0);
+  const termina = linha.length ? linha[linha.length - 1].fimV : ini;
+  const conflitos = linha.filter(x => x.atraso > 0).length;
+  return {
+    items: linha, tempoVis, dist,
+    desloc: Math.round((dist / 40) * 60),
+    tempoTotal: termina - ini,
+    ini, fim, jornadaMin: Math.max(0, fim - ini),
+    semGps, termina, conflitos,
+    estoura: termina > fim
+  };
 }
 function _statusDiaRM(calc, dia, cfg) {
   if (!calc.items.length) return null;
   if (dia === 'sab' && !cfg.sabAtivo) return { cor: 'var(--amarelo)', txt: '⚠️ sábado desativado nas Configurações' };
-  if (calc.tempoTotal > calc.jornadaMin) return { cor: 'var(--vermelho)', txt: `🔴 dia apertado · passa ${_fmtMinRM(calc.tempoTotal - calc.jornadaMin)}` };
-  const folga = calc.jornadaMin - calc.tempoTotal;
+  if (calc.conflitos) return { cor: 'var(--vermelho)', txt: `🔴 ${calc.conflitos} horário${calc.conflitos > 1 ? 's' : ''} fixo${calc.conflitos > 1 ? 's' : ''} atrasando` };
+  if (calc.estoura) return { cor: 'var(--vermelho)', txt: `🔴 dia apertado · passa ${_fmtMinRM(calc.termina - calc.fim)}` };
+  const folga = calc.fim - calc.termina;
   if (folga >= 90) return { cor: '#7DD3FC', txt: `🔵 cabe mais · termina ~${_minParaHHMM(calc.termina)}` };
   return { cor: 'var(--verde)', txt: `🟢 cabe no dia · termina ~${_minParaHHMM(calc.termina)}` };
 }
@@ -7655,21 +7802,40 @@ function renderizarSemanaManual() {
     let inner = '';
     if (aberto && calc.items.length) {
       const prox = RM_DIAS[(RM_DIAS.indexOf(d) + 1) % RM_DIAS.length];
-      inner = '<div style="margin-top:8px;">' + calc.items.map((x, i) => `
-        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--borda);">
-          <span style="width:22px;height:22px;background:var(--bg2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--texto2);flex-shrink:0;">${i + 1}</span>
+      inner = '<div style="margin-top:8px;">' + calc.items.map((x, i) => {
+        // Lacuna visível antes de uma âncora (tempo parado esperando o horário)
+        let lacuna = '';
+        if (i > 0) {
+          const gap = x.inicio - calc.items[i - 1].fimV;
+          if (x.fixo && gap >= 40) lacuna = `<div style="text-align:center;font-size:10.5px;color:var(--texto3);padding:3px 0;">⌛ janela livre de ~${_fmtMinRM(gap)}</div>`;
+        }
+        const chip = x.fixo
+          ? `<span style="min-width:52px;text-align:center;font-size:10.5px;font-weight:800;color:#7DD3FC;background:rgba(56,189,248,.14);border:1px solid rgba(56,189,248,.4);border-radius:7px;padding:3px 4px;flex-shrink:0;font-family:'DM Sans',sans-serif;">🔒 ${x.it.hora}</span>`
+          : `<span style="min-width:52px;text-align:center;font-size:10.5px;font-weight:700;color:var(--texto2);flex-shrink:0;font-family:'DM Sans',sans-serif;">~${_minParaHHMM(x.inicio)}</span>`;
+        const atrasoLinha = x.atraso > 0
+          ? `<div style="font-size:10.5px;color:var(--vermelho);font-weight:600;">⚠️ só chega ~${_minParaHHMM(x.inicio)} — marcado ${x.it.hora}</div>`
+          : '';
+        return `${lacuna}
+        <div style="display:flex;align-items:center;gap:7px;padding:7px 0;border-top:1px solid var(--borda);">
+          ${chip}
           <div style="flex:1;min-width:0;">
             <div style="font-size:12.5px;font-weight:600;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(x.c.nome)}</div>
             <div style="font-size:10.5px;color:var(--texto3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${x.it.marcas && x.it.marcas.length ? esc(x.it.marcas.join(' + ')) + ' · ' : ''}${_fmtMinRM(x.it.tempo || 30)}${!(x.c.lat && x.c.lng) ? ' · 📍 sem GPS' : ''}</div>
+            ${atrasoLinha}
           </div>
-          <button onclick="event.stopPropagation();moverClienteRM('${x.it.id}','${prox}')" title="Mover para ${RM_NOMES[prox]}" style="background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:5px 8px;color:var(--texto2);font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'DM Sans',sans-serif;">→ ${RM_ABREV[prox]}</button>
+          <button onclick="event.stopPropagation();abrirHoraRM('${x.it.id}')" title="${x.fixo ? 'Mudar/remover horário fixo' : 'Fixar horário com o cliente'}" style="background:${x.fixo ? 'rgba(56,189,248,.14)' : 'var(--bg2)'};border:1px solid ${x.fixo ? 'rgba(56,189,248,.4)' : 'var(--borda)'};border-radius:8px;width:26px;height:26px;color:${x.fixo ? '#7DD3FC' : 'var(--texto2)'};font-size:12px;cursor:pointer;flex-shrink:0;">🕐</button>
+          <button onclick="event.stopPropagation();moverClienteRM('${x.it.id}','${prox}')" title="Mover para ${RM_NOMES[prox]}" style="background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:5px 7px;color:var(--texto2);font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'DM Sans',sans-serif;">→ ${RM_ABREV[prox]}</button>
           <button onclick="event.stopPropagation();removerClienteRMSemana('${x.it.id}')" style="background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.35);border-radius:8px;width:26px;height:26px;color:var(--vermelho);font-size:12px;cursor:pointer;flex-shrink:0;">✕</button>
-        </div>`).join('') + '</div>';
+        </div>`;
+      }).join('') + '</div>';
     }
     return `<div onclick="_smExpandido=_smExpandido==='${d}'?null:'${d}';renderizarSemanaManual();" style="background:var(--bg3);border:1px solid ${estourou ? 'rgba(255,77,106,.45)' : 'var(--borda)'};border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <span style="font-size:14px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">${RM_NOMES[d]}</span>
-        <span style="font-size:11px;font-weight:600;color:${st ? st.cor : 'var(--texto3)'};text-align:right;">${st ? st.txt : 'sem clientes · toque para nada 😄'}</span>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <span style="font-size:11px;font-weight:600;color:${st ? st.cor : 'var(--texto3)'};text-align:right;">${st ? st.txt : 'sem clientes'}</span>
+          ${calc.items.length ? `<button onclick="event.stopPropagation();apagarDiaRM('${d}')" title="Apagar a ${RM_NOMES[d].toLowerCase()}" style="background:transparent;border:none;color:var(--texto3);font-size:13px;cursor:pointer;padding:2px;flex-shrink:0;">🗑️</button>` : ''}
+        </span>
       </div>
       ${calc.items.length ? `<div style="font-size:11px;color:var(--texto2);margin-top:3px;">${calc.items.length} cliente${calc.items.length > 1 ? 's' : ''} · ${calc.dist ? calc.dist.toFixed(0) + 'km' : 'sem trechos com GPS'} · ~${_fmtMinRM(calc.tempoTotal)} de rota${calc.semGps ? ` · ${calc.semGps} sem GPS` : ''}</div>` : ''}
       ${inner}
@@ -7678,6 +7844,77 @@ function renderizarSemanaManual() {
   document.getElementById('sm-sub').textContent = total
     ? `${total} cliente${total > 1 ? 's' : ''} · ${cidades.size} cidade${cidades.size > 1 ? 's' : ''} · ${kmTotal.toFixed(0)}km na semana · toque no dia para ver os clientes`
     : 'Nenhum cliente ainda — volte com ‹ e escolha os clientes da sua semana.';
+}
+
+// ---- Apagar rota (semana inteira ou um dia) ----
+function apagarSemanaRM() {
+  const rm = getRotaManual();
+  const total = RM_DIAS.reduce((s, d) => s + rm.dias[d].length, 0);
+  if (!total) { toast('A semana já está vazia'); return; }
+  if (!confirm(`Apagar a rota da semana inteira? (${total} cliente${total > 1 ? 's' : ''})`)) return;
+  RM_DIAS.forEach(d => rm.dias[d] = []);
+  salvarRotaManual(rm);
+  _smExpandido = null;
+  renderizarSemanaManual();
+  toast('🗑️ Semana apagada — começar do zero');
+}
+function apagarDiaRM(dia) {
+  const rm = getRotaManual();
+  const n = rm.dias[dia].length;
+  if (!n) return;
+  if (!confirm(`Apagar a ${RM_NOMES[dia].toLowerCase()}? (${n} cliente${n > 1 ? 's' : ''})`)) return;
+  rm.dias[dia] = [];
+  salvarRotaManual(rm);
+  renderizarSemanaManual();
+  toast(`🗑️ ${RM_NOMES[dia]} apagada`);
+}
+
+// ---- Horário fixo (🔒) ----
+let _horaRmAlvo = null;
+function abrirHoraRM(id) {
+  const entrada = _rmEntradaDo(id);
+  if (!entrada) return;
+  _horaRmAlvo = id;
+  const map = {}; getClientes().forEach(c => map[c.id] = c);
+  const c = map[id];
+  document.getElementById('hora-rm-sub').textContent =
+    `${c ? c.nome : 'Cliente'} · ${RM_NOMES[entrada.dia].toLowerCase()} · visita de ${_fmtMinRM(entrada.item.tempo || 30)}`;
+  document.getElementById('hora-rm-input').value = entrada.item.hora || '';
+  document.getElementById('hora-rm-remover').style.display = entrada.item.hora ? 'block' : 'none';
+  document.getElementById('modal-hora-rm').classList.add('aberto');
+}
+function confirmarHoraRM() {
+  const hora = document.getElementById('hora-rm-input').value;
+  if (!hora) { toast('Escolha um horário primeiro'); return; }
+  const entrada = _rmEntradaDo(_horaRmAlvo);
+  if (!entrada) { fecharModal('modal-hora-rm'); return; }
+  const rm = getRotaManual();
+  const item = rm.dias[entrada.dia].find(x => x.id === _horaRmAlvo);
+  const horaAnterior = item.hora;
+  item.hora = hora;
+  // Simula o dia com o novo horário — avisa se cria conflito, mas deixa fixar
+  const calc = _calcDiaRM(entrada.dia, rm);
+  const meuAtraso = calc.items.find(x => x.it.id === _horaRmAlvo);
+  if (calc.conflitos > 0) {
+    const ok = confirm(`⚠️ Com esse horário, ${calc.conflitos > 1 ? 'alguns horários fixos atrasam' : 'um horário fixo atrasa'}${meuAtraso && meuAtraso.atraso > 0 ? ` (você só chega ~${_minParaHHMM(meuAtraso.inicio)})` : ''}.\n\nFixar mesmo assim? Você decide.`);
+    if (!ok) { item.hora = horaAnterior; return; }
+  }
+  salvarRotaManual(rm);
+  fecharModal('modal-hora-rm');
+  renderizarSemanaManual();
+  toast(`🔒 Horário fixado: ${hora}`);
+}
+function removerHoraRM() {
+  const entrada = _rmEntradaDo(_horaRmAlvo);
+  if (entrada) {
+    const rm = getRotaManual();
+    const item = rm.dias[entrada.dia].find(x => x.id === _horaRmAlvo);
+    if (item) delete item.hora;
+    salvarRotaManual(rm);
+    renderizarSemanaManual();
+    toast('Horário removido — o app volta a encaixar sozinho');
+  }
+  fecharModal('modal-hora-rm');
 }
 
 function moverClienteRM(id, dia) {
@@ -7739,14 +7976,16 @@ function ajeitarSemanaRM() {
     const d = diasUteis[i];
     let calc = _calcDiaRM(d, rm);
     let guarda = 30; // trava de segurança
-    while (calc.tempoTotal > calc.jornadaMin && rm.dias[d].length > 1 && guarda-- > 0) {
-      // move o cliente de menor nota para o dia seguinte
-      let wi = 0, wn = Infinity;
+    while ((calc.estoura || calc.conflitos > 0) && guarda-- > 0) {
+      // move o FLUTUANTE de menor nota para o dia seguinte (🔒 é compromisso, não se move)
+      let wi = -1, wn = Infinity;
       rm.dias[d].forEach((it, idx) => {
+        if (it.hora) return; // horário fixo fica onde está
         const c = map[it.id];
         const n = c ? notaClienteRM(c) : 0;
         if (n < wn) { wn = n; wi = idx; }
       });
+      if (wi === -1) break; // só sobraram horários fixos — nada a mover
       const mv = rm.dias[d].splice(wi, 1)[0];
       rm.dias[diasUteis[i + 1]].unshift(mv);
       movidos++;
@@ -7772,16 +8011,14 @@ function dispararRotaManualWpp() {
     if (!calc.items.length) return;
     const dataDia = new Date(seg); dataDia.setDate(seg.getDate() + di);
     msg += `\n📍 *${RM_NOMES[d].toUpperCase()} · ${fmtD(dataDia)}* — ${calc.items.length} visita${calc.items.length > 1 ? 's' : ''}${calc.dist ? ` · ${calc.dist.toFixed(0)}km` : ''}\n`;
-    let rel = calc.ini, prev = null;
     calc.items.forEach((x, i) => {
       const c = x.c, it = x.it;
-      if (c.lat && c.lng && prev) rel += Math.round((calcularDistancia(+prev.lat, +prev.lng, +c.lat, +c.lng) / 40) * 60);
-      msg += `${i + 1}. 🕗 ~${_minParaHHMM(rel)} · *${c.nome}*${c.loja ? ` — ${c.loja}` : ''}${c.cidade ? ` (${c.cidade})` : ''}\n`;
+      const horaTxt = x.fixo ? `🔒 ${_minParaHHMM(x.inicio)}` : `~${_minParaHHMM(x.inicio)}`;
+      msg += `${i + 1}. 🕗 ${horaTxt} · *${c.nome}*${c.loja ? ` — ${c.loja}` : ''}${c.cidade ? ` (${c.cidade})` : ''}\n`;
       if (it.marcas && it.marcas.length) msg += `   🏷️ ${it.marcas.join(' + ')} · ~${_fmtMinRM(it.tempo || 30)}\n`;
-      rel += (it.tempo || 30);
-      if (c.lat && c.lng) prev = c;
+      if (x.atraso > 0) msg += `   ⚠️ marcado ${it.hora} — só chega ~${_minParaHHMM(x.inicio)}\n`;
     });
-    msg += `🏁 termina ~${_minParaHHMM(rel)}\n`;
+    msg += `🏁 termina ~${_minParaHHMM(calc.termina)}\n`;
   });
   msg += `\n_${total} cliente${total > 1 ? 's' : ''} na semana · Carteira Viva_`;
   _wppAbrir(msg);

@@ -1332,6 +1332,17 @@ if ('serviceWorker' in navigator) {
 
       <div class="config-item">
         <div class="config-item-header">
+          <span class="config-item-label">🧳 Mostruário em Avaliação</span>
+        </div>
+        <div class="config-dias-wrap">
+          <span class="config-dias-label">Voltar em</span>
+          <input type="number" class="config-dias-input" id="cfg-mostruario_avaliacao" min="1" max="180" value="7">
+          <span class="config-dias-unidade">dias</span>
+        </div>
+      </div>
+
+      <div class="config-item">
+        <div class="config-item-header">
           <span class="config-item-label">🥊 Comprou do concorrente</span>
         </div>
         <div class="config-dias-wrap">
@@ -4439,7 +4450,7 @@ function salvarClientes(c) {
 function getConfig() {
   const email = usuarioAtual?.email || '';
   if (_cacheConfig && _cacheConfigEmail === email) return _cacheConfig;
-  const def = { estoque_alto:30, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguardando_proposta:3, aguarda_colecao:60, fechou_pedido:30, comprou_concorrente:30, inadimplente:45, fechado:60, nao_vai_comprar:90, dias_esquecidos:50, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''], horarioNotif:'07:30', notifWpp:true };
+  const def = { estoque_alto:30, outra_marca:35, mercado_parado:30, produto_nao_girou:7, aguardando_giro:30, prazo_pagamento:45, aguardando_proposta:3, mostruario_avaliacao:7, aguarda_colecao:60, fechou_pedido:30, comprou_concorrente:30, inadimplente:45, fechado:60, nao_vai_comprar:90, dias_esquecidos:50, custom_0:30, custom_1:30, custom_2:30, skus:['peças','caixas','unidades','kg'], skusCustom:['','',''], marcas:['','','','','','','','','',''], horarioNotif:'07:30', notifWpp:true };
   _cacheConfig = Object.assign(def, getData('cv_config_' + email) || {});
   _cacheConfigEmail = email;
   return _cacheConfig;
@@ -5615,6 +5626,34 @@ const MOTIVOS_BASE = {
         n=>`${n}, não quero que você perca as condições que montei. Posso fechar a proposta hoje e já deixar tudo encaminhado?`,
         n=>`${n}, se a proposta fizer sentido, esse é o melhor momento para fechar antes que os valores mudem. Posso contar com você?`,
         n=>`${n}, nossa parceria é importante para mim. Se faltou algo na proposta para você fechar, me fala que eu dou um jeito agora.`
+      ]
+    ]
+  },
+  mostruario_avaliacao: {
+    label: '🧳 Mostruário em Avaliação',
+    cadenciaRelativa: [0.3, 0.7, 1.0],
+    gatilhos: GATILHOS_LABELS,
+    msgs: [
+      [
+        n=>`${n}, deixei o mostruário aí para você avaliar com calma. Já teve chance de dar uma olhada nas peças?`,
+        n=>`${n}, passando para saber o que você achou das amostras que deixei. Alguma já chamou sua atenção?`,
+        n=>`${n}, sobre o mostruário que ficou com você — quero saber sua impressão. Posso esclarecer qualquer dúvida sobre os produtos?`,
+        n=>`${n}, separei aquele mostruário pensando no perfil da sua loja. Conseguiu mostrar para a equipe e para os clientes?`,
+        n=>`${n}, só passando para confirmar se o mostruário chegou certinho e se você já pôde avaliar. O que achou até agora?`
+      ],
+      [
+        n=>`${n}, e aí, o que o mostruário te disse? Se gostou de alguma peça, já consigo montar o pedido com uma boa condição.`,
+        n=>`${n}, posso passar aí para recolher o mostruário e, de quebra, já fecharmos o que fez mais sentido para você?`,
+        n=>`${n}, as peças do mostruário que mais giram nessa época estão saindo rápido. Quer que eu reserve enquanto você decide?`,
+        n=>`${n}, sei que avaliar mostruário dá trabalho. Posso te ajudar a escolher o mix ideal com base no giro de lojas parecidas?`,
+        n=>`${n}, quem fecha essa semana ainda garante o prazo especial nas peças do mostruário. Vale a conversa antes que mude?`
+      ],
+      [
+        n=>`${n}, chegou a hora de decidir sobre o mostruário. Quer que eu já monte o pedido com o que você mais gostou?`,
+        n=>`${n}, preciso recolher o mostruário em breve. Antes disso, quer aproveitar e fechar as peças que te interessaram?`,
+        n=>`${n}, último aviso amigável: as condições que combinei para o mostruário encerram essa semana. Fechamos hoje?`,
+        n=>`${n}, não quero que você perca as peças que separei no mostruário. Posso fechar o pedido agora e já deixar encaminhado?`,
+        n=>`${n}, nossa parceria é importante para mim. Se faltou algo para você decidir sobre o mostruário, me fala que eu resolvo agora.`
       ]
     ]
   },
@@ -9247,31 +9286,8 @@ function salvarContato() {
       [bv, bw].forEach(b => { if (b) { b.style.borderColor = '#FF4D6A'; setTimeout(() => { b.style.borderColor = ''; }, 2500); } });
       return;
     }
-    // Valida: todo pedido corrente com valor/qtd precisa informar o prazo de entrega
-    // (alimenta pós-venda, timing de recompra e o cálculo de probabilidade da IA)
-    if (window._pedidoEntregaAtiva) {
-      const idxSemEntrega = marcas.findIndex((_, i) => {
-        const valorEl = document.getElementById('pedido-valor-' + i);
-        const qtdEl = document.getElementById('pedido-quantidade-' + i);
-        const temDado = (valorEl && valorParaFloat(valorEl.value) > 0) || (qtdEl && parseFloat(qtdEl.value) > 0);
-        const entrega = window._pedidoEntregas && window._pedidoEntregas[i];
-        return temDado && !entrega;
-      });
-      if (idxSemEntrega !== -1) {
-        document.getElementById('modal-pedido').classList.add('aberto');
-        toast('🚚 Informe o prazo de entrega antes de salvar');
-        _pedidoRevelarMarca(idxSemEntrega, false);
-        const bloco = document.getElementById('bloco-marca-' + idxSemEntrega);
-        if (bloco) bloco.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        const secao = bloco ? bloco.querySelector('.entrega-section-card') : null;
-        if (secao) {
-          secao.style.borderColor = '#FF4D6A';
-          secao.style.boxShadow = '0 0 0 2px rgba(255,77,106,.25)';
-          setTimeout(() => { secao.style.borderColor = ''; secao.style.boxShadow = ''; }, 2500);
-        }
-        return;
-      }
-    }
+    // Prazo de entrega é OPCIONAL: quem quiser preenche (alimenta pós-venda e a IA,
+    // mas não bloqueia o salvamento da venda).
     const pedidos = [];
     let valorTotal = 0;
     marcas.forEach((marca, i) => {
@@ -13070,7 +13086,7 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
         ${temMeta ? `<div style="font-size:10px;color:var(--texto3);margin-top:4px;">🔒 Definida pela meta — não editável</div>` : ''}
       </div>
       ${_isRetroativo ? '' : `<div class="entrega-section-card" style="background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.18);border-radius:10px;padding:10px 12px;margin:10px 0 0;">
-        <div style="font-size:11px;font-weight:700;color:#38BDF8;margin-bottom:7px;font-family:'DM Sans',sans-serif;">🚚 Prazo de entrega do pedido no cliente <span style="color:#FF4D6A;">*</span> <span style="font-weight:600;color:var(--texto3);">obrigatório</span></div>
+        <div style="font-size:11px;font-weight:700;color:#38BDF8;margin-bottom:7px;font-family:'DM Sans',sans-serif;">🚚 Prazo de entrega do pedido no cliente <span style="font-weight:600;color:var(--texto3);">(opcional)</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;">
           ${[3,7,15,20,30,45,60,75,90,120].map(d => `<button type="button" id="entrega-btn-${i}-${d}" onclick="_setEntregaDias(${i},${d})" style="padding:5px 9px;border-radius:7px;border:1px solid var(--borda);background:var(--bg2);color:var(--texto2);font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;">${d}d</button>`).join('')}
         </div>
@@ -13506,7 +13522,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('cli
 
 // ===== MOTIVOS PERSONALIZADOS + DRAG AND DROP =====
 
-const MOTIVOS_DEFAULT_ORDER = ['fechou_pedido','estoque_alto','comprou_concorrente','mercado_parado','prazo_pagamento','aguardando_proposta','aguardando_giro','aguarda_colecao','nao_vai_comprar','inadimplente','fechado'];
+const MOTIVOS_DEFAULT_ORDER = ['fechou_pedido','estoque_alto','comprou_concorrente','mercado_parado','prazo_pagamento','aguardando_proposta','mostruario_avaliacao','aguardando_giro','aguarda_colecao','nao_vai_comprar','inadimplente','fechado'];
 
 function getMotivosOrdem() {
   const key = 'cv_motivos_ordem_' + (usuarioAtual?.email || '');

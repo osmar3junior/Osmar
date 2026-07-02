@@ -818,6 +818,18 @@ if ('serviceWorker' in navigator) {
       <div style="color:var(--verde);font-size:20px;">›</div>
     </button>
 
+    <!-- BOTÃO ROTA MANUAL DA SEMANA -->
+    <button onclick="abrirRotaManual()" style="width:100%;background:linear-gradient(135deg,#0B1626,#14263E);border:1.5px solid rgba(56,189,248,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(56,189,248,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">✋</div>
+        <div style="text-align:left;">
+          <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Rota manual da semana</div>
+          <div style="font-size:11px;color:var(--texto2);">Você escolhe os clientes, o app confere se cabe no dia</div>
+        </div>
+      </div>
+      <div style="color:#7DD3FC;font-size:20px;">›</div>
+    </button>
+
     <!-- BOTÃO OPORTUNIDADES AGORA -->
     <button onclick="abrirOportunidades()" style="width:100%;background:linear-gradient(135deg,#1a1200,#2a1f00);border:1.5px solid rgba(255,192,67,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:12px;">
@@ -1443,6 +1455,40 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="config-secao">
+      <div class="config-secao-titulo">🕒 Meu dia de visitas</div>
+      <div class="config-secao-sub">Diga quanto tempo você fica, em média, dentro de cada cliente — por marca. É com isso que a <strong>Rota Manual da Semana</strong> calcula se o seu dia de visitas cabe na jornada e a que horas você termina.</div>
+      <div id="cfg-tempo-visita-lista"></div>
+      <div style="font-size:11.5px;color:#7DD3FC;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:9px 11px;margin:2px 0 16px;line-height:1.45;">💡 Cliente com mais de uma marca? Na hora de montar a rota você marca o que pretende vender e o app <b>soma os tempos</b>.</div>
+      <div style="font-size:13px;font-weight:700;color:var(--texto);margin-bottom:8px;font-family:'DM Sans',sans-serif;">🌅 Jornada de visitas</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <div style="flex:1;">
+          <label style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Início</label>
+          <input type="time" class="campo-input" id="cfg-jornada-ini" value="08:00" onchange="salvarMeuDiaCfg()">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Fim</label>
+          <input type="time" class="campo-input" id="cfg-jornada-fim" value="18:00" onchange="salvarMeuDiaCfg()">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:13px;color:var(--texto);">Visito aos sábados</span>
+        <button id="cfg-sab-toggle" onclick="toggleSabadoCfg()" style="width:48px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;background:#333;">
+          <span id="cfg-sab-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#888;transition:left .2s,background .2s;"></span>
+        </button>
+      </div>
+      <div id="cfg-sab-horarios" style="display:none;gap:8px;margin-bottom:4px;">
+        <div style="flex:1;">
+          <label style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Início (sáb)</label>
+          <input type="time" class="campo-input" id="cfg-sab-ini" value="08:00" onchange="salvarMeuDiaCfg()">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Fim (sáb)</label>
+          <input type="time" class="campo-input" id="cfg-sab-fim" value="12:00" onchange="salvarMeuDiaCfg()">
+        </div>
+      </div>
+    </div>
+
+    <div class="config-secao">
       <div class="config-secao-titulo">🎯 Metas por marca</div>
       <div class="config-secao-sub">Cadastre a meta de cada marca que você representa. O app calcula automaticamente a tendência de fechamento com base nas suas vendas registradas.</div>
       <div id="metas-config-lista"></div>
@@ -2025,6 +2071,60 @@ if ('serviceWorker' in navigator) {
         <span id="maps-label">Iniciar no Google Maps</span>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL ROTA MANUAL DA SEMANA — passo 1: escolher clientes -->
+<div class="modal-overlay" id="modal-rota-manual">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">✋ Rota manual da semana</div>
+      <button onclick="fecharModal('modal-rota-manual')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div class="modal-sub" style="margin-bottom:12px;">Marque o dia, busque e toque nos clientes. A nota de 0 a 10 mostra se vale a visita nesta semana.</div>
+
+    <div id="rm-dias-chips" style="display:flex;gap:4px;margin-bottom:4px;"></div>
+    <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-bottom:10px;">Tocar no cliente adiciona no dia marcado</div>
+
+    <input type="text" class="campo-input" id="rm-busca" placeholder="🔎 Nome do cliente ou da loja..." oninput="_rmBusca=this.value;_rmExpandido=null;renderizarListaRM();" style="margin-bottom:8px;">
+    <div id="rm-cidades" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+
+    <div id="rm-lista"></div>
+
+    <div style="position:sticky;bottom:-12px;background:var(--bg2);padding:10px 0 12px;border-top:1px solid var(--borda);margin-top:8px;">
+      <div id="rm-footer-resumo" style="font-size:12px;color:var(--texto2);text-align:center;margin-bottom:8px;"></div>
+      <button id="rm-btn-semana" onclick="abrirSemanaManual()" style="width:100%;background:linear-gradient(135deg,#38BDF8,#0284C7);border:none;border-radius:12px;padding:13px;color:#04202E;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">📅 Ver minha semana</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ROTA MANUAL DA SEMANA — passo 2: minha semana -->
+<div class="modal-overlay" id="modal-semana-manual">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onclick="fecharModal('modal-semana-manual');setTimeout(()=>abrirRotaManual(),150)" title="Voltar para escolher clientes" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
+        <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">📅 Minha semana</div>
+      </div>
+      <button onclick="fecharModal('modal-semana-manual')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div class="modal-sub" id="sm-sub" style="margin-bottom:12px;"></div>
+
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <button onclick="ordenarSemanaRM('potencial')" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:9px 4px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;">🏆 Por potencial</button>
+      <button onclick="ordenarSemanaRM('logistica')" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:9px 4px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;">🛣️ Por logística</button>
+    </div>
+
+    <div id="sm-dias"></div>
+
+    <button onclick="ajeitarSemanaRM()" style="width:100%;background:linear-gradient(135deg,var(--roxo),#7C3AED);border:none;border-radius:12px;padding:13px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px;">🪄 Ajeitar minha semana</button>
+    <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin:6px 0 12px;">Redistribui o que não couber para o dia seguinte</div>
+
+    <button onclick="dispararRotaManualWpp()" style="width:100%;background:#25D366;border:none;border-radius:12px;padding:13px;color:#04231A;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="#04231A"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+      Disparar rota no meu WhatsApp
+    </button>
+    <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-top:6px;">Abre o WhatsApp com a semana pronta — horários, marcas e cidades</div>
   </div>
 </div>
 
@@ -7209,6 +7309,549 @@ function iniciarRotaNoGoogleMaps() {
   fecharModal('modal-rota-hoje');
 }
 
+// ===== ROTA MANUAL DA SEMANA =====
+// O rep escolhe os clientes do jeito dele (por dia, cidade ou busca), marca as
+// marcas que pretende vender e o app critica se cada dia cabe na jornada.
+const RM_DIAS  = ['seg','ter','qua','qui','sex','sab'];
+const RM_NOMES = { seg:'Segunda', ter:'Terça', qua:'Quarta', qui:'Quinta', sex:'Sexta', sab:'Sábado' };
+const RM_ABREV = { seg:'Seg', ter:'Ter', qua:'Qua', qui:'Qui', sex:'Sex', sab:'Sáb' };
+
+let _rmDia = 'seg';
+let _rmCidade = null;          // null = todas
+let _rmBusca = '';
+let _rmExpandido = null;       // id do cliente com o cartão aberto
+let _rmMarcasSel = {};         // { marca: true } do cartão aberto
+let _rmMarcasExp = [];         // marcas do cliente expandido (p/ onclick por índice)
+let _rmClientes = [];
+let _rmCidadesLista = [];
+let _rmMaxPot = 0;             // maior potencial da carteira (normaliza a nota)
+let _smExpandido = null;       // dia aberto na tela da semana
+
+function getRotaManual() {
+  const cfg = getConfig();
+  const rm = cfg.rotaManual || { dias: {} };
+  if (!rm.dias) rm.dias = {};
+  RM_DIAS.forEach(d => { if (!Array.isArray(rm.dias[d])) rm.dias[d] = []; });
+  return rm;
+}
+function salvarRotaManual(rm) { const cfg = getConfig(); cfg.rotaManual = rm; salvarConfigData(cfg); }
+
+function _fmtMinRM(m) {
+  m = Math.round(m);
+  if (m < 60) return m + 'min';
+  const h = Math.floor(m / 60), r = m % 60;
+  return r ? h + 'h' + String(r).padStart(2, '0') : h + 'h';
+}
+function _hhmmParaMin(s) { const p = (s || '').split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); }
+function _minParaHHMM(m) { m = Math.round(m) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+function _normRM(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+function tempoVisitaMarca(marca) {
+  const cfg = getConfig();
+  const t = (cfg.tempoVisitaMarca || {})[marca];
+  return t || cfg.tempoVisitaPadrao || 30;
+}
+
+// Nota 0–10: maturação do retorno (60%) + potencial em relação à carteira (40%)
+function notaClienteRM(c) {
+  const diff = getDiffDiasCliente(c);
+  let matur;
+  if (diff === null) matur = (c.historico && c.historico.length) ? .45 : .35;
+  else if (diff <= 0)  matur = 1;
+  else if (diff <= 2)  matur = .85;
+  else if (diff <= 5)  matur = .65;
+  else if (diff <= 10) matur = .45;
+  else matur = .25;
+  let pot = 0;
+  const potC = calcularPotencialCliente(c);
+  Object.values(potC).forEach(pv => { pot = Math.max(pot, pv.max || pv.avg || 0); });
+  const potNorm = _rmMaxPot > 0 ? Math.min(1, pot / _rmMaxPot) : 0;
+  return Math.max(0, Math.min(10, 10 * (0.6 * matur + 0.4 * potNorm)));
+}
+function _badgeNotaRM(nota) {
+  const [bg, cor] = nota >= 7 ? ['rgba(0,214,143,.15)', 'var(--verde)']
+    : nota >= 4 ? ['rgba(255,192,67,.15)', 'var(--amarelo)']
+    : ['rgba(255,255,255,.06)', 'var(--texto2)'];
+  return `<span style="width:36px;height:36px;border-radius:50%;background:${bg};color:${cor};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;font-family:'DM Sans',sans-serif;">${nota.toFixed(1).replace('.', ',')}</span>`;
+}
+
+// Em que dia este cliente já está? → { dia, item } ou null
+function _rmEntradaDo(id) {
+  const rm = getRotaManual();
+  for (const d of RM_DIAS) {
+    const item = rm.dias[d].find(x => x.id === id);
+    if (item) return { dia: d, item };
+  }
+  return null;
+}
+function _marcasVencidasDe(c) {
+  const metas = getConfig().metas || [];
+  const out = [];
+  (c.marcas || []).forEach(marca => {
+    const m = metas.find(x => x.marca === marca);
+    if (!m?.cicloIdeal) return;
+    let ult = null;
+    (c.historico || []).forEach(h => {
+      if (h.motivo !== 'fechou_pedido') return;
+      const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : (c.marcas || [])[0] === marca;
+      if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
+    });
+    const dias = ult ? Math.floor((new Date() - ult) / 86400000) : m.cicloIdeal + 1;
+    if (dias >= m.cicloIdeal) out.push(marca);
+  });
+  return out;
+}
+function _contextoMarcaRM(c, marca) {
+  let ult = null;
+  (c.historico || []).forEach(h => {
+    if (h.motivo !== 'fechou_pedido') return;
+    const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : (c.marcas || [])[0] === marca;
+    if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
+  });
+  const pot = calcularPotencialCliente(c)[marca] || {};
+  const parts = [];
+  if (ult) parts.push(`última compra há ${Math.floor((new Date() - ult) / 86400000)}d`);
+  else parts.push('nunca comprou esta marca');
+  if (pot.avg > 0) parts.push(`média R$ ${fmtK(pot.avg)}`);
+  return parts.join(' · ');
+}
+
+function abrirRotaManual() {
+  _rmClientes = getClientes().filter(c => !c.statusArquivo);
+  _rmMaxPot = 0;
+  _rmClientes.forEach(c => {
+    const potC = calcularPotencialCliente(c);
+    Object.values(potC).forEach(pv => { _rmMaxPot = Math.max(_rmMaxPot, pv.max || pv.avg || 0); });
+  });
+  _rmBusca = ''; _rmExpandido = null;
+  const inp = document.getElementById('rm-busca'); if (inp) inp.value = '';
+  renderizarDiasRM();
+  renderizarCidadesRM();
+  renderizarListaRM();
+  atualizarFooterRM();
+  document.getElementById('modal-rota-manual').classList.add('aberto');
+}
+
+function renderizarDiasRM() {
+  const cont = document.getElementById('rm-dias-chips'); if (!cont) return;
+  const rm = getRotaManual(), cfg = getConfig();
+  cont.innerHTML = RM_DIAS.map(d => {
+    const n = rm.dias[d].length;
+    const ativo = d === _rmDia;
+    const dim = d === 'sab' && !cfg.sabAtivo && !n;
+    return `<button onclick="selecionarDiaRM('${d}')" style="flex:1;padding:7px 2px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;${ativo ? 'background:rgba(56,189,248,.18);border:1.5px solid rgba(56,189,248,.6);color:#7DD3FC;' : 'background:var(--bg3);border:1px solid var(--borda);color:var(--texto2);'}${dim ? 'opacity:.45;' : ''}">${RM_ABREV[d]}<span style="display:block;font-size:10px;${n ? 'color:var(--verde);' : 'opacity:.4;'}">${n || '·'}</span></button>`;
+  }).join('');
+}
+function selecionarDiaRM(d) {
+  if (d === 'sab' && !getConfig().sabAtivo) toast('💡 Sábado está desativado nas Configurações — dá pra usar mesmo assim');
+  _rmDia = d; _rmExpandido = null;
+  renderizarDiasRM(); renderizarListaRM(); atualizarFooterRM();
+}
+
+function renderizarCidadesRM() {
+  const cont = document.getElementById('rm-cidades'); if (!cont) return;
+  const contagem = {};
+  _rmClientes.forEach(c => { const k = (c.cidade || '').trim() || 'Sem cidade'; contagem[k] = (contagem[k] || 0) + 1; });
+  _rmCidadesLista = Object.keys(contagem).sort((a, b) => contagem[b] - contagem[a]);
+  const chip = (label, n, ativo, click) => `<button onclick="${click}" style="padding:6px 12px;border-radius:20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;${ativo ? 'background:var(--verde);border:1.5px solid var(--verde);color:#04231A;' : 'background:transparent;border:1px solid var(--borda);color:var(--texto2);'}">${label}${n != null ? ` <span style="opacity:.7;">${n}</span>` : ''}</button>`;
+  cont.innerHTML = chip('Todas', _rmClientes.length, _rmCidade === null, 'selecionarCidadeRM(-1)')
+    + _rmCidadesLista.map((cid, i) => chip(esc(cid), contagem[cid], _rmCidade === cid, `selecionarCidadeRM(${i})`)).join('');
+}
+function selecionarCidadeRM(i) {
+  _rmCidade = i < 0 ? null : _rmCidadesLista[i];
+  _rmExpandido = null;
+  renderizarCidadesRM(); renderizarListaRM();
+}
+
+function renderizarListaRM() {
+  const cont = document.getElementById('rm-lista'); if (!cont) return;
+  const busca = _normRM(_rmBusca);
+  let lista = _rmClientes.filter(c => !_rmCidade || ((c.cidade || '').trim() || 'Sem cidade') === _rmCidade);
+  if (busca) lista = lista.filter(c => _normRM(c.nome).includes(busca) || _normRM(c.loja).includes(busca));
+  const rank = lista.map(c => ({ c, nota: notaClienteRM(c) })).sort((a, b) => b.nota - a.nota);
+  if (!rank.length) {
+    cont.innerHTML = `<div style="text-align:center;padding:28px 16px;color:var(--texto3);font-size:13px;">Nenhum cliente encontrado${_rmBusca ? ' para "' + esc(_rmBusca) + '"' : ''}.</div>`;
+    return;
+  }
+  const LIMITE = 60;
+  cont.innerHTML = rank.slice(0, LIMITE).map(({ c, nota }) => {
+    const exist = _rmEntradaDo(c.id);
+    const aberto = _rmExpandido === c.id;
+    const sub = `${esc(c.loja || '')}${c.cidade ? ' · ' + esc(c.cidade) : ''}${c.tipo === 'prospect' ? ' · <span style="color:var(--amarelo);">prospecção</span>' : ''}`;
+    const naRota = exist ? `<div style="font-size:10.5px;color:var(--verde);font-weight:600;margin-top:2px;">✓ na rota de ${RM_ABREV[exist.dia]} · ${_fmtMinRM(exist.item.tempo || 30)}</div>` : '';
+    const icone = exist
+      ? '<span style="width:26px;height:26px;border-radius:50%;background:var(--verde);display:flex;align-items:center;justify-content:center;color:#04231A;font-size:14px;font-weight:800;flex-shrink:0;">✓</span>'
+      : '<span style="width:26px;height:26px;border-radius:50%;border:2px solid var(--texto3);display:flex;align-items:center;justify-content:center;color:var(--texto3);font-size:16px;flex-shrink:0;">+</span>';
+    return `<div onclick="expandirClienteRM('${c.id}')" style="border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer;${aberto ? 'border:1.5px solid rgba(56,189,248,.55);background:rgba(56,189,248,.05);' : 'border:1px solid var(--borda);background:var(--bg3);'}">
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${_badgeNotaRM(nota)}
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13.5px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Sans',sans-serif;">${esc(c.nome)}</div>
+          <div style="font-size:11px;color:var(--texto2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sub}</div>
+          ${naRota}
+        </div>
+        ${aberto ? '<span style="color:var(--texto3);font-size:14px;flex-shrink:0;">▴</span>' : icone}
+      </div>
+      ${aberto ? _cardExpandidoRM(c) : ''}
+    </div>`;
+  }).join('') + (rank.length > LIMITE ? `<div style="text-align:center;font-size:11px;color:var(--texto3);padding:8px;">Mostrando ${LIMITE} de ${rank.length} — refine a busca ou escolha uma cidade.</div>` : '');
+}
+
+function expandirClienteRM(id) {
+  if (_rmExpandido === id) { _rmExpandido = null; renderizarListaRM(); return; }
+  _rmExpandido = id;
+  _rmMarcasSel = {};
+  const c = _rmClientes.find(x => x.id === id);
+  const exist = _rmEntradaDo(id);
+  if (exist) {
+    (exist.item.marcas || []).forEach(m => _rmMarcasSel[m] = true);
+  } else if (c) {
+    const vencidas = _marcasVencidasDe(c);
+    if (vencidas.length) vencidas.forEach(m => _rmMarcasSel[m] = true);
+    else (c.marcas || []).forEach(m => _rmMarcasSel[m] = true);
+  }
+  renderizarListaRM();
+}
+
+function _tempoSelecionadoRM() {
+  const marcas = Object.keys(_rmMarcasSel).filter(m => _rmMarcasSel[m]);
+  if (!marcas.length) return getConfig().tempoVisitaPadrao || 30;
+  return marcas.reduce((s, m) => s + tempoVisitaMarca(m), 0);
+}
+
+function _cardExpandidoRM(c) {
+  const exist = _rmEntradaDo(c.id);
+  _rmMarcasExp = (c.marcas || []).filter(m => m && m.trim());
+  let marcasHtml;
+  if (!_rmMarcasExp.length) {
+    marcasHtml = `<div style="font-size:11.5px;color:var(--texto3);margin:10px 0 8px;">Sem marca cadastrada neste cliente — reservo o tempo padrão de ${_fmtMinRM(getConfig().tempoVisitaPadrao || 30)}.</div>`;
+  } else {
+    marcasHtml = `<div style="font-size:11px;color:var(--texto2);margin:10px 0 6px;">O que você pretende vender nessa visita?</div>`
+      + _rmMarcasExp.map((m, i) => {
+        const sel = !!_rmMarcasSel[m];
+        return `<div onclick="event.stopPropagation();toggleMarcaRM(${i})" style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-radius:10px;padding:8px 10px;margin-bottom:6px;cursor:pointer;${sel ? 'background:rgba(56,189,248,.12);border:1.5px solid rgba(56,189,248,.45);' : 'background:var(--bg2);border:1px solid var(--borda);'}">
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:${sel ? '#7DD3FC' : 'var(--texto)'};font-family:'DM Sans',sans-serif;">${esc(m)}</div>
+            <div style="font-size:10.5px;color:var(--texto3);">${_contextoMarcaRM(c, m)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <span style="font-size:12px;font-weight:700;color:${sel ? '#7DD3FC' : 'var(--texto3)'};">${_fmtMinRM(tempoVisitaMarca(m))}</span>
+            <span style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;${sel ? 'background:#38BDF8;color:#04202E;font-weight:800;' : 'border:2px solid var(--texto3);'}">${sel ? '✓' : ''}</span>
+          </div>
+        </div>`;
+      }).join('');
+  }
+  const btnPrincipal = exist
+    ? (exist.dia === _rmDia ? '💾 Atualizar visita' : `Mover para ${RM_NOMES[_rmDia].toLowerCase()}`)
+    : `Adicionar na ${RM_NOMES[_rmDia].toLowerCase()}`;
+  return `${marcasHtml}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0;">
+      <span style="font-size:12px;color:var(--texto2);">Tempo previsto da visita</span>
+      <span style="font-size:15px;font-weight:800;color:var(--texto);font-family:'DM Sans',sans-serif;">${_fmtMinRM(_tempoSelecionadoRM())}</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      ${exist ? `<button onclick="event.stopPropagation();removerClienteRM('${c.id}')" style="flex:1;background:rgba(255,77,106,.1);border:1.5px solid rgba(255,77,106,.4);border-radius:10px;padding:10px;color:var(--vermelho);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Remover</button>` : ''}
+      <button onclick="event.stopPropagation();adicionarClienteRM('${c.id}')" style="flex:2;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:10px;padding:10px;color:#04231A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">${btnPrincipal}</button>
+    </div>`;
+}
+
+function toggleMarcaRM(i) {
+  const m = _rmMarcasExp[i];
+  if (m == null) return;
+  _rmMarcasSel[m] = !_rmMarcasSel[m];
+  renderizarListaRM();
+}
+
+function adicionarClienteRM(id) {
+  const c = _rmClientes.find(x => x.id === id);
+  if (!c) return;
+  const marcas = Object.keys(_rmMarcasSel).filter(m => _rmMarcasSel[m]);
+  const tempo = _tempoSelecionadoRM();
+  const rm = getRotaManual();
+  RM_DIAS.forEach(d => rm.dias[d] = rm.dias[d].filter(x => x.id !== id)); // um cliente só entra em um dia
+  rm.dias[_rmDia].push({ id, marcas, tempo });
+  salvarRotaManual(rm);
+  _rmExpandido = null;
+  toast(`✅ ${c.nome} na ${RM_NOMES[_rmDia].toLowerCase()} · ${_fmtMinRM(tempo)}`);
+  renderizarDiasRM(); renderizarListaRM(); atualizarFooterRM();
+}
+
+function _removerRMCore(id) {
+  const rm = getRotaManual();
+  RM_DIAS.forEach(d => rm.dias[d] = rm.dias[d].filter(x => x.id !== id));
+  salvarRotaManual(rm);
+}
+function removerClienteRM(id) {
+  _removerRMCore(id);
+  _rmExpandido = null;
+  toast('Cliente removido da rota');
+  renderizarDiasRM(); renderizarListaRM(); atualizarFooterRM();
+}
+
+function atualizarFooterRM() {
+  const resumo = document.getElementById('rm-footer-resumo');
+  const btn = document.getElementById('rm-btn-semana');
+  if (!resumo || !btn) return;
+  const rm = getRotaManual();
+  const items = rm.dias[_rmDia];
+  const tempo = items.reduce((s, x) => s + (x.tempo || 30), 0);
+  const total = RM_DIAS.reduce((s, d) => s + rm.dias[d].length, 0);
+  resumo.innerHTML = items.length
+    ? `<b style="color:var(--texto);">${RM_NOMES[_rmDia]}</b> até agora · ${items.length} cliente${items.length > 1 ? 's' : ''} · ~${_fmtMinRM(tempo)} + estrada`
+    : `Nenhum cliente na ${RM_NOMES[_rmDia].toLowerCase()} ainda`;
+  btn.textContent = `📅 Ver minha semana${total ? ` (${total})` : ''}`;
+}
+
+// ---- Passo 2: minha semana ----
+function _calcDiaRM(dia, rm) {
+  rm = rm || getRotaManual();
+  const cfg = getConfig();
+  const map = {}; getClientes().forEach(c => map[c.id] = c);
+  const items = rm.dias[dia].map(it => ({ it, c: map[it.id] })).filter(x => x.c && !x.c._del);
+  const tempoVis = items.reduce((s, x) => s + (x.it.tempo || 30), 0);
+  let dist = 0, prev = null, semGps = 0;
+  items.forEach(x => {
+    const c = x.c;
+    if (c.lat && c.lng) { if (prev) dist += calcularDistancia(+prev.lat, +prev.lng, +c.lat, +c.lng); prev = c; }
+    else semGps++;
+  });
+  const desloc = Math.round((dist / 40) * 60); // média de 40 km/h na estrada
+  const tempoTotal = tempoVis + desloc;
+  const sab = dia === 'sab';
+  const ini = _hhmmParaMin(sab ? (cfg.sabIni || '08:00') : (cfg.jornadaIni || '08:00'));
+  const fim = _hhmmParaMin(sab ? (cfg.sabFim || '12:00') : (cfg.jornadaFim || '18:00'));
+  return { items, tempoVis, dist, desloc, tempoTotal, ini, fim, jornadaMin: Math.max(0, fim - ini), semGps, termina: ini + tempoTotal };
+}
+function _statusDiaRM(calc, dia, cfg) {
+  if (!calc.items.length) return null;
+  if (dia === 'sab' && !cfg.sabAtivo) return { cor: 'var(--amarelo)', txt: '⚠️ sábado desativado nas Configurações' };
+  if (calc.tempoTotal > calc.jornadaMin) return { cor: 'var(--vermelho)', txt: `🔴 dia apertado · passa ${_fmtMinRM(calc.tempoTotal - calc.jornadaMin)}` };
+  const folga = calc.jornadaMin - calc.tempoTotal;
+  if (folga >= 90) return { cor: '#7DD3FC', txt: `🔵 cabe mais · termina ~${_minParaHHMM(calc.termina)}` };
+  return { cor: 'var(--verde)', txt: `🟢 cabe no dia · termina ~${_minParaHHMM(calc.termina)}` };
+}
+
+function abrirSemanaManual() {
+  fecharModal('modal-rota-manual');
+  _smExpandido = null;
+  setTimeout(() => {
+    renderizarSemanaManual();
+    document.getElementById('modal-semana-manual').classList.add('aberto');
+  }, 150);
+}
+
+function renderizarSemanaManual() {
+  const cont = document.getElementById('sm-dias'); if (!cont) return;
+  const rm = getRotaManual(), cfg = getConfig();
+  const total = RM_DIAS.reduce((s, d) => s + rm.dias[d].length, 0);
+  let kmTotal = 0; const cidades = new Set();
+  cont.innerHTML = RM_DIAS.map(d => {
+    const calc = _calcDiaRM(d, rm);
+    if (!calc.items.length && d === 'sab' && !cfg.sabAtivo) return '';
+    kmTotal += calc.dist;
+    calc.items.forEach(x => cidades.add((x.c.cidade || '').trim() || '—'));
+    const st = _statusDiaRM(calc, d, cfg);
+    const aberto = _smExpandido === d;
+    const estourou = st && st.txt.indexOf('🔴') === 0;
+    let inner = '';
+    if (aberto && calc.items.length) {
+      const prox = RM_DIAS[(RM_DIAS.indexOf(d) + 1) % RM_DIAS.length];
+      inner = '<div style="margin-top:8px;">' + calc.items.map((x, i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--borda);">
+          <span style="width:22px;height:22px;background:var(--bg2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--texto2);flex-shrink:0;">${i + 1}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12.5px;font-weight:600;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(x.c.nome)}</div>
+            <div style="font-size:10.5px;color:var(--texto3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${x.it.marcas && x.it.marcas.length ? esc(x.it.marcas.join(' + ')) + ' · ' : ''}${_fmtMinRM(x.it.tempo || 30)}${!(x.c.lat && x.c.lng) ? ' · 📍 sem GPS' : ''}</div>
+          </div>
+          <button onclick="event.stopPropagation();moverClienteRM('${x.it.id}','${prox}')" title="Mover para ${RM_NOMES[prox]}" style="background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:5px 8px;color:var(--texto2);font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'DM Sans',sans-serif;">→ ${RM_ABREV[prox]}</button>
+          <button onclick="event.stopPropagation();removerClienteRMSemana('${x.it.id}')" style="background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.35);border-radius:8px;width:26px;height:26px;color:var(--vermelho);font-size:12px;cursor:pointer;flex-shrink:0;">✕</button>
+        </div>`).join('') + '</div>';
+    }
+    return `<div onclick="_smExpandido=_smExpandido==='${d}'?null:'${d}';renderizarSemanaManual();" style="background:var(--bg3);border:1px solid ${estourou ? 'rgba(255,77,106,.45)' : 'var(--borda)'};border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span style="font-size:14px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">${RM_NOMES[d]}</span>
+        <span style="font-size:11px;font-weight:600;color:${st ? st.cor : 'var(--texto3)'};text-align:right;">${st ? st.txt : 'sem clientes · toque para nada 😄'}</span>
+      </div>
+      ${calc.items.length ? `<div style="font-size:11px;color:var(--texto2);margin-top:3px;">${calc.items.length} cliente${calc.items.length > 1 ? 's' : ''} · ${calc.dist ? calc.dist.toFixed(0) + 'km' : 'sem trechos com GPS'} · ~${_fmtMinRM(calc.tempoTotal)} de rota${calc.semGps ? ` · ${calc.semGps} sem GPS` : ''}</div>` : ''}
+      ${inner}
+    </div>`;
+  }).join('');
+  document.getElementById('sm-sub').textContent = total
+    ? `${total} cliente${total > 1 ? 's' : ''} · ${cidades.size} cidade${cidades.size > 1 ? 's' : ''} · ${kmTotal.toFixed(0)}km na semana · toque no dia para ver os clientes`
+    : 'Nenhum cliente ainda — volte com ‹ e escolha os clientes da sua semana.';
+}
+
+function moverClienteRM(id, dia) {
+  const rm = getRotaManual();
+  let item = null;
+  RM_DIAS.forEach(d => {
+    const idx = rm.dias[d].findIndex(x => x.id === id);
+    if (idx !== -1) item = rm.dias[d].splice(idx, 1)[0];
+  });
+  if (!item) return;
+  rm.dias[dia].push(item);
+  salvarRotaManual(rm);
+  toast(`→ Movido para ${RM_NOMES[dia].toLowerCase()}`);
+  renderizarSemanaManual();
+}
+function removerClienteRMSemana(id) {
+  _removerRMCore(id);
+  toast('Cliente removido da rota');
+  renderizarSemanaManual();
+}
+
+function ordenarSemanaRM(modo) {
+  const rm = getRotaManual();
+  const map = {}; getClientes().forEach(c => map[c.id] = c);
+  RM_DIAS.forEach(d => {
+    if (rm.dias[d].length < 2) return;
+    const cs = rm.dias[d].map(it => ({ it, c: map[it.id] })).filter(x => x.c);
+    if (modo === 'potencial') {
+      cs.sort((a, b) => notaClienteRM(b.c) - notaClienteRM(a.c));
+    } else {
+      const comGps = cs.filter(x => x.c.lat && x.c.lng);
+      const semGps = cs.filter(x => !(x.c.lat && x.c.lng));
+      if (comGps.length > 1) {
+        const ordered = [comGps[0]];
+        const rest = comGps.slice(1);
+        let lat = +comGps[0].c.lat, lng = +comGps[0].c.lng;
+        while (rest.length) {
+          let bi = 0, bd = Infinity;
+          rest.forEach((x, i) => { const dd = calcularDistancia(lat, lng, +x.c.lat, +x.c.lng); if (dd < bd) { bd = dd; bi = i; } });
+          const p = rest.splice(bi, 1)[0];
+          ordered.push(p); lat = +p.c.lat; lng = +p.c.lng;
+        }
+        cs.length = 0; cs.push(...ordered, ...semGps);
+      }
+    }
+    rm.dias[d] = cs.map(x => x.it);
+  });
+  salvarRotaManual(rm);
+  renderizarSemanaManual();
+  toast(modo === 'potencial' ? '🏆 Dias ordenados por potencial' : '🛣️ Dias ordenados por logística');
+}
+
+function ajeitarSemanaRM() {
+  const rm = getRotaManual(), cfg = getConfig();
+  const map = {}; getClientes().forEach(c => map[c.id] = c);
+  const diasUteis = cfg.sabAtivo ? RM_DIAS : RM_DIAS.slice(0, 5);
+  let movidos = 0;
+  for (let i = 0; i < diasUteis.length - 1; i++) {
+    const d = diasUteis[i];
+    let calc = _calcDiaRM(d, rm);
+    let guarda = 30; // trava de segurança
+    while (calc.tempoTotal > calc.jornadaMin && rm.dias[d].length > 1 && guarda-- > 0) {
+      // move o cliente de menor nota para o dia seguinte
+      let wi = 0, wn = Infinity;
+      rm.dias[d].forEach((it, idx) => {
+        const c = map[it.id];
+        const n = c ? notaClienteRM(c) : 0;
+        if (n < wn) { wn = n; wi = idx; }
+      });
+      const mv = rm.dias[d].splice(wi, 1)[0];
+      rm.dias[diasUteis[i + 1]].unshift(mv);
+      movidos++;
+      calc = _calcDiaRM(d, rm);
+    }
+  }
+  salvarRotaManual(rm);
+  renderizarSemanaManual();
+  toast(movidos ? `🪄 Movi ${movidos} cliente${movidos > 1 ? 's' : ''} para caber na jornada` : '👌 Sua semana já cabe nos dias');
+}
+
+function dispararRotaManualWpp() {
+  const rm = getRotaManual();
+  const total = RM_DIAS.reduce((s, d) => s + rm.dias[d].length, 0);
+  if (!total) { toast('Monte sua semana antes de disparar 😉'); return; }
+  const hoje = new Date(), dow = hoje.getDay();
+  const delta = dow === 0 ? 1 : dow === 6 ? 2 : 1 - dow; // segunda-feira da semana
+  const seg = new Date(hoje); seg.setDate(hoje.getDate() + delta);
+  const fmtD = dt => dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  let msg = `✋ *ROTA MANUAL DA SEMANA*\n_Semana de ${fmtD(seg)} · Gerado pelo Carteira Viva_\n`;
+  RM_DIAS.forEach((d, di) => {
+    const calc = _calcDiaRM(d, rm);
+    if (!calc.items.length) return;
+    const dataDia = new Date(seg); dataDia.setDate(seg.getDate() + di);
+    msg += `\n📍 *${RM_NOMES[d].toUpperCase()} · ${fmtD(dataDia)}* — ${calc.items.length} visita${calc.items.length > 1 ? 's' : ''}${calc.dist ? ` · ${calc.dist.toFixed(0)}km` : ''}\n`;
+    let rel = calc.ini, prev = null;
+    calc.items.forEach((x, i) => {
+      const c = x.c, it = x.it;
+      if (c.lat && c.lng && prev) rel += Math.round((calcularDistancia(+prev.lat, +prev.lng, +c.lat, +c.lng) / 40) * 60);
+      msg += `${i + 1}. 🕗 ~${_minParaHHMM(rel)} · *${c.nome}*${c.loja ? ` — ${c.loja}` : ''}${c.cidade ? ` (${c.cidade})` : ''}\n`;
+      if (it.marcas && it.marcas.length) msg += `   🏷️ ${it.marcas.join(' + ')} · ~${_fmtMinRM(it.tempo || 30)}\n`;
+      rel += (it.tempo || 30);
+      if (c.lat && c.lng) prev = c;
+    });
+    msg += `🏁 termina ~${_minParaHHMM(rel)}\n`;
+  });
+  msg += `\n_${total} cliente${total > 1 ? 's' : ''} na semana · Carteira Viva_`;
+  _wppAbrir(msg);
+}
+
+// ---- Configurações: Meu dia de visitas ----
+function _rowTempoCfg(label, val, fnDown, fnUp) {
+  const btn = 'width:30px;height:30px;border-radius:50%;border:1.5px solid var(--borda);background:var(--bg2);color:var(--texto);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+  return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--borda);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--bg3);">
+    <span style="font-size:13px;font-weight:600;color:var(--texto);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'DM Sans',sans-serif;">${label}</span>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <button type="button" onclick="${fnDown}" style="${btn}">−</button>
+      <span style="min-width:52px;text-align:center;font-size:14px;font-weight:800;color:var(--verde);font-family:'DM Sans',sans-serif;">${_fmtMinRM(val)}</span>
+      <button type="button" onclick="${fnUp}" style="${btn}">+</button>
+    </div>
+  </div>`;
+}
+function renderizarMeuDiaConfig() {
+  const cont = document.getElementById('cfg-tempo-visita-lista'); if (!cont) return;
+  const cfg = getConfig();
+  const marcas = (cfg.marcas || []).filter(m => m && m.trim());
+  const tv = cfg.tempoVisitaMarca || {};
+  let html = '';
+  if (!marcas.length) html += `<div style="font-size:12px;color:var(--texto3);margin-bottom:8px;">Cadastre suas marcas acima e cada uma ganha o seu tempo aqui. Por enquanto uso só o tempo padrão.</div>`;
+  html += marcas.map((m, i) => _rowTempoCfg('🏷️ ' + esc(m), tv[m] || 30, `ajustarTempoVisitaCfg(${i},-15)`, `ajustarTempoVisitaCfg(${i},15)`)).join('');
+  html += _rowTempoCfg('⏱️ Tempo padrão (sem marca)', cfg.tempoVisitaPadrao || 30, 'ajustarTempoPadraoCfg(-15)', 'ajustarTempoPadraoCfg(15)');
+  cont.innerHTML = html;
+  const ji = document.getElementById('cfg-jornada-ini'); if (ji) ji.value = cfg.jornadaIni || '08:00';
+  const jf = document.getElementById('cfg-jornada-fim'); if (jf) jf.value = cfg.jornadaFim || '18:00';
+  const si = document.getElementById('cfg-sab-ini'); if (si) si.value = cfg.sabIni || '08:00';
+  const sf = document.getElementById('cfg-sab-fim'); if (sf) sf.value = cfg.sabFim || '12:00';
+  const tg = document.getElementById('cfg-sab-toggle'), kn = document.getElementById('cfg-sab-knob'), hs = document.getElementById('cfg-sab-horarios');
+  if (tg && kn && hs) {
+    if (cfg.sabAtivo) { tg.style.background = 'var(--verde)'; kn.style.left = '25px'; kn.style.background = '#fff'; hs.style.display = 'flex'; }
+    else { tg.style.background = '#333'; kn.style.left = '3px'; kn.style.background = '#888'; hs.style.display = 'none'; }
+  }
+}
+function ajustarTempoVisitaCfg(i, delta) {
+  const cfg = getConfig();
+  const marcas = (cfg.marcas || []).filter(m => m && m.trim());
+  const marca = marcas[i]; if (!marca) return;
+  if (!cfg.tempoVisitaMarca) cfg.tempoVisitaMarca = {};
+  const atual = cfg.tempoVisitaMarca[marca] || 30;
+  cfg.tempoVisitaMarca[marca] = Math.max(15, Math.min(240, atual + delta));
+  salvarConfigData(cfg);
+  renderizarMeuDiaConfig();
+}
+function ajustarTempoPadraoCfg(delta) {
+  const cfg = getConfig();
+  cfg.tempoVisitaPadrao = Math.max(15, Math.min(240, (cfg.tempoVisitaPadrao || 30) + delta));
+  salvarConfigData(cfg);
+  renderizarMeuDiaConfig();
+}
+function salvarMeuDiaCfg() {
+  const cfg = getConfig();
+  cfg.jornadaIni = document.getElementById('cfg-jornada-ini')?.value || '08:00';
+  cfg.jornadaFim = document.getElementById('cfg-jornada-fim')?.value || '18:00';
+  cfg.sabIni = document.getElementById('cfg-sab-ini')?.value || '08:00';
+  cfg.sabFim = document.getElementById('cfg-sab-fim')?.value || '12:00';
+  salvarConfigData(cfg);
+  toast('🕒 Jornada salva!');
+}
+function toggleSabadoCfg() {
+  const cfg = getConfig();
+  cfg.sabAtivo = !cfg.sabAtivo;
+  salvarConfigData(cfg);
+  renderizarMeuDiaConfig();
+  toast(cfg.sabAtivo ? '✅ Sábado ativado na sua semana' : 'Sábado desativado');
+}
+
 // ===== NOTIFICAÇÕES DE ESQUECIDOS =====
 function solicitarPermissaoNotificacao() {
   if (!('Notification' in window)) return;
@@ -9687,6 +10330,7 @@ function carregarConfig() {
   renderizarSkuGrid(cfg);
   _renderSkuCustom();
   _renderMarcasGrid();
+  renderizarMeuDiaConfig();
   // Carrega prazo dos motivos custom
   const customs = getMotivosCustom();
   customs.forEach((label, i) => {
@@ -9797,6 +10441,7 @@ function excluirMarca(i) {
   salvarConfigData(cfg);
   _renderMarcasGrid();
   renderizarMetasConfig(cfg);
+  renderizarMeuDiaConfig();
   toast('Marca "' + nome + '" removida');
 }
 
@@ -9845,6 +10490,7 @@ function salvarMarcaUnica(i) {
   }
   _renderMarcasGrid();
   renderizarMetasConfig(getConfig());
+  renderizarMeuDiaConfig();
 }
 
 function salvarConfig() {

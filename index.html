@@ -830,6 +830,15 @@ if ('serviceWorker' in navigator) {
       <div style="color:#7DD3FC;font-size:20px;">›</div>
     </button>
 
+    <!-- BANNER JANELA DE COLEÇÃO (confecção/moda) -->
+    <button id="banner-colecao" onclick="abrirRotaManual()" style="display:none;width:100%;background:linear-gradient(135deg,#1a1200,#2a1f00);border:1.5px solid rgba(255,192,67,.3);border-radius:14px;padding:14px 16px;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;gap:10px;">
+      <div style="text-align:left;min-width:0;">
+        <div id="banner-colecao-titulo" style="font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:700;color:var(--texto);"></div>
+        <div id="banner-colecao-sub" style="font-size:11px;color:var(--texto2);margin-top:2px;line-height:1.4;"></div>
+      </div>
+      <div style="color:#FFC043;font-size:20px;flex-shrink:0;">›</div>
+    </button>
+
     <!-- BOTÃO OPORTUNIDADES AGORA -->
     <button onclick="abrirOportunidades()" style="width:100%;background:linear-gradient(135deg,#1a1200,#2a1f00);border:1.5px solid rgba(255,192,67,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:12px;">
@@ -1486,6 +1495,13 @@ if ('serviceWorker' in navigator) {
           <input type="time" class="campo-input" id="cfg-sab-fim" value="12:00" onchange="salvarMeuDiaCfg()">
         </div>
       </div>
+    </div>
+
+    <div class="config-secao">
+      <div class="config-secao-titulo">🧥 Coleções — confecção</div>
+      <div class="config-secao-sub">Para clientes do segmento <strong>Moda e Vestuário</strong>: o app sabe qual coleção está com a janela de venda aberta, avisa no painel quem ainda não fez o pedido dela e prioriza esses clientes na Rota Manual. Datas padrão do mercado — ajuste se a sua marca antecipa ou atrasa.</div>
+      <div id="cfg-colecoes-lista"></div>
+      <button type="button" onclick="restaurarColecoesCfg()" style="width:100%;background:transparent;border:1px dashed var(--borda);border-radius:10px;padding:10px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">↺ Restaurar padrão do mercado</button>
     </div>
 
     <div class="config-secao">
@@ -6074,6 +6090,7 @@ function atualizarDashboard() {
   atualizarSemaforoDash();
   atualizarBadgeDespesas();
   atualizarBadgeProspectos();
+  atualizarBannerColecao();
   const clientes = getClientesAtivos();
   const cfg = getConfig();
   document.getElementById('num-total').textContent = clientes.length;
@@ -6551,6 +6568,117 @@ function _nearestNeighbor(lista, latIni, lngIni) {
   return out;
 }
 
+// Data-base do giro de uma marca num contato: a ÚLTIMA entrega programada
+// (pedido programado) ou a entrega única prevista — senão, a data da venda.
+// Regra do Osmar: a recompra só reabre depois da última entrega + giro normal.
+function _dataGiroPedido(h, p) {
+  let d = new Date(h.data);
+  let ult = null;
+  if (p) {
+    if (p.entregas && p.entregas.length) ult = p.entregas.map(e => e.data).filter(Boolean).sort().pop();
+    else if (p.dataEntregaPrevista) ult = p.dataEntregaPrevista;
+  }
+  if (ult) {
+    const de = new Date(ult + 'T00:00:00');
+    if (de > d) d = de;
+  }
+  return d;
+}
+// Última entrega programada FUTURA do cliente (qualquer marca) — cliente "coberto"
+function _programadoAte(c) {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  let max = null;
+  (c.historico || []).slice(0, 12).forEach(h => {
+    if (h.motivo !== 'fechou_pedido') return;
+    (h.pedidos || []).forEach(p => {
+      const ult = (p.entregas && p.entregas.length)
+        ? p.entregas.map(e => e.data).filter(Boolean).sort().pop()
+        : p.dataEntregaPrevista;
+      if (!ult) return;
+      const d = new Date(ult + 'T00:00:00');
+      if (d > hoje && (!max || d > max)) max = d;
+    });
+  });
+  return max;
+}
+
+// ===== COLEÇÕES — inteligência sazonal do segmento confecção (moda) =====
+// Janelas oficiais de venda (calendário do mercado, confirmado pelo Osmar):
+// Outono/Inverno 15/10→29/03 · Primavera/Verão 30/03→14/07 · Alto verão 15/07→14/10.
+// As três emendam e cobrem o ano — em qualquer data existe exatamente 1 aberta.
+const COLECOES_DEF = {
+  oi: { nome: 'Outono/Inverno',  curto: 'inverno',    emoji: '🧥', ini: '10-15', fim: '03-29' },
+  pv: { nome: 'Primavera/Verão', curto: 'verão',      emoji: '🌸', ini: '03-30', fim: '07-14' },
+  av: { nome: 'Alto verão',      curto: 'alto verão', emoji: '🔥', ini: '07-15', fim: '10-14' }
+};
+function getColecoesCfg() {
+  const salvas = getConfig().colecoes || {};
+  const out = {};
+  Object.keys(COLECOES_DEF).forEach(k => {
+    out[k] = Object.assign({}, COLECOES_DEF[k], salvas[k] || {});
+  });
+  return out;
+}
+function _mmddNum(s) { const p = (s || '').split('-'); return (+p[0]) * 100 + (+p[1]); }
+// Qual coleção está com a janela de venda aberta nesta data?
+function _colecaoDaData(dt) {
+  const cols = getColecoesCfg();
+  const md = (dt.getMonth() + 1) * 100 + dt.getDate();
+  for (const k of Object.keys(cols)) {
+    const c = cols[k];
+    const i = _mmddNum(c.ini), f = _mmddNum(c.fim);
+    const dentro = i <= f ? (md >= i && md <= f) : (md >= i || md <= f); // janela que vira o ano
+    if (!dentro) continue;
+    const ano = dt.getFullYear();
+    const anoIni = (i > f && md <= f) ? ano - 1 : ano;
+    const anoFim = (i > f && md >= i) ? ano + 1 : ano;
+    const pi = c.ini.split('-').map(Number), pf = c.fim.split('-').map(Number);
+    return {
+      key: k + '-' + anoFim, tipo: k, nome: c.nome, curto: c.curto, emoji: c.emoji,
+      ini: new Date(anoIni, pi[0] - 1, pi[1]),
+      fim: new Date(anoFim, pf[0] - 1, pf[1], 23, 59, 59)
+    };
+  }
+  return null;
+}
+function _colecaoAtual() { return _colecaoDaData(new Date()); }
+function _ehConfeccao(c) { return c.segmento === 'moda'; }
+function _temPedidoDaColecao(c, col) {
+  return (c.historico || []).some(h => {
+    if (h.motivo !== 'fechou_pedido') return false;
+    const d = new Date(h.data);
+    return d >= col.ini && d <= col.fim;
+  });
+}
+// Cliente de confecção ainda sem pedido da coleção aberta → alvo da cobrança.
+// retaFinal = últimas 3 semanas da janela (cobrança esquenta).
+function _pendenteColecao(c) {
+  if (!_ehConfeccao(c)) return null;
+  const col = _colecaoAtual();
+  if (!col || _temPedidoDaColecao(c, col)) return null;
+  const diasFim = Math.ceil((col.fim - new Date()) / 86400000);
+  return Object.assign({ diasFim, retaFinal: diasFim <= 21 }, col);
+}
+function atualizarBannerColecao() {
+  const el = document.getElementById('banner-colecao');
+  if (!el) return;
+  const col = _colecaoAtual();
+  const confec = getClientesAtivos().filter(_ehConfeccao);
+  if (!col || !confec.length) { el.style.display = 'none'; return; }
+  const pend = confec.filter(c => !_temPedidoDaColecao(c, col));
+  if (!pend.length) { el.style.display = 'none'; return; }
+  const diasFim = Math.ceil((col.fim - new Date()) / 86400000);
+  const reta = diasFim <= 21;
+  const fimTxt = col.fim.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  document.getElementById('banner-colecao-titulo').textContent =
+    `${col.emoji} Janela ${col.nome} aberta até ${fimTxt}`;
+  document.getElementById('banner-colecao-sub').textContent = reta
+    ? `⏳ Fecha em ${diasFim} dia${diasFim > 1 ? 's' : ''}! ${pend.length} cliente${pend.length > 1 ? 's' : ''} de moda ainda sem pedido da coleção`
+    : `${pend.length} cliente${pend.length > 1 ? 's' : ''} de moda ainda sem pedido da coleção — priorizados na rota`;
+  el.style.borderColor = reta ? 'rgba(255,77,106,.45)' : 'rgba(255,192,67,.3)';
+  el.style.display = 'flex';
+}
+
 function _scoreFoco(c) {
   const metas = (getConfig().metas || []);
   let score = 0, focoCount = 0;
@@ -6560,8 +6688,11 @@ function _scoreFoco(c) {
     let ult = null;
     (c.historico || []).forEach(h => {
       if (h.motivo !== 'fechou_pedido') return;
-      const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : (c.marcas||[])[0] === marca;
-      if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
+      const pm = h.pedidos ? h.pedidos.find(p => p.marca === marca) : null;
+      const tem = h.pedidos ? !!pm : (c.marcas||[])[0] === marca;
+      if (!tem) return;
+      const d = _dataGiroPedido(h, pm);
+      if (!ult || d > ult) ult = d;
     });
     const dias = ult ? Math.floor((new Date() - ult) / 86400000) : m.cicloIdeal + 1;
     if (dias >= m.cicloIdeal) {
@@ -6649,8 +6780,11 @@ function _dadosComerciais(c) {
     let ult = null;
     hist.forEach(h => {
       if (h.motivo !== 'fechou_pedido') return;
-      const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : (c.marcas||[])[0] === marca;
-      if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
+      const pm = h.pedidos ? h.pedidos.find(p => p.marca === marca) : null;
+      const tem = h.pedidos ? !!pm : (c.marcas||[])[0] === marca;
+      if (!tem) return;
+      const d = _dataGiroPedido(h, pm);
+      if (!ult || d > ult) ult = d;
     });
     const dias = ult ? Math.floor((hoje - ult) / 86400000) : null;
     const ciclo = meta?.cicloIdeal || 60;
@@ -7398,7 +7532,17 @@ function notaClienteRM(c) {
   const potC = calcularPotencialCliente(c);
   Object.values(potC).forEach(pv => { pot = Math.max(pot, pv.max || pv.avg || 0); });
   const potNorm = _rmMaxPot > 0 ? Math.min(1, pot / _rmMaxPot) : 0;
-  return Math.max(0, Math.min(10, 10 * (0.6 * matur + 0.4 * potNorm)));
+  const nota = Math.max(0, Math.min(10, 10 * (0.6 * matur + 0.4 * potNorm)));
+  // Cliente com entregas programadas ainda por vir = coberto, não pode comprar →
+  // nota trava no teto frio (3,4) por maior que seja o potencial. Nos 14 dias
+  // finais antes da última entrega ele volta a esquentar normal.
+  const prog = typeof _programadoAte === 'function' ? _programadoAte(c) : null;
+  if (prog && (prog - new Date()) / 86400000 > 14) return Math.min(nota, 3.4);
+  // Cobrança sazonal: confecção sem pedido da coleção aberta esquenta na rota
+  // (+1,5 durante a janela · +2,5 na reta final das últimas 3 semanas)
+  const pend = typeof _pendenteColecao === 'function' ? _pendenteColecao(c) : null;
+  if (pend) return Math.min(10, nota + (pend.retaFinal ? 2.5 : 1.5));
+  return nota;
 }
 function _badgeNotaRM(nota) {
   const [bg, cor] = nota >= 7 ? ['rgba(0,214,143,.15)', 'var(--verde)']
@@ -7425,8 +7569,11 @@ function _marcasVencidasDe(c) {
     let ult = null;
     (c.historico || []).forEach(h => {
       if (h.motivo !== 'fechou_pedido') return;
-      const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : (c.marcas || [])[0] === marca;
-      if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
+      const pm = h.pedidos ? h.pedidos.find(p => p.marca === marca) : null;
+      const tem = h.pedidos ? !!pm : (c.marcas || [])[0] === marca;
+      if (!tem) return;
+      const d = _dataGiroPedido(h, pm);
+      if (!ult || d > ult) ult = d;
     });
     const dias = ult ? Math.floor((new Date() - ult) / 86400000) : m.cicloIdeal + 1;
     if (dias >= m.cicloIdeal) out.push(marca);
@@ -7437,13 +7584,19 @@ function _contextoMarcaRM(c, marca) {
   let ult = null;
   (c.historico || []).forEach(h => {
     if (h.motivo !== 'fechou_pedido') return;
-    const tem = h.pedidos ? h.pedidos.some(p => p.marca === marca) : (c.marcas || [])[0] === marca;
-    if (tem && (!ult || new Date(h.data) > ult)) ult = new Date(h.data);
+    const pm = h.pedidos ? h.pedidos.find(p => p.marca === marca) : null;
+    const tem = h.pedidos ? !!pm : (c.marcas || [])[0] === marca;
+    if (!tem) return;
+    const d = _dataGiroPedido(h, pm);
+    if (!ult || d > ult) ult = d;
   });
   const pot = calcularPotencialCliente(c)[marca] || {};
   const parts = [];
-  if (ult) parts.push(`última compra há ${Math.floor((new Date() - ult) / 86400000)}d`);
-  else parts.push('nunca comprou esta marca');
+  if (ult) {
+    const diasDesde = Math.floor((new Date() - ult) / 86400000);
+    if (diasDesde < 0) parts.push(`📦 programado até ${ult.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`);
+    else parts.push(`última compra há ${diasDesde}d`);
+  } else parts.push('nunca comprou esta marca');
   if (pot.avg > 0) parts.push(`média R$ ${fmtK(pot.avg)}`);
   return parts.join(' · ');
 }
@@ -7509,7 +7662,11 @@ function renderizarListaRM() {
   cont.innerHTML = rank.slice(0, LIMITE).map(({ c, nota }) => {
     const exist = _rmEntradaDo(c.id);
     const aberto = _rmExpandido === c.id;
-    const sub = `${esc(c.loja || '')}${c.cidade ? ' · ' + esc(c.cidade) : ''}${c.tipo === 'prospect' ? ' · <span style="color:var(--amarelo);">prospecção</span>' : ''}`;
+    const progAte = _programadoAte(c);
+    const seloProg = progAte ? ` · <span style="color:#7DD3FC;font-weight:600;">📦 até ${progAte.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>` : '';
+    const pendCol = _pendenteColecao(c);
+    const seloCol = pendCol ? ` · <span style="color:var(--amarelo);font-weight:600;">${pendCol.emoji} sem ${pendCol.curto}${pendCol.retaFinal ? ' · fecha em ' + pendCol.diasFim + 'd' : ''}</span>` : '';
+    const sub = `${esc(c.loja || '')}${c.cidade ? ' · ' + esc(c.cidade) : ''}${c.tipo === 'prospect' ? ' · <span style="color:var(--amarelo);">prospecção</span>' : ''}${seloProg}${seloCol}`;
     const naRota = exist ? `<div style="font-size:10.5px;color:var(--verde);font-weight:600;margin-top:2px;">✓ na rota de ${RM_ABREV[exist.dia]} · ${_fmtMinRM(exist.item.tempo || 30)}${exist.item.hora ? ' · 🔒 ' + exist.item.hora : ''}</div>` : '';
     const icone = exist
       ? '<span style="width:26px;height:26px;border-radius:50%;background:var(--verde);display:flex;align-items:center;justify-content:center;color:#04231A;font-size:14px;font-weight:800;flex-shrink:0;">✓</span>'
@@ -8107,6 +8264,55 @@ function toggleSabadoCfg() {
   salvarConfigData(cfg);
   renderizarMeuDiaConfig();
   toast(cfg.sabAtivo ? '✅ Sábado ativado na sua semana' : 'Sábado desativado');
+}
+
+// ---- Configurações: janelas de coleção (confecção/moda) ----
+function renderizarColecoesConfig() {
+  const cont = document.getElementById('cfg-colecoes-lista'); if (!cont) return;
+  const cols = getColecoesCfg();
+  const fmt = s => { const p = (s || '').split('-'); return (p[1] || '').padStart(2, '0') + '/' + (p[0] || '').padStart(2, '0'); };
+  const inp = 'width:62px;text-align:center;background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:8px 4px;color:var(--texto);font-family:\'DM Sans\',sans-serif;font-size:12px;';
+  cont.innerHTML = Object.keys(cols).map(k => {
+    const c = cols[k];
+    return `<div style="display:flex;align-items:center;gap:7px;border:1px solid var(--borda);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--bg3);">
+      <span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--texto);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.emoji} ${c.nome}</span>
+      <input id="cfg-col-ini-${k}" value="${fmt(c.ini)}" placeholder="dd/mm" maxlength="5" inputmode="numeric" style="${inp}" onchange="salvarColecoesCfg()">
+      <span style="color:var(--texto3);font-size:11px;flex-shrink:0;">até</span>
+      <input id="cfg-col-fim-${k}" value="${fmt(c.fim)}" placeholder="dd/mm" maxlength="5" inputmode="numeric" style="${inp}" onchange="salvarColecoesCfg()">
+    </div>`;
+  }).join('');
+}
+function salvarColecoesCfg() {
+  const parse = v => {
+    const m = (v || '').trim().match(/^(\d{1,2})\s*[\/\-.]\s*(\d{1,2})$/);
+    if (!m) return null;
+    const d = +m[1], mo = +m[2];
+    if (d < 1 || d > 31 || mo < 1 || mo > 12) return null;
+    return String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  };
+  const novo = {};
+  let erro = false;
+  Object.keys(COLECOES_DEF).forEach(k => {
+    const i = parse(document.getElementById('cfg-col-ini-' + k)?.value);
+    const f = parse(document.getElementById('cfg-col-fim-' + k)?.value);
+    if (!i || !f) { erro = true; return; }
+    novo[k] = { ini: i, fim: f };
+  });
+  if (erro) { toast('Use o formato dd/mm — ex.: 15/10'); renderizarColecoesConfig(); return; }
+  const cfg = getConfig();
+  cfg.colecoes = novo;
+  salvarConfigData(cfg);
+  renderizarColecoesConfig();
+  atualizarBannerColecao();
+  toast('🧥 Janelas de coleção salvas!');
+}
+function restaurarColecoesCfg() {
+  const cfg = getConfig();
+  delete cfg.colecoes;
+  salvarConfigData(cfg);
+  renderizarColecoesConfig();
+  atualizarBannerColecao();
+  toast('↺ Janelas restauradas para o padrão do mercado');
 }
 
 // ===== NOTIFICAÇÕES DE ESQUECIDOS =====
@@ -10202,7 +10408,17 @@ function salvarContato() {
       const acompanhar   = (window._pedidoAcompanhar && window._pedidoAcompanhar[i]) || false;
       if (valor > 0 || qtd > 0) {
         const p = { marca, valor: valor > 0 ? valor : undefined, qtd: qtd > 0 ? qtd : undefined, unidade: unidade || undefined, canal: canal || undefined };
-        if (entregaInfo) {
+        const prog = typeof _progEntregasValidas === 'function' ? _progEntregasValidas(i) : [];
+        if (prog.length) {
+          // Pedido programado: N entregas com data e valor. A última entrega é a
+          // referência do giro (dataEntregaPrevista mantém compat com o resto do app).
+          p.entregas = prog.map(e => ({ data: e.data, valor: e.valor > 0 ? e.valor : undefined }));
+          p.dataEntregaPrevista = prog[prog.length - 1].data;
+          const _dU = new Date(p.dataEntregaPrevista + 'T00:00:00');
+          const _hj = new Date(); _hj.setHours(0, 0, 0, 0);
+          p.prazoEntregaDias = Math.max(0, Math.round((_dU - _hj) / 86400000));
+          if (acompanhar) p.acompanharEntrega = true;
+        } else if (entregaInfo) {
           if (typeof entregaInfo === 'object' && entregaInfo.iso) {
             p.prazoEntregaDias    = entregaInfo.dias;
             p.dataEntregaPrevista = entregaInfo.iso;
@@ -10588,6 +10804,7 @@ function carregarConfig() {
   _renderSkuCustom();
   _renderMarcasGrid();
   renderizarMeuDiaConfig();
+  renderizarColecoesConfig();
   // Carrega prazo dos motivos custom
   const customs = getMotivosCustom();
   customs.forEach((label, i) => {
@@ -11074,6 +11291,105 @@ function _mostrarConfirmacaoEntrega(idx, dataObj) {
   _habilitarAcompEntrega(idx);
 }
 
+// ===== PEDIDO PROGRAMADO (várias entregas com data e valor) =====
+function _progAtivar(i) {
+  window._pedidoEntregasProg = window._pedidoEntregasProg || [];
+  if (!window._pedidoEntregasProg[i] || !window._pedidoEntregasProg[i].length) {
+    window._pedidoEntregasProg[i] = [{ data: '', valor: 0 }, { data: '', valor: 0 }];
+    // Se já tinha escolhido uma entrega única, ela vira a 1ª parcela
+    const unica = window._pedidoEntregas && window._pedidoEntregas[i];
+    if (unica) {
+      let iso;
+      if (typeof unica === 'object' && unica.iso) iso = unica.iso;
+      else { const d = new Date(); d.setDate(d.getDate() + unica); iso = d.toISOString().slice(0, 10); }
+      window._pedidoEntregasProg[i][0].data = iso;
+    }
+  }
+  const abrir = document.getElementById(`prog-abrir-${i}`);
+  const wrap = document.getElementById(`prog-wrap-${i}`);
+  if (abrir) abrir.style.display = 'none';
+  if (wrap) wrap.style.display = 'block';
+  _progRender(i);
+  _progSync(i);
+}
+function _progAddRow(i) {
+  window._pedidoEntregasProg[i].push({ data: '', valor: 0 });
+  _progRender(i);
+}
+function _progRemRow(i, j) {
+  window._pedidoEntregasProg[i].splice(j, 1);
+  if (!window._pedidoEntregasProg[i].length) {
+    const abrir = document.getElementById(`prog-abrir-${i}`);
+    const wrap = document.getElementById(`prog-wrap-${i}`);
+    if (wrap) wrap.style.display = 'none';
+    if (abrir) abrir.style.display = 'flex';
+  }
+  _progRender(i);
+  _progSync(i);
+}
+function _progSetData(i, j, v) {
+  window._pedidoEntregasProg[i][j].data = v;
+  _progSync(i);
+  _progSoma(i);
+}
+function _progSetValor(i, j, el) {
+  mascaraMoeda(el);
+  window._pedidoEntregasProg[i][j].valor = valorParaFloat(el.value);
+  _progSoma(i);
+}
+// Entregas com data preenchida, em ordem cronológica
+function _progEntregasValidas(i) {
+  return (((window._pedidoEntregasProg || [])[i]) || [])
+    .filter(e => e.data)
+    .sort((a, b) => (a.data < b.data ? -1 : 1));
+}
+// Espelha a ÚLTIMA entrega em _pedidoEntregas[i] — é ela que manda no giro,
+// e é o que libera o toggle de acompanhar (compatibilidade com o fluxo único)
+function _progSync(i) {
+  const ent = _progEntregasValidas(i);
+  if (!ent.length) return;
+  const ult = ent[ent.length - 1].data;
+  const d = new Date(ult + 'T00:00:00');
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  window._pedidoEntregas = window._pedidoEntregas || [];
+  window._pedidoEntregas[i] = { iso: ult, dias: Math.max(0, Math.round((d - hoje) / 86400000)) };
+  _mostrarConfirmacaoEntrega(i, d);
+  const conf = document.getElementById(`entrega-confirmada-${i}`);
+  if (conf && ent.length > 1) conf.textContent = `✓ ${ent.length} entregas programadas · última em ${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}`;
+}
+function _progSoma(i) {
+  const el = document.getElementById(`prog-soma-${i}`); if (!el) return;
+  const rows = (((window._pedidoEntregasProg || [])[i]) || []).filter(e => e.data || e.valor > 0);
+  if (!rows.length) { el.textContent = ''; return; }
+  const soma = rows.reduce((s, e) => s + (e.valor || 0), 0);
+  const pedido = valorParaFloat((document.getElementById('pedido-valor-' + i) || {}).value || '');
+  let txt = `Programado: R$ ${soma.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  let cor = 'var(--texto2)';
+  if (pedido > 0 && soma > 0) {
+    const dif = pedido - soma;
+    if (Math.abs(dif) < 0.01) { txt += ' · ✓ bate com o pedido'; cor = 'var(--verde)'; }
+    else if (dif > 0) { txt += ` · falta R$ ${dif.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`; cor = 'var(--amarelo)'; }
+    else { txt += ` · R$ ${Math.abs(dif).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} acima do pedido`; cor = 'var(--amarelo)'; }
+  }
+  el.textContent = txt;
+  el.style.color = cor;
+}
+function _progRender(i) {
+  const cont = document.getElementById(`prog-rows-${i}`); if (!cont) return;
+  const rows = ((window._pedidoEntregasProg || [])[i]) || [];
+  cont.innerHTML = rows.map((e, j) => `
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+      <span style="font-size:10px;color:var(--texto3);min-width:16px;font-family:'DM Sans',sans-serif;">${j + 1}ª</span>
+      <input type="date" value="${e.data}" onchange="_progSetData(${i},${j},this.value)" style="flex:1.2;min-width:0;background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:8px 9px;color:var(--texto);font-family:'DM Sans',sans-serif;font-size:12px;">
+      <div style="flex:1;position:relative;min-width:0;">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--texto3);font-size:11px;">R$</span>
+        <input type="text" inputmode="numeric" value="${e.valor > 0 ? e.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}" placeholder="0,00" oninput="_progSetValor(${i},${j},this)" style="width:100%;background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:8px 8px 8px 26px;color:var(--texto);font-family:'DM Sans',sans-serif;font-size:12px;">
+      </div>
+      <button type="button" onclick="_progRemRow(${i},${j})" style="width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,77,106,.35);background:rgba(255,77,106,.08);color:var(--vermelho);font-size:11px;cursor:pointer;flex-shrink:0;">✕</button>
+    </div>`).join('');
+  _progSoma(i);
+}
+
 // Libera o toggle de acompanhar quando a previsão de entrega é definida.
 // Se a config do rep for "acompanhar todas", liga automaticamente na 1ª vez.
 function _habilitarAcompEntrega(idx) {
@@ -11311,13 +11627,19 @@ function _calcularPostVendaEntregas() {
       const diasDesdeVisita = Math.floor((hoje - dataVisita) / 86400000);
       if (diasDesdeVisita > 120) return; // não mostra histórico muito antigo
       h.pedidos.forEach(p => {
-        if (!p.acompanharEntrega || !p.dataEntregaPrevista) return;
-        const dataEntrega = new Date(p.dataEntregaPrevista + 'T00:00:00');
-        const diasApos = Math.floor((hoje - dataEntrega) / 86400000);
-        const diasMinNotif = (p.prazoEntregaDias || 0) > 30 ? 5 : 3;
-        if (diasApos < diasMinNotif) return;
-        if (diasApos > 30) return; // janela de 30 dias para mostrar o pós-venda
-        resultado.push({ c, h, p, diasApos, dataEntrega });
+        if (!p.acompanharEntrega) return;
+        // Pedido programado: cada entrega gera o próprio pós-venda; senão, a única
+        const datas = (p.entregas && p.entregas.length)
+          ? p.entregas.map(e => e.data).filter(Boolean)
+          : (p.dataEntregaPrevista ? [p.dataEntregaPrevista] : []);
+        datas.forEach((dt, ei) => {
+          const dataEntrega = new Date(dt + 'T00:00:00');
+          const diasApos = Math.floor((hoje - dataEntrega) / 86400000);
+          const diasMinNotif = (p.prazoEntregaDias || 0) > 30 ? 5 : 3;
+          if (diasApos < diasMinNotif) return;
+          if (diasApos > 30) return; // janela de 30 dias para mostrar o pós-venda
+          resultado.push({ c, h, p, diasApos, dataEntrega, entregaNum: datas.length > 1 ? ei + 1 : null, entregaTotal: datas.length > 1 ? datas.length : null });
+        });
       });
     });
   });
@@ -13270,7 +13592,18 @@ function salvarEdicaoPedido() {
     const qtd     = parseInt(qtdEl ? qtdEl.value : '') || 0;
     const unidade = unidEl ? unidEl.value : '';
     const canal   = (window._pedidoCanais && window._pedidoCanais[i]) || undefined;
-    if (valor > 0 || qtd > 0) { pedidos.push({ marca: marca || '', valor, qtd, unidade, canal }); valorTotal += valor; }
+    if (valor > 0 || qtd > 0) {
+      const novo = { marca: marca || '', valor, qtd, unidade, canal };
+      // Preserva os dados de entrega do pedido original (a edição não re-pergunta
+      // a entrega — sem isso, editar apagava entregas programadas e acompanhamento)
+      const velho = (clientes[ci].historico[hi].pedidos || []).find(p => (p.marca || '') === (marca || ''));
+      if (velho) {
+        ['entregas', 'dataEntregaPrevista', 'prazoEntregaDias', 'acompanharEntrega'].forEach(k => {
+          if (velho[k] !== undefined) novo[k] = velho[k];
+        });
+      }
+      pedidos.push(novo); valorTotal += valor;
+    }
   });
 
   if (!pedidos.length) { toast('Informe pelo menos um valor'); return; }
@@ -13956,6 +14289,7 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
   window._pedidoCanais     = new Array(marcas.length).fill(null);
   const _notifEntrega      = getConfig().notificacaoEntrega || null;
   window._pedidoEntregas   = new Array(marcas.length).fill(null);
+  window._pedidoEntregasProg = marcas.map(() => []); // pedido programado: [{data,valor}] por marca
   // Toggle de acompanhar SEMPRE começa desligado — só libera depois que o rep
   // define a previsão de entrega (sem previsão não há o que acompanhar).
   // Se a config for "acompanhar todas", liga sozinho quando o prazo é definido.
@@ -14020,6 +14354,13 @@ function renderizarCamposPedido(cliente, unidadePadrao) {
         </div>
         <input type="date" id="entrega-cal-${i}" style="display:none;width:100%;background:var(--bg2);border:1px solid var(--borda);border-radius:9px;padding:9px 11px;color:var(--texto);font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:6px;" oninput="_setEntregaData(${i},this.value)">
         <button type="button" onclick="_abrirCalEntrega(${i})" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;border:1px dashed var(--borda);background:transparent;color:var(--texto2);font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;width:100%;justify-content:center;cursor:pointer;margin-bottom:4px;">📅 Escolher data no calendário</button>
+        <button type="button" id="prog-abrir-${i}" onclick="_progAtivar(${i})" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:7px;border:1px dashed rgba(56,189,248,.4);background:rgba(56,189,248,.05);color:#7DD3FC;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif;width:100%;justify-content:center;cursor:pointer;margin-bottom:4px;">📦 Pedido programado? Adicionar várias entregas</button>
+        <div id="prog-wrap-${i}" style="display:none;background:rgba(56,189,248,.04);border:1px solid rgba(56,189,248,.18);border-radius:9px;padding:9px;margin-bottom:6px;">
+          <div style="font-size:10.5px;color:var(--texto2);margin-bottom:7px;">Cada entrega com data e valor — o giro da marca conta a partir da <b style="color:#7DD3FC;">última entrega</b>.</div>
+          <div id="prog-rows-${i}"></div>
+          <button type="button" onclick="_progAddRow(${i})" style="width:100%;padding:7px;border-radius:7px;border:1px dashed var(--borda);background:transparent;color:var(--texto2);font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:6px;">+ adicionar entrega</button>
+          <div id="prog-soma-${i}" style="font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;"></div>
+        </div>
         <div id="entrega-confirmada-${i}" style="display:none;font-size:11px;color:#38BDF8;font-family:'DM Sans',sans-serif;align-items:center;gap:4px;margin-bottom:4px;"></div>
         ${_notifEntrega ? `<div id="acomp-row-${i}" style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.03);border:1px solid var(--borda);border-radius:8px;padding:8px 11px;margin-top:4px;opacity:.45;transition:opacity .2s;">
           <div style="min-width:0;">
@@ -14265,15 +14606,15 @@ function calcularAlertasMarcas() {
       if (!ciclo || ciclo <= 0) return;
 
       // Última compra desta marca específica para este cliente
+      // (pedido programado: conta a partir da última entrega, não da venda)
       let ultimaCompra = null;
       (c.historico || []).forEach(h => {
         if (h.motivo !== 'fechou_pedido') return;
-        const temMarca = h.pedidos
-          ? h.pedidos.some(p => p.marca === marca)
-          : (marcasCliente.length === 1); // legado sem pedidos por marca
-        if (temMarca && (!ultimaCompra || new Date(h.data) > ultimaCompra)) {
-          ultimaCompra = new Date(h.data);
-        }
+        const pm = h.pedidos ? h.pedidos.find(p => p.marca === marca) : null;
+        const temMarca = h.pedidos ? !!pm : (marcasCliente.length === 1); // legado sem pedidos por marca
+        if (!temMarca) return;
+        const d = _dataGiroPedido(h, pm);
+        if (!ultimaCompra || d > ultimaCompra) ultimaCompra = d;
       });
 
       if (!ultimaCompra) return; // nunca comprou esta marca — não gera alerta ainda

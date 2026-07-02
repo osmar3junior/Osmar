@@ -2102,8 +2102,8 @@ if ('serviceWorker' in navigator) {
     <div id="rm-dias-chips" style="display:flex;gap:4px;margin-bottom:4px;"></div>
     <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-bottom:10px;">Tocar no cliente adiciona no dia marcado</div>
 
-    <input type="text" class="campo-input" id="rm-busca" placeholder="🔎 Nome do cliente ou da loja..." oninput="_rmBusca=this.value;_rmExpandido=null;renderizarListaRM();" style="margin-bottom:8px;">
-    <div id="rm-cidades" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+    <input type="text" class="campo-input" id="rm-busca" placeholder="🔎 Cliente, loja ou cidade..." oninput="_rmBusca=this.value;_rmExpandido=null;renderizarListaRM();" style="margin-bottom:8px;">
+    <div id="rm-cidades" style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px;padding-bottom:4px;scrollbar-width:none;"></div>
 
     <div id="rm-lista"></div>
 
@@ -7638,9 +7638,12 @@ function renderizarCidadesRM() {
   const contagem = {};
   _rmClientes.forEach(c => { const k = (c.cidade || '').trim() || 'Sem cidade'; contagem[k] = (contagem[k] || 0) + 1; });
   _rmCidadesLista = Object.keys(contagem).sort((a, b) => contagem[b] - contagem[a]);
-  const chip = (label, n, ativo, click) => `<button onclick="${click}" style="padding:6px 12px;border-radius:20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;${ativo ? 'background:var(--verde);border:1.5px solid var(--verde);color:#04231A;' : 'background:transparent;border:1px solid var(--borda);color:var(--texto2);'}">${label}${n != null ? ` <span style="opacity:.7;">${n}</span>` : ''}</button>`;
+  const chip = (label, n, ativo, click) => `<button ${ativo ? 'data-chip-ativo="1" ' : ''}onclick="${click}" style="flex-shrink:0;white-space:nowrap;padding:6px 12px;border-radius:20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;${ativo ? 'background:var(--verde);border:1.5px solid var(--verde);color:#04231A;' : 'background:transparent;border:1px solid var(--borda);color:var(--texto2);'}">${label}${n != null ? ` <span style="opacity:.7;">${n}</span>` : ''}</button>`;
   cont.innerHTML = chip('Todas', _rmClientes.length, _rmCidade === null, 'selecionarCidadeRM(-1)')
     + _rmCidadesLista.map((cid, i) => chip(esc(cid), contagem[cid], _rmCidade === cid, `selecionarCidadeRM(${i})`)).join('');
+  // Mantém o chip ativo à vista na rolagem lateral
+  const ativoEl = cont.querySelector('[data-chip-ativo]');
+  if (ativoEl && ativoEl.scrollIntoView) ativoEl.scrollIntoView({ inline: 'center', block: 'nearest' });
 }
 function selecionarCidadeRM(i) {
   _rmCidade = i < 0 ? null : _rmCidadesLista[i];
@@ -7652,7 +7655,7 @@ function renderizarListaRM() {
   const cont = document.getElementById('rm-lista'); if (!cont) return;
   const busca = _normRM(_rmBusca);
   let lista = _rmClientes.filter(c => !_rmCidade || ((c.cidade || '').trim() || 'Sem cidade') === _rmCidade);
-  if (busca) lista = lista.filter(c => _normRM(c.nome).includes(busca) || _normRM(c.loja).includes(busca));
+  if (busca) lista = lista.filter(c => _normRM(c.nome).includes(busca) || _normRM(c.loja).includes(busca) || _normRM(c.cidade).includes(busca));
   const rank = lista.map(c => ({ c, nota: notaClienteRM(c) })).sort((a, b) => b.nota - a.nota);
   if (!rank.length) {
     cont.innerHTML = `<div style="text-align:center;padding:28px 16px;color:var(--texto3);font-size:13px;">Nenhum cliente encontrado${_rmBusca ? ' para "' + esc(_rmBusca) + '"' : ''}.</div>`;

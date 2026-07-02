@@ -7357,6 +7357,8 @@ let _rmClientes = [];
 let _rmCidadesLista = [];
 let _rmMaxPot = 0;             // maior potencial da carteira (normaliza a nota)
 let _smExpandido = null;       // dia aberto na tela da semana
+let _rmHoraSel = '';           // 🔒 horário escolhido no cartão expandido (passo 1)
+let _rmHoraAberto = false;     // seletor de hora visível no cartão?
 
 function getRotaManual() {
   const cfg = getConfig();
@@ -7531,9 +7533,12 @@ function expandirClienteRM(id) {
   if (_rmExpandido === id) { _rmExpandido = null; renderizarListaRM(); return; }
   _rmExpandido = id;
   _rmMarcasSel = {};
+  _rmHoraSel = '';
+  _rmHoraAberto = false;
   const c = _rmClientes.find(x => x.id === id);
   const exist = _rmEntradaDo(id);
   if (exist) {
+    _rmHoraSel = exist.item.hora || '';
     (exist.item.marcas || []).forEach(m => _rmMarcasSel[m] = true);
   } else if (c) {
     const vencidas = _marcasVencidasDe(c);
@@ -7571,14 +7576,28 @@ function _cardExpandidoRM(c) {
         </div>`;
       }).join('');
   }
-  const btnPrincipal = exist
+  const sufHora = _rmHoraSel ? ` · 🔒 ${_rmHoraSel}` : '';
+  const btnPrincipal = (exist
     ? (exist.dia === _rmDia ? '💾 Atualizar visita' : `Mover para ${RM_NOMES[_rmDia].toLowerCase()}`)
-    : `Adicionar na ${RM_NOMES[_rmDia].toLowerCase()}`;
+    : `Adicionar na ${RM_NOMES[_rmDia].toLowerCase()}`) + sufHora;
+  const chipHora = _rmHoraSel
+    ? `<button onclick="event.stopPropagation();_rmHoraAberto=!_rmHoraAberto;renderizarListaRM();" style="display:flex;align-items:center;gap:5px;background:linear-gradient(135deg,#38BDF8,#0284C7);border:none;border-radius:9px;padding:8px 11px;color:#04202E;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">🔒 ${_rmHoraSel} · mudar</button>`
+    : `<button onclick="event.stopPropagation();_rmHoraAberto=!_rmHoraAberto;renderizarListaRM();" style="display:flex;align-items:center;gap:5px;background:rgba(56,189,248,.08);border:1.5px solid rgba(56,189,248,.45);border-radius:9px;padding:8px 11px;color:#7DD3FC;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">🕐 Marcar horário</button>`;
+  const pickerHora = _rmHoraAberto
+    ? `<div onclick="event.stopPropagation()" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+        <input type="time" class="campo-input" value="${_rmHoraSel}" style="flex:1;padding:9px 11px;font-size:14px;" onchange="_rmHoraSel=this.value;_rmHoraAberto=false;renderizarListaRM();">
+        ${_rmHoraSel ? `<button onclick="event.stopPropagation();_rmHoraSel='';_rmHoraAberto=false;renderizarListaRM();" style="background:rgba(255,77,106,.08);border:1px solid rgba(255,77,106,.35);border-radius:9px;padding:9px 11px;color:var(--vermelho);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">remover</button>` : ''}
+      </div>`
+    : '';
   return `${marcasHtml}
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0;">
-      <span style="font-size:12px;color:var(--texto2);">Tempo previsto da visita</span>
-      <span style="font-size:15px;font-weight:800;color:var(--texto);font-family:'DM Sans',sans-serif;">${_fmtMinRM(_tempoSelecionadoRM())}</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0;">
+      <div>
+        <div style="font-size:11px;color:var(--texto2);">Tempo previsto da visita</div>
+        <div style="font-size:15px;font-weight:800;color:var(--texto);font-family:'DM Sans',sans-serif;">${_fmtMinRM(_tempoSelecionadoRM())}</div>
+      </div>
+      ${chipHora}
     </div>
+    ${pickerHora}
     <div style="display:flex;gap:8px;">
       ${exist ? `<button onclick="event.stopPropagation();removerClienteRM('${c.id}')" style="flex:1;background:rgba(255,77,106,.1);border:1.5px solid rgba(255,77,106,.4);border-radius:10px;padding:10px;color:var(--vermelho);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Remover</button>` : ''}
       <button onclick="event.stopPropagation();adicionarClienteRM('${c.id}')" style="flex:2;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:10px;padding:10px;color:#04231A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">${btnPrincipal}</button>
@@ -7597,58 +7616,59 @@ function adicionarClienteRM(id) {
   if (!c) return;
   const marcas = Object.keys(_rmMarcasSel).filter(m => _rmMarcasSel[m]);
   const tempo = _tempoSelecionadoRM();
+  const hora = _rmHoraSel || null; // 🔒 escolhido no cartão (ou nada)
   // Simula o dia com a visita nova: se estourar a jornada ou atrasar um
   // horário fixo, abre o modal de encaixe com as alternativas que cabem.
-  const sim = _simulaAddRM(id, marcas, tempo, _rmDia);
-  if (sim.estoura || sim.conflitos > 0) { _abrirEncaixeRM(c, marcas, tempo, sim); return; }
-  _finalizarAddRM(id, marcas, tempo, _rmDia, c.nome);
+  const sim = _simulaAddRM(id, marcas, tempo, _rmDia, hora);
+  if (sim.estoura || sim.conflitos > 0) { _abrirEncaixeRM(c, marcas, tempo, sim, hora); return; }
+  _finalizarAddRM(id, marcas, tempo, _rmDia, c.nome, hora);
 }
 
-function _simulaAddRM(id, marcas, tempo, dia) {
+function _simulaAddRM(id, marcas, tempo, dia, hora) {
   const rm = JSON.parse(JSON.stringify(getRotaManual()));
   RM_DIAS.forEach(d => rm.dias[d] = rm.dias[d].filter(x => x.id !== id));
-  rm.dias[dia].push({ id, marcas, tempo });
+  const item = { id, marcas, tempo };
+  if (hora) item.hora = hora;
+  rm.dias[dia].push(item);
   return _calcDiaRM(dia, rm);
 }
 
-function _addRMCore(id, marcas, tempo, dia) {
+function _addRMCore(id, marcas, tempo, dia, hora) {
+  // O cartão do passo 1 é a fonte da verdade do 🔒: pré-preenche ao expandir,
+  // então salvar sem hora = rep removeu o horário de propósito.
   const rm = getRotaManual();
-  let horaExistente = null; // preserva o 🔒 se o cliente já estava na rota
-  RM_DIAS.forEach(d => {
-    const ex = rm.dias[d].find(x => x.id === id);
-    if (ex && ex.hora) horaExistente = ex.hora;
-    rm.dias[d] = rm.dias[d].filter(x => x.id !== id);
-  });
+  RM_DIAS.forEach(d => { rm.dias[d] = rm.dias[d].filter(x => x.id !== id); });
   const item = { id, marcas, tempo };
-  if (horaExistente) item.hora = horaExistente;
+  if (hora) item.hora = hora;
   rm.dias[dia].push(item);
   salvarRotaManual(rm);
 }
 
-function _finalizarAddRM(id, marcas, tempo, dia, nome) {
-  _addRMCore(id, marcas, tempo, dia);
+function _finalizarAddRM(id, marcas, tempo, dia, nome, hora) {
+  _addRMCore(id, marcas, tempo, dia, hora);
   _rmExpandido = null;
-  toast(`✅ ${nome} na ${RM_NOMES[dia].toLowerCase()} · ${_fmtMinRM(tempo)}`);
+  toast(`✅ ${nome} na ${RM_NOMES[dia].toLowerCase()} · ${_fmtMinRM(tempo)}${hora ? ' · 🔒 ' + hora : ''}`);
   renderizarDiasRM(); renderizarListaRM(); atualizarFooterRM();
   if (document.getElementById('modal-semana-manual')?.classList.contains('aberto')) renderizarSemanaManual();
 }
 
 let _encaixePendente = null;
-function _abrirEncaixeRM(c, marcas, tempo, sim) {
-  _encaixePendente = { id: c.id, marcas, tempo, nome: c.nome };
+function _abrirEncaixeRM(c, marcas, tempo, sim, hora) {
+  _encaixePendente = { id: c.id, marcas, tempo, nome: c.nome, hora: hora || null };
   const cfg = getConfig();
+  const rotulo = `<b>${esc(c.nome)}</b> (visita de ${_fmtMinRM(tempo)}${hora ? ' · 🔒 ' + hora : ''})`;
   let msg;
   if (sim.conflitos > 0) {
-    msg = `Colocando <b>${esc(c.nome)}</b> (visita de ${_fmtMinRM(tempo)}) na ${RM_NOMES[_rmDia].toLowerCase()}, ${sim.conflitos > 1 ? 'horários fixos 🔒 atrasam' : 'um horário fixo 🔒 atrasa'} — não dá tempo de chegar.`;
+    msg = `Colocando ${rotulo} na ${RM_NOMES[_rmDia].toLowerCase()}, ${sim.conflitos > 1 ? 'horários fixos 🔒 atrasam' : 'um horário fixo 🔒 atrasa'} — não dá tempo de chegar.`;
   } else {
-    msg = `Colocando <b>${esc(c.nome)}</b> (visita de ${_fmtMinRM(tempo)}) na ${RM_NOMES[_rmDia].toLowerCase()}, o dia termina ~${_minParaHHMM(sim.termina)} — passa ${_fmtMinRM(sim.termina - sim.fim)} da sua jornada.`;
+    msg = `Colocando ${rotulo} na ${RM_NOMES[_rmDia].toLowerCase()}, o dia termina ~${_minParaHHMM(sim.termina)} — passa ${_fmtMinRM(sim.termina - sim.fim)} da sua jornada.`;
   }
   document.getElementById('encaixe-rm-msg').innerHTML = '⚠️ ' + msg;
   const dias = cfg.sabAtivo ? RM_DIAS : RM_DIAS.slice(0, 5);
   const opcoes = [];
   dias.forEach(d => {
     if (d === _rmDia) return;
-    const s2 = _simulaAddRM(c.id, marcas, tempo, d);
+    const s2 = _simulaAddRM(c.id, marcas, tempo, d, hora); // 🔒 viaja junto com a visita
     if (!s2.estoura && !s2.conflitos) opcoes.push({ d, folga: s2.fim - s2.termina, termina: s2.termina, n: s2.items.length });
   });
   opcoes.sort((a, b) => b.folga - a.folga);
@@ -7670,7 +7690,7 @@ function confirmarEncaixeRM(dia) {
   fecharModal('modal-encaixe-rm');
   if (!_encaixePendente) return;
   const p = _encaixePendente; _encaixePendente = null;
-  _finalizarAddRM(p.id, p.marcas, p.tempo, dia, p.nome);
+  _finalizarAddRM(p.id, p.marcas, p.tempo, dia, p.nome, p.hora);
 }
 
 function _removerRMCore(id) {

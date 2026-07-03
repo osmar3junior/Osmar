@@ -4752,7 +4752,16 @@ function abrirNotificacoes() {
   });
   const cfg = getConfig();
   const metas = (cfg.metas || []);
+  const metasAtrasadas = _getMetasAtrasadas();
+  const _marcasJaAceleradas = new Set(metasAtrasadas.map(a => a.marca)); // não duplica com "Precisa acelerar"
   const metasRisco = metas.filter(m => {
+    if (!(m.valor > 0)) return false;
+    if (_marcasJaAceleradas.has(m.marca)) return false;
+    // Começo do período (<15% decorrido): cedo demais para gritar "0%" — vira spam
+    const { inicio, fim } = _periodoMeta(m);
+    const diasTotal = Math.max(1, Math.round((fim - inicio) / 86400000));
+    const diasPassados = Math.max(0, Math.min(Math.round((new Date() - inicio) / 86400000), diasTotal));
+    if ((diasPassados / diasTotal) < 0.15) return false;
     const real = calcularRealMarca(m);
     const pct  = calcularTendencia(m, real);
     return pct !== null && pct < 80;
@@ -4815,7 +4824,6 @@ function abrirNotificacoes() {
     );
   }
 
-  const metasAtrasadas = _getMetasAtrasadas();
   if (metasAtrasadas.length) {
     html += `<div style="font-size:10px;font-weight:700;color:#FB923C;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">⚡ Precisa acelerar</div>`;
     metasAtrasadas.forEach(a => {
@@ -4833,9 +4841,16 @@ function abrirNotificacoes() {
     metasRisco.forEach(m => {
       const real = calcularRealMarca(m);
       const pct  = calcularTendencia(m, real);
+      const ehReais = m.sku === 'reais' || m.sku === 'faturamento';
+      const fmtV = v => ehReais ? 'R$ ' + fmtK(v) : Math.round(v).toLocaleString('pt-BR');
+      const skuL = ehReais ? '' : ' ' + (m.sku || '');
+      const falta = Math.max(0, m.valor - real);
+      const fimM = _periodoMeta(m).fim;
+      const diasUteis = _diasUteisRestantes(new Date(), fimM);
+      const porDia = diasUteis > 0 ? falta / diasUteis : 0;
       html += linhaAlerta('📉','rgba(56,189,248,.4)','rgba(56,189,248,.07)',
-        `${m.marca} — tendência ${pct}%`,
-        'Abaixo de 80% do ritmo necessário',
+        `${m.marca} — tendência de fechamento ${pct}%`,
+        `${fmtV(real)} de ${fmtV(m.valor)}${skuL} vendido${ehReais?'':'s'} · falta ${fmtV(falta)} · precisa de ~${fmtV(porDia)}${skuL}/dia (${diasUteis} ${diasUteis !== 1 ? 'dias úteis' : 'dia útil'})`,
         `fecharModal('modal-notificacoes');setTimeout(()=>abrirRelatorios(),200)`
       );
     });
@@ -4870,6 +4885,41 @@ function abrirNotificacoes() {
         </div>
         <span style="color:var(--texto3);font-size:16px;align-self:center;">›</span>
       </div>`;
+    });
+  }
+
+  // Coleção fechando (só com a inteligência sazonal ativada — reta final da janela)
+  if (typeof _sazonalAtivo === 'function' && _sazonalAtivo()) {
+    const colAtual = _colecaoAtual();
+    if (colAtual) {
+      const diasFimCol = Math.ceil((colAtual.fim - new Date()) / 86400000);
+      if (diasFimCol <= 21 && diasFimCol >= 0) {
+        const pendCol = clientes.filter(c => _ehConfeccao(c) && !_temPedidoDaColecao(c, colAtual));
+        if (pendCol.length) {
+          html += `<div style="font-size:10px;font-weight:700;color:#FFC043;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🧥 Coleção fechando</div>`;
+          html += linhaAlerta(colAtual.emoji,'rgba(255,192,67,.4)','rgba(255,192,67,.07)',
+            `${colAtual.nome} fecha em ${diasFimCol} dia${diasFimCol !== 1 ? 's' : ''}`,
+            `${pendCol.length} cliente${pendCol.length > 1 ? 's' : ''} de moda ainda sem pedido da coleção — toque para montar a rota`,
+            `fecharModal('modal-notificacoes');setTimeout(()=>abrirRotaManual(),200)`
+          );
+        }
+      }
+    }
+  }
+
+  // Entregas chegando (hoje ou nos próximos 2 dias) — avise o cliente antes
+  const chegando = _calcularEntregasChegando();
+  if (chegando.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#00D68F;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">📦 Entrega chegando</div>`;
+    chegando.forEach(({ c, p, diff, data, num, total }) => {
+      const qd = diff === 0 ? '<b style="color:#00D68F;">chega HOJE</b>' : diff === 1 ? 'chega amanhã' : `chega em ${diff} dias`;
+      const parcela = num ? `${num}ª de ${total} entregas · ` : '';
+      const dtFmt2 = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      html += linhaAlerta('📦','rgba(0,214,143,.4)','rgba(0,214,143,.07)',
+        `${esc(c.nome)}${c.loja ? ' — ' + esc(c.loja) : ''}`,
+        `${parcela}${p.marca ? esc(p.marca) + ' · ' : ''}${qd} (${dtFmt2}) — avise o cliente e confirme o recebimento`,
+        `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${c.id}','clientes'),200)`
+      );
     });
   }
 
@@ -4945,7 +4995,8 @@ function _atualizarBadgeNotif() {
   const gatilhos = calcularGatilhosAntecipacao().filter(g => g.urgencia === 'ultima');
   const atrasadas = _getMetasAtrasadas();
   const postVendaCount = _calcularPostVendaEntregas().length;
-  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length + postVendaCount;
+  const entregasHoje = _calcularEntregasChegando().filter(e => e.diff === 0).length;
+  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length + postVendaCount + entregasHoje;
   const badge = document.getElementById('notif-badge');
   const btn = badge?.parentElement;
   if (!badge) return;
@@ -11689,6 +11740,31 @@ async function _dispararNotificacaoLocal() {
     requireInteraction: false,
     data: { url: './', acao: 'rota' }
   });
+}
+
+// Entregas acompanhadas que chegam HOJE ou nos próximos 2 dias — o rep avisa o
+// cliente antes de o caminhão chegar (pedido programado: cada parcela conta)
+function _calcularEntregasChegando() {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const out = [];
+  getClientesAtivos().forEach(c => {
+    (c.historico || []).forEach(h => {
+      if (h.motivo !== 'fechou_pedido' || !h.pedidos) return;
+      h.pedidos.forEach(p => {
+        if (!p.acompanharEntrega) return;
+        const datas = (p.entregas && p.entregas.length)
+          ? p.entregas.map(e => e.data).filter(Boolean)
+          : (p.dataEntregaPrevista ? [p.dataEntregaPrevista] : []);
+        datas.forEach((dt, ei) => {
+          const d = new Date(dt + 'T00:00:00');
+          const diff = Math.round((d - hoje) / 86400000);
+          if (diff < 0 || diff > 2) return;
+          out.push({ c, p, diff, data: d, num: datas.length > 1 ? ei + 1 : null, total: datas.length > 1 ? datas.length : null });
+        });
+      });
+    });
+  });
+  return out.sort((a, b) => a.diff - b.diff);
 }
 
 // Retorna marcas que passaram da metade do período e estão abaixo do ritmo necessário

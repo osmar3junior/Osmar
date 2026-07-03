@@ -13843,6 +13843,11 @@ function renderizarRelatorios() {
     else { diariaTxt = fmtMedia(mediaDiaria, meta.sku); diariaUnit = (meta.sku === 'reais' || meta.sku === 'faturamento') ? 'por dia' : `${skuLabel}/dia`; }
 
     const positivPct = Math.round(_taxa * 100);
+    // Tendência de Fechamento: se mantiver a pegada diária, fecha o período com
+    // quanto? (projeção no ritmo atual ÷ meta, em %)
+    const tendPct = meta.valor > 0 ? Math.round((projecao / meta.valor) * 100) : 0;
+    const tendCor = (metaBatida || tendPct >= 100) ? '#00D68F' : tendPct >= 80 ? '#F59E0B' : '#EF4444';
+    const tendPctTxt = (tendPct > 999 ? '+999' : tendPct) + '%';
     const detalheHTML = _detalheVendasMarca(meta);
 
     metaTotalN += meta.valor;
@@ -13884,8 +13889,9 @@ function renderizarRelatorios() {
           </div>
         </div>
         <div style="text-align:right;">
-          <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Positiv. <span style="color:var(--texto2);font-weight:600;">${positivPct}%</span></div>
-          <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:2px;">${diasRestantes} dias úteis · até ${dataFimFmt}</div>
+          <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Tendência de Fechamento</div>
+          <div style="font-size:24px;font-weight:700;color:${tendCor};font-family:'DM Sans',sans-serif;letter-spacing:-.5px;line-height:1;">${tendPctTxt}</div>
+          <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:3px;">fecha com ~<span style="color:var(--texto2);font-weight:600;">${fmtN(projecao)}${(meta.sku === 'reais' || meta.sku === 'faturamento') ? '' : ' ' + skuLabel}</span> no ritmo</div>
         </div>
       </div>
 
@@ -13896,8 +13902,9 @@ function renderizarRelatorios() {
             <div style="font-size:17px;font-weight:700;font-family:'DM Sans',sans-serif;color:${lacuna >= 0 ? '#00D68F' : '#EF4444'};">${lacuna >= 0 ? '+' : ''}${fmtN(lacuna)}</div>
           </div>
           <div style="background:var(--bg3);border-radius:10px;padding:10px 12px;">
-            <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Projeção</div>
-            <div style="font-size:17px;font-weight:700;font-family:'DM Sans',sans-serif;color:var(--texto2);">${fmtN(projecao)}</div>
+            <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Positivação</div>
+            <div style="font-size:17px;font-weight:700;font-family:'DM Sans',sans-serif;color:var(--texto2);">${positivPct}%</div>
+            <div style="font-size:10.5px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:2px;">${diasRestantes} dias úteis · até ${dataFimFmt}</div>
           </div>
         </div>
         <div style="padding:12px 16px 16px;">${detalheHTML}</div>

@@ -1498,13 +1498,6 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="config-secao">
-      <div class="config-secao-titulo">🧥 Coleções — confecção</div>
-      <div class="config-secao-sub">Para clientes do segmento <strong>Moda e Vestuário</strong>: o app sabe qual coleção está com a janela de venda aberta, avisa no painel quem ainda não fez o pedido dela e prioriza esses clientes na Rota Manual. Datas padrão do mercado — ajuste se a sua marca antecipa ou atrasa.</div>
-      <div id="cfg-colecoes-lista"></div>
-      <button type="button" onclick="restaurarColecoesCfg()" style="width:100%;background:transparent;border:1px dashed var(--borda);border-radius:10px;padding:10px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">↺ Restaurar padrão do mercado</button>
-    </div>
-
-    <div class="config-secao">
       <div class="config-secao-titulo">🎯 Metas por marca</div>
       <div class="config-secao-sub">Cadastre a meta de cada marca que você representa. O app calcula automaticamente a tendência de fechamento com base nas suas vendas registradas.</div>
       <div id="metas-config-lista"></div>
@@ -1634,6 +1627,25 @@ if ('serviceWorker' in navigator) {
       <input type="text" class="campo-input" id="cfg-groq-key" placeholder="gsk_..." style="margin-top:8px;font-family:monospace;font-size:13px;letter-spacing:.5px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <button onclick="salvarConfig();testarChaveGroq()" style="width:100%;margin-top:8px;background:rgba(124,58,237,.12);border:1.5px solid rgba(124,58,237,.4);border-radius:10px;padding:11px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔎 Salvar e testar chave</button>
       <div style="font-size:11px;color:var(--texto3);margin-top:8px;line-height:1.5;">🔒 Sua chave fica só no seu aparelho. É gratuita e leva 3 minutos para obter. <span onclick="abrirComoAtivarApi()" style="color:#A78BFA;cursor:pointer;font-weight:600;">Como criar sua chave Groq →</span></div>
+    </div>
+
+    <div class="config-secao" id="secao-outros-segmentos">
+      <div class="config-secao-titulo">🧩 Configuração opcional — outros segmentos</div>
+      <div class="config-secao-sub">Recursos sob medida para segmentos específicos. <strong>Só funcionam se você ligar o botão</strong> — desligado, nada disso aparece no seu app. Novos segmentos serão adicionados aqui conforme o app evolui.</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-top:4px;">
+        <div style="min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">🧥 Confecção — coleções e janelas de venda</div>
+          <div style="font-size:11px;color:var(--texto3);line-height:1.45;margin-top:2px;">Cobra a venda de cada coleção na janela certa: aviso no painel, prioridade na rota e estratégias no Gestor IA. Vale para os clientes do segmento <strong style="color:var(--texto2);">Moda e Vestuário</strong>.</div>
+        </div>
+        <button id="cfg-sazonal-toggle" onclick="toggleSazonalCfg()" style="width:48px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;background:#333;flex-shrink:0;margin-top:2px;">
+          <span id="cfg-sazonal-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#888;transition:left .2s,background .2s;"></span>
+        </button>
+      </div>
+      <div id="cfg-sazonal-wrap" style="display:none;margin-top:10px;">
+        <div class="config-secao-sub" style="margin-bottom:8px;">Janelas de venda — datas padrão do mercado, ajuste se a sua marca antecipa ou atrasa.</div>
+        <div id="cfg-colecoes-lista"></div>
+        <button type="button" onclick="restaurarColecoesCfg()" style="width:100%;background:transparent;border:1px dashed var(--borda);border-radius:10px;padding:10px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">↺ Restaurar padrão do mercado</button>
+      </div>
     </div>
 
     <div class="config-secao">
@@ -6652,9 +6664,15 @@ function _temPedidoDaColecao(c, col) {
     return d >= col.ini && d <= col.fim;
   });
 }
+// A inteligência de coleções é OPT-IN: só roda se o rep ligar o toggle em
+// Configurações → "Configuração opcional — outros segmentos" (pedido do Osmar,
+// p/ não criar falsa leitura em reps de outros segmentos).
+function _sazonalAtivo() { return !!getConfig().sazonalAtivo; }
+
 // Cliente de confecção ainda sem pedido da coleção aberta → alvo da cobrança.
 // retaFinal = últimas 3 semanas da janela (cobrança esquenta).
 function _pendenteColecao(c) {
+  if (!_sazonalAtivo()) return null;
   if (!_ehConfeccao(c)) return null;
   const col = _colecaoAtual();
   if (!col || _temPedidoDaColecao(c, col)) return null;
@@ -6664,8 +6682,22 @@ function _pendenteColecao(c) {
 function atualizarBannerColecao() {
   const el = document.getElementById('banner-colecao');
   if (!el) return;
-  const col = _colecaoAtual();
   const confec = getClientesAtivos().filter(_ehConfeccao);
+  if (!_sazonalAtivo()) {
+    // Convite discreto SÓ para quem tem cliente de moda e ainda não ativou
+    if (confec.length && !getConfig().sazonalConviteVisto) {
+      document.getElementById('banner-colecao-titulo').textContent = '🧥 Você atende confecção?';
+      document.getElementById('banner-colecao-sub').textContent = `Você tem ${confec.length} cliente${confec.length > 1 ? 's' : ''} de moda — ative a inteligência de coleções nas Configurações.`;
+      el.style.borderColor = 'rgba(255,192,67,.3)';
+      el.onclick = _abrirConfigSegmentos;
+      el.style.display = 'flex';
+    } else {
+      el.style.display = 'none';
+    }
+    return;
+  }
+  el.onclick = abrirRotaManual;
+  const col = _colecaoAtual();
   if (!col || !confec.length) { el.style.display = 'none'; return; }
   const pend = confec.filter(c => !_temPedidoDaColecao(c, col));
   if (!pend.length) { el.style.display = 'none'; return; }
@@ -8295,6 +8327,15 @@ function renderizarColecoesConfig() {
       <input id="cfg-col-fim-${k}" value="${fmt(c.fim)}" placeholder="dd/mm" maxlength="5" inputmode="numeric" style="${inp}" onchange="salvarColecoesCfg()">
     </div>`;
   }).join('');
+  // Estado do toggle mestre (opt-in) e visibilidade do bloco de edição
+  const ativo = _sazonalAtivo();
+  const tg = document.getElementById('cfg-sazonal-toggle');
+  const kn = document.getElementById('cfg-sazonal-knob');
+  const wrap = document.getElementById('cfg-sazonal-wrap');
+  if (tg && kn && wrap) {
+    if (ativo) { tg.style.background = 'var(--verde)'; kn.style.left = '25px'; kn.style.background = '#fff'; wrap.style.display = 'block'; }
+    else { tg.style.background = '#333'; kn.style.left = '3px'; kn.style.background = '#888'; wrap.style.display = 'none'; }
+  }
 }
 function salvarColecoesCfg() {
   const parse = v => {
@@ -8327,6 +8368,26 @@ function restaurarColecoesCfg() {
   renderizarColecoesConfig();
   atualizarBannerColecao();
   toast('↺ Janelas restauradas para o padrão do mercado');
+}
+function toggleSazonalCfg() {
+  const cfg = getConfig();
+  cfg.sazonalAtivo = !cfg.sazonalAtivo;
+  if (cfg.sazonalAtivo) cfg.sazonalConviteVisto = true; // ativou — convite cumpriu o papel
+  salvarConfigData(cfg);
+  renderizarColecoesConfig();
+  atualizarBannerColecao();
+  toast(cfg.sazonalAtivo ? '🧥 Inteligência de coleções ativada!' : 'Coleções desativadas — nada de confecção aparece no app');
+}
+// Convite do painel → abre Configurações já na seção de segmentos (e não insiste mais)
+function _abrirConfigSegmentos() {
+  const cfg = getConfig();
+  cfg.sazonalConviteVisto = true;
+  salvarConfigData(cfg);
+  irPara('config');
+  setTimeout(() => {
+    const sec = document.getElementById('secao-outros-segmentos');
+    if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 350);
 }
 
 // ===== NOTIFICAÇÕES DE ESQUECIDOS =====
@@ -11957,7 +12018,7 @@ let _gerenteCacheCfgHash = null;
 function _gerenteCfgHash() {
   const cfg = getConfig();
   try {
-    return JSON.stringify({ metas: cfg.metas, marcas: cfg.marcas, wpp: cfg.wppRep, email: cfg.emailRep, buffer: cfg.bufferMeta });
+    return JSON.stringify({ metas: cfg.metas, marcas: cfg.marcas, wpp: cfg.wppRep, email: cfg.emailRep, buffer: cfg.bufferMeta, saz: cfg.sazonalAtivo, col: cfg.colecoes });
   } catch (e) { return String(Date.now()); }
 }
 
@@ -12306,7 +12367,7 @@ async function gerarAnaliseGerente(forcar=false) {
         if (prog) o.programadoAte = prog.toLocaleDateString('pt-BR');
         return o;
       });
-    const col = _colecaoAtual();
+    const col = _sazonalAtivo() ? _colecaoAtual() : null; // opt-in: sem toggle ligado, nada de confecção vai à IA
     if (col) {
       const confec = ativos.filter(_ehConfeccao);
       if (confec.length) {
@@ -12335,15 +12396,15 @@ CONSCIÊNCIA DE TEMPO (campo "temporalidade" + campos de cada marca): AJUSTE seu
 - METAS POR COLEÇÃO ("tipoPeriodo":"coleção"): trate pelo período inteiro dela (use "periodo" e "periodoDecorrido"), NÃO pelo mês calendário. Uma coleção pode ter ritmo e prazos diferentes do mês.
 
 NOTA 0-10 ("topOportunidades"): é a MESMA nota que o app mostra ao rep nas telas de rota e oportunidades (timing de recompra × potencial na carteira; 7+ = quente, 4-7 = morno). Use esses nomes ao indicar quem atacar primeiro. "marcasNoPontoDeRecompra" = marcas com ciclo de giro vencido nesse cliente. Cliente com "programadoAte" está coberto por entregas programadas até essa data — NÃO empurre venda antes; no máximo visita de acompanhamento de entrega.
+${dados.sazonalConfeccao ? `
+JANELA DE COLEÇÃO ("sazonalConfeccao"): a janela citada está ABERTA e fecha em "fechaEm". Os clientes em "semPedidoDaColecao" ainda NÃO compraram a coleção atual — prioridade máxima de cobrança antes de a janela fechar (depois disso a venda é perdida para a concorrência até a próxima coleção).
 
-JANELA DE COLEÇÃO ("sazonalConfeccao", se presente): a janela citada está ABERTA e fecha em "fechaEm". Os clientes em "semPedidoDaColecao" ainda NÃO compraram a coleção atual — prioridade máxima de cobrança antes de a janela fechar (depois disso a venda é perdida para a concorrência até a próxima coleção).
-
-ESTRATÉGIAS DO SETOR DE CONFECÇÃO (repertório validado por reps veteranos — recomende 1 ou 2 quando houver clientes de moda e a situação pedir, citando o cliente-alvo):
+ESTRATÉGIAS DO SETOR DE CONFECÇÃO (repertório validado por reps veteranos — este rep TEM clientes de moda/vestuário; recomende 1 ou 2 quando a situação pedir, citando o cliente-alvo):
 1. TROCA DESCONTO×PRAZO: negociar com o gerente comercial reduzir o desconto e AUMENTAR o prazo médio (para cliente com caixa apertado que precisa de fôlego) ou aumentar o desconto e REDUZIR o prazo (para cliente capitalizado focado em preço). Custa pouco para a indústria e destrava pedido parado.
 2. MINI-PACOTES CURVA A: montar pacotes fechados só com os produtos curva A de venda comprovada — oferta enxuta, giro garantido, ideal para destravar venda quando o mercado está difícil ou o cliente está inseguro.
 3. FORA DE LINHA/COLEÇÃO: solicitar à indústria peças fora de linha ou de coleção passada com desconto agressivo, direcionadas aos clientes focados em preço — vira venda incremental sem queimar a tabela vigente.
 4. FATURAMENTO ANTECIPADO COM DATA-BASE SALVA (pedido programado): negociar faturar antes da data programada MANTENDO a data-base de pagamento original — o cliente ganha prazo extra de forma indireta, sem mexer em tabela nem desconto. Argumento forte para antecipar receita da indústria e fidelizar o lojista.
-
+` : ''}
 DADOS REAIS DO REPRESENTANTE (use só o que estiver aqui, não invente números):
 ${JSON.stringify(dados, null, 2)}
 

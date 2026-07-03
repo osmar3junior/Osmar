@@ -12130,14 +12130,23 @@ function _planoMesPendencias() {
   const marcasCad = (cfg.marcas || []).filter(Boolean);
   const marcasComMeta = metas.map(m => (m.marca||'').trim().toLowerCase());
   const mes = _mesAtualStr();
+  // Meta vigente = por coleção OU do mês atual/futuro. Metas de meses passados
+  // são histórico e não geram cobrança (idem saudeConfiguracao do Gestor IA).
+  const _vigente = m => m.tipoPeriodo === 'colecao' ? true : (!m.mes || m.mes >= mes);
+  const metasVigentes = metas.filter(_vigente);
+  const marcasComMetaVigente = new Set(metasVigentes.map(m => (m.marca||'').trim().toLowerCase()));
   const pend = [];
   const semMeta = marcasCad.filter(m => !marcasComMeta.includes(m.trim().toLowerCase()));
   if (semMeta.length) pend.push(`• ${semMeta.length} marca(s) sem meta: ${semMeta.join(', ')}`);
-  const desatual = metas.filter(m => m.tipoPeriodo!=='colecao' && m.mes && m.mes < mes).map(m => m.marca);
+  const desatual = [...new Set(
+    metas.filter(m => m.tipoPeriodo!=='colecao' && m.mes && m.mes < mes
+                   && !marcasComMetaVigente.has((m.marca||'').trim().toLowerCase()))
+         .map(m => m.marca)
+  )];
   if (desatual.length) pend.push(`• Meta do mês novo em: ${desatual.join(', ')}`);
-  const semValor = metas.filter(m => !(m.valor>0)).map(m => m.marca || '(sem marca)');
+  const semValor = metasVigentes.filter(m => !(m.valor>0)).map(m => m.marca || '(sem marca)');
   if (semValor.length) pend.push(`• Valor da meta em branco: ${semValor.join(', ')}`);
-  const semComissao = metas.filter(m => !(m.comissao>0)).map(m => m.marca || '(sem marca)');
+  const semComissao = metasVigentes.filter(m => !(m.comissao>0)).map(m => m.marca || '(sem marca)');
   if (semComissao.length) pend.push(`• Comissão não preenchida: ${semComissao.join(', ')}`);
   if (!(cfg.wppRep||'').trim()) pend.push('• Seu WhatsApp (para receber os planos)');
   return pend;
@@ -12345,14 +12354,25 @@ function _coletarDadosRep() {
   const marcasCad     = (cfg.marcas || []).filter(Boolean);
   const marcasComMeta = metas.map(m => (m.marca||'').trim().toLowerCase());
   const mesAtualStr   = `${Y}-${String(M+1).padStart(2,'0')}`;
+  // Uma meta está VIGENTE se for por coleção OU se for do mês atual/futuro.
+  // Metas de meses passados são histórico — não devem gerar cobrança de config.
+  const _metaVigente = m => m.tipoPeriodo === 'colecao' ? true : (!m.mes || m.mes >= mesAtualStr);
+  const metasVigentes = metas.filter(_metaVigente);
+  const marcasComMetaVigente = new Set(metasVigentes.map(m => (m.marca||'').trim().toLowerCase()));
   const saudeConfiguracao = {
     marcasCadastradas: marcasCad.length,
     metasCadastradas: metas.length,
     marcasSemMeta: marcasCad.filter(m => !marcasComMeta.includes(m.trim().toLowerCase())),
-    metasSemValor: metas.filter(m => !(m.valor>0)).map(m => m.marca || '(sem marca)'),
-    metasSemComissao: metas.filter(m => !(m.comissao>0)).map(m => m.marca || '(sem marca)'),
-    metasSemGiroIdeal: metas.filter(m => !(m.cicloIdeal>0)).map(m => m.marca || '(sem marca)'),
-    metasMensaisDesatualizadas: metas.filter(m => m.tipoPeriodo!=='colecao' && m.mes && m.mes < mesAtualStr).map(m => `${m.marca} (meta de ${m.mes})`),
+    metasSemValor: metasVigentes.filter(m => !(m.valor>0)).map(m => m.marca || '(sem marca)'),
+    metasSemComissao: metasVigentes.filter(m => !(m.comissao>0)).map(m => m.marca || '(sem marca)'),
+    metasSemGiroIdeal: metasVigentes.filter(m => !(m.cicloIdeal>0)).map(m => m.marca || '(sem marca)'),
+    // Só cobra "meta do mês novo" a marca cuja ÚNICA meta é de mês passado —
+    // se já existe a meta vigente (o rep criou a de julho), a marca some daqui.
+    metasMensaisDesatualizadas: [...new Set(
+      metas.filter(m => m.tipoPeriodo!=='colecao' && m.mes && m.mes < mesAtualStr
+                     && !marcasComMetaVigente.has((m.marca||'').trim().toLowerCase()))
+           .map(m => m.marca)
+    )],
     whatsappRepConfigurado: !!(cfg.wppRep||'').trim(),
     emailRepConfigurado: !!(cfg.emailRep||'').trim()
   };

@@ -724,6 +724,15 @@ if ('serviceWorker' in navigator) {
     <div class="login-titulo">Sua carteira<br>nunca para de<br><span style="color:var(--verde)">vender.</span></div>
     <div class="login-sub">O copiloto do representante na estrada. Saiba a hora certa de retomar cada cliente e nunca mais perca uma venda por esquecimento.</div>
     <div id="form-login">
+      <div onclick="mostrarCadastro()" style="display:flex;align-items:center;gap:11px;background:rgba(0,214,143,.08);border:1.5px solid rgba(0,214,143,.35);border-radius:12px;padding:12px 14px;margin-bottom:18px;cursor:pointer;">
+        <span style="font-size:22px;flex-shrink:0;">👋</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:700;color:var(--verde);">É seu primeiro acesso?</div>
+          <div style="font-size:11.5px;color:var(--texto2);margin-top:1px;">Toque aqui para criar seu e-mail e senha — é grátis.</div>
+        </div>
+        <span style="color:var(--verde);font-size:18px;flex-shrink:0;">›</span>
+      </div>
+      <div style="text-align:center;font-size:11px;color:var(--texto3);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;">ou entre com sua conta</div>
       <div class="campo-grupo">
         <label class="campo-label">Email</label>
         <input type="email" class="campo-input" id="login-email" placeholder="seu@email.com">

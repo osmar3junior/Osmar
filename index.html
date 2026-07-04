@@ -2401,7 +2401,7 @@ if ('serviceWorker' in navigator) {
     <!-- Raio -->
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;padding:8px 12px;margin-bottom:10px;">
       <span id="qv-raio-label" style="font-size:11px;color:var(--texto2);flex-shrink:0;">Raio</span>
-      <input type="range" id="qv-raio-slider" min="5" max="200" step="5" value="15" oninput="qvSetRaio(this.value)"
+      <input type="range" id="qv-raio-slider" min="5" max="300" step="5" value="15" oninput="qvSetRaio(this.value)"
         style="flex:1;margin:0 11px;height:4px;border-radius:99px;background:var(--bg3);accent-color:#38BDF8;cursor:pointer;">
       <span id="qv-raio-out" style="font-size:12px;font-weight:700;color:#7DD3FC;flex-shrink:0;">15 km</span>
     </div>
@@ -8431,7 +8431,10 @@ function renderizarSemanaManual() {
           <button onclick="event.stopPropagation();moverClienteRM('${x.it.id}','${prox}')" title="Mover para ${RM_NOMES[prox]}" style="background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:5px 7px;color:var(--texto2);font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'DM Sans',sans-serif;">→ ${RM_ABREV[prox]}</button>
           <button onclick="event.stopPropagation();removerClienteRMSemana('${x.it.id}')" style="background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.35);border-radius:8px;width:26px;height:26px;color:var(--vermelho);font-size:12px;cursor:pointer;flex-shrink:0;">✕</button>
         </div>`;
-      }).join('') + '</div>';
+      }).join('')
+      + `<button onclick="event.stopPropagation();dispararDiaManualWpp('${d}')" style="width:100%;margin-top:9px;display:flex;align-items:center;justify-content:center;gap:7px;background:#25D366;border:none;border-radius:10px;padding:11px;color:#04231A;font-size:12.5px;font-weight:800;font-family:'DM Sans',sans-serif;cursor:pointer;">💬 Enviar ${RM_NOMES[d].toLowerCase()} no WhatsApp</button>`
+      + `<div style="font-size:9.5px;color:var(--texto3);text-align:center;margin-top:5px;">Cada cliente vai com o link do Google Maps</div>`
+      + '</div>';
     }
     return `<div onclick="_smExpandido=_smExpandido==='${d}'?null:'${d}';renderizarSemanaManual();" style="background:var(--bg3);border:1px solid ${estourou ? 'rgba(255,77,106,.45)' : 'var(--borda)'};border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -8625,6 +8628,34 @@ function dispararRotaManualWpp() {
     msg += `🏁 termina ~${_minParaHHMM(calc.termina)}\n`;
   });
   msg += `\n_${total} cliente${total > 1 ? 's' : ''} na semana · Carteira Viva_`;
+  _wppAbrir(msg);
+}
+
+// Envia a rota de UM dia com link do Google Maps por cliente (abre o GPS)
+function dispararDiaManualWpp(dia) {
+  const rm = getRotaManual();
+  const calc = _calcDiaRM(dia, rm);
+  if (!calc.items.length) { toast('Esse dia está sem clientes'); return; }
+  const hoje = new Date(), dow = hoje.getDay();
+  const delta = dow === 0 ? 1 : dow === 6 ? 2 : 1 - dow;
+  const seg = new Date(hoje); seg.setDate(hoje.getDate() + delta);
+  const dataDia = new Date(seg); dataDia.setDate(seg.getDate() + RM_DIAS.indexOf(dia));
+  const fmtD = dt => dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+  let msg = `🗺️ *ROTA DE ${RM_NOMES[dia].toUpperCase()} · ${fmtD(dataDia)}*\n_${calc.items.length} visita${calc.items.length > 1 ? 's' : ''}${calc.dist ? ` · ${calc.dist.toFixed(0)}km` : ''} · Carteira Viva_\n`;
+  calc.items.forEach((x, i) => {
+    const c = x.c, it = x.it;
+    const horaTxt = x.fixo ? `🔒 ${_minParaHHMM(x.inicio)}` : `~${_minParaHHMM(x.inicio)}`;
+    msg += `\n${'━'.repeat(14)}\n`;
+    msg += `*${i + 1}. ${c.nome.toUpperCase()}*${c.loja ? ` — ${c.loja}` : ''}${c.cidade ? ` (${c.cidade})` : ''}\n`;
+    msg += `🕗 ${horaTxt}`;
+    if (it.marcas && it.marcas.length) msg += ` · 🏷️ ${it.marcas.join(' + ')}`;
+    msg += `\n`;
+    if (x.atraso > 0) msg += `⚠️ marcado ${it.hora} — só chega ~${_minParaHHMM(x.inicio)}\n`;
+    msg += `📍 Abrir no mapa: ${_qvMapsLink(c)}\n`;
+  });
+  msg += `\n🏁 termina ~${_minParaHHMM(calc.termina)}\n`;
+  msg += `\n_Carteira Viva — seu copiloto na estrada_ 🚗`;
   _wppAbrir(msg);
 }
 

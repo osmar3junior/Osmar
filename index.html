@@ -839,6 +839,18 @@ if ('serviceWorker' in navigator) {
       <div style="color:#7DD3FC;font-size:20px;">›</div>
     </button>
 
+    <!-- BOTÃO QUEM VISITAR POR CIDADE -->
+    <button onclick="abrirQuemVisitar()" style="width:100%;background:linear-gradient(135deg,#0B1B24,#12303B);border:1.5px solid rgba(56,189,248,.35);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(56,189,248,.14);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">📍</div>
+        <div style="text-align:left;">
+          <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Quem visitar por cidade</div>
+          <div style="font-size:11px;color:var(--texto2);">Escolha a cidade e veja quem vale a pena</div>
+        </div>
+      </div>
+      <div style="color:#7DD3FC;font-size:20px;">›</div>
+    </button>
+
     <!-- BANNER JANELA DE COLEÇÃO (confecção/moda) -->
     <button id="banner-colecao" onclick="abrirRotaManual()" style="display:none;width:100%;background:linear-gradient(135deg,#1a1200,#2a1f00);border:1.5px solid rgba(255,192,67,.3);border-radius:14px;padding:14px 16px;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;gap:10px;">
       <div style="text-align:left;min-width:0;">
@@ -2364,6 +2376,48 @@ if ('serviceWorker' in navigator) {
         <span style="font-size:22px;">🎯</span>
         <div><div style="font-size:14px;font-weight:700;color:var(--texto);">Prontos para comprar</div><div style="font-size:11px;color:var(--texto3);">Clientes com maior probabilidade de comprar agora</div></div>
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL QUEM VISITAR POR CIDADE -->
+<div class="modal-overlay" id="modal-quem-visitar">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">📍 Quem visitar</div>
+      <button onclick="fecharModal('modal-quem-visitar')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div id="qv-sub" style="font-size:11.5px;color:var(--texto2);margin-bottom:11px;">Escolha a cidade ou busque um cliente</div>
+
+    <input type="text" class="campo-input" id="qv-busca" placeholder="🔎 Cidade ou nome do cliente..." autocomplete="off" oninput="qvBuscaInput(this.value)" style="margin-bottom:2px;">
+    <div id="qv-autocomplete" style="display:none;background:var(--bg2);border:1px solid var(--borda);border-top:none;border-radius:0 0 10px 10px;overflow:hidden;margin-bottom:12px;"></div>
+
+    <!-- Chip da âncora (modo cliente) -->
+    <div id="qv-ancora-chip" style="display:none;margin-bottom:11px;"></div>
+
+    <!-- Carrossel de cidades (modo cidade) -->
+    <div id="qv-cidades" style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:10px;padding-bottom:4px;scrollbar-width:none;"></div>
+
+    <!-- Raio -->
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;padding:8px 12px;margin-bottom:10px;">
+      <span id="qv-raio-label" style="font-size:11px;color:var(--texto2);flex-shrink:0;">Raio</span>
+      <input type="range" id="qv-raio-slider" min="5" max="200" step="5" value="15" oninput="qvSetRaio(this.value)"
+        style="flex:1;margin:0 11px;height:4px;border-radius:99px;background:var(--bg3);accent-color:#38BDF8;cursor:pointer;">
+      <span id="qv-raio-out" style="font-size:12px;font-weight:700;color:#7DD3FC;flex-shrink:0;">15 km</span>
+    </div>
+
+    <!-- Ordenar -->
+    <div style="display:flex;gap:7px;margin-bottom:6px;">
+      <button id="qv-ord-pot" onclick="qvSetOrdem('potencial')" style="flex:1;text-align:center;border-radius:10px;padding:8px 4px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">🏆 Potencial</button>
+      <button id="qv-ord-prox" onclick="qvSetOrdem('proximidade')" style="flex:1;text-align:center;border-radius:10px;padding:8px 4px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">📍 Proximidade</button>
+    </div>
+    <div style="font-size:10px;color:var(--texto3);text-align:center;margin-bottom:11px;">Toque no ✓ para marcar · toque no card abre o cliente</div>
+
+    <div id="qv-lista"></div>
+
+    <div style="position:sticky;bottom:-14px;background:var(--bg2);padding:10px 0 6px;border-top:1px solid var(--borda);margin-top:8px;">
+      <button onclick="enviarQuemVisitarWhatsApp()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:7px;background:#25D366;border:none;border-radius:12px;padding:13px;color:#04231A;font-size:13.5px;font-weight:800;font-family:'DM Sans',sans-serif;cursor:pointer;">💬 <span id="qv-btn-label">Enviar rota via WhatsApp</span></button>
+      <div style="font-size:10px;color:var(--texto3);text-align:center;margin-top:6px;">Cada cliente vai com um link do mapa · sem marcar, mando a lista toda</div>
     </div>
   </div>
 </div>
@@ -7089,6 +7143,273 @@ function _foraRotaWhatsApp() {
   });
   msg += `\n_${lista.length} cliente${lista.length>1?'s':''} encontrado${lista.length>1?'s':''} · Carteira Viva_`;
   fecharModal('modal-fora-rota');
+  _wppAbrir(msg);
+}
+
+// ===== QUEM VISITAR POR CIDADE =====
+// Dois modos: CIDADE (raio expande a partir do centro da cidade escolhida) e
+// CLIENTE (o cliente vira âncora e o raio mede a distância a partir dele).
+// Reaproveita _notaForaRota, _rationaleForaRota e calcularDistancia do "fora da rota".
+let _qvModo = 'cidade';       // 'cidade' | 'cliente'
+let _qvCidade = null;
+let _qvAnchorId = null;
+let _qvRaio = 15;
+let _qvOrdem = 'potencial';   // 'potencial' | 'proximidade'
+let _qvBusca = '';
+let _qvSel = new Set();
+let _qvCidadesLista = [];
+
+function abrirQuemVisitar() {
+  _qvModo = 'cidade';
+  _qvAnchorId = null;
+  _qvRaio = 15;
+  _qvOrdem = 'potencial';
+  _qvBusca = '';
+  _qvSel.clear();
+  const inp = document.getElementById('qv-busca'); if (inp) inp.value = '';
+  document.getElementById('qv-autocomplete').style.display = 'none';
+  // Cidade padrão = a com mais clientes
+  const contagem = _qvContagemCidades();
+  _qvCidadesLista = Object.keys(contagem).sort((a, b) => contagem[b] - contagem[a]);
+  _qvCidade = _qvCidadesLista[0] || null;
+  document.getElementById('qv-raio-slider').value = 15;
+  renderizarQuemVisitar();
+  document.getElementById('modal-quem-visitar').classList.add('aberto');
+}
+
+function _qvContagemCidades() {
+  const c = {};
+  getClientesAtivos().forEach(cl => { const k = (cl.cidade || '').trim() || 'Sem cidade'; c[k] = (c[k] || 0) + 1; });
+  return c;
+}
+
+// Centro geográfico dos clientes de uma cidade (média das coordenadas)
+function _qvCentroCidade(cidade) {
+  const cls = getClientesAtivos().filter(c => ((c.cidade || '').trim() || 'Sem cidade') === cidade && c.lat && c.lng);
+  if (!cls.length) return null;
+  const lat = cls.reduce((s, c) => s + parseFloat(c.lat), 0) / cls.length;
+  const lng = cls.reduce((s, c) => s + parseFloat(c.lng), 0) / cls.length;
+  return { lat, lng };
+}
+
+// Lista base conforme o modo, já com nota/dist/rationale e ordenada
+function _qvListaAtual() {
+  let centro = null, excluirId = null;
+  if (_qvModo === 'cliente') {
+    const anchor = getClientes().find(c => c.id === _qvAnchorId);
+    if (anchor && anchor.lat && anchor.lng) { centro = { lat: parseFloat(anchor.lat), lng: parseFloat(anchor.lng) }; excluirId = anchor.id; }
+  } else {
+    centro = _qvCidade ? _qvCentroCidade(_qvCidade) : null;
+  }
+
+  let base = getClientesAtivos();
+  if (_qvModo === 'cidade') {
+    // clientes da cidade + vizinhos dentro do raio (se houver centro)
+    base = base.filter(c => {
+      const naCidade = ((c.cidade || '').trim() || 'Sem cidade') === _qvCidade;
+      if (naCidade) return true;
+      if (!centro || !c.lat || !c.lng) return false;
+      return calcularDistancia(centro.lat, centro.lng, parseFloat(c.lat), parseFloat(c.lng)) <= _qvRaio;
+    });
+  } else {
+    base = base.filter(c => c.id !== excluirId && c.lat && c.lng && centro
+      && calcularDistancia(centro.lat, centro.lng, parseFloat(c.lat), parseFloat(c.lng)) <= _qvRaio);
+  }
+
+  const arr = base.map(c => {
+    const ni = _notaForaRota(c);
+    const dist = (centro && c.lat && c.lng) ? calcularDistancia(centro.lat, centro.lng, parseFloat(c.lat), parseFloat(c.lng)) : null;
+    return { cliente: c, nota: ni.nota, notaInfo: ni, marca: ni.marca, dist };
+  });
+
+  if (_qvOrdem === 'proximidade') {
+    arr.sort((a, b) => (a.dist == null ? 1e9 : a.dist) - (b.dist == null ? 1e9 : b.dist));
+  } else {
+    arr.sort((a, b) => b.nota - a.nota);
+  }
+  return arr;
+}
+
+function renderizarQuemVisitar() {
+  // Sub + slider label + botões de ordem
+  document.getElementById('qv-raio-out').textContent = _qvRaio + ' km';
+  document.getElementById('qv-raio-label').textContent = _qvModo === 'cliente' ? 'Raio em volta dele' : 'Raio';
+  _qvPintarOrdem();
+
+  // Chip da âncora + carrossel de cidades (só um dos dois visível)
+  const chip = document.getElementById('qv-ancora-chip');
+  const cidadesWrap = document.getElementById('qv-cidades');
+  if (_qvModo === 'cliente') {
+    const anchor = getClientes().find(c => c.id === _qvAnchorId);
+    cidadesWrap.style.display = 'none';
+    chip.style.display = 'block';
+    chip.innerHTML = `<span onclick="qvLimparAncora()" style="display:inline-flex;align-items:center;gap:7px;background:rgba(56,189,248,.12);border:1.5px solid rgba(56,189,248,.4);border-radius:20px;padding:5px 12px;cursor:pointer;">
+      <span style="font-size:12px;">📍</span>
+      <span style="font-size:12px;font-weight:700;color:#7DD3FC;">Perto de ${esc(anchor ? anchor.nome : '')}</span>
+      <span style="color:#7DD3FC;font-size:13px;opacity:.7;">✕</span>
+    </span>`;
+    document.getElementById('qv-sub').textContent = anchor ? `${anchor.nome}${anchor.cidade ? ' · ' + anchor.cidade : ''} é o ponto de partida` : '';
+  } else {
+    chip.style.display = 'none';
+    cidadesWrap.style.display = 'flex';
+    const contagem = _qvContagemCidades();
+    const chipCid = (cid, i) => {
+      const ativo = cid === _qvCidade;
+      return `<button ${ativo ? 'data-qv-ativo="1" ' : ''}onclick="qvSelecionarCidade(${i})" style="flex-shrink:0;white-space:nowrap;padding:6px 13px;border-radius:20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;${ativo ? 'background:var(--verde);border:1.5px solid var(--verde);color:#04231A;' : 'background:transparent;border:1px solid var(--borda);color:var(--texto2);'}">${esc(cid)} <span style="opacity:.7;">${contagem[cid] || 0}</span></button>`;
+    };
+    cidadesWrap.innerHTML = _qvCidadesLista.map((cid, i) => chipCid(cid, i)).join('');
+    const at = cidadesWrap.querySelector('[data-qv-ativo]');
+    if (at && at.scrollIntoView) at.scrollIntoView({ inline: 'center', block: 'nearest' });
+    const n = getClientesAtivos().filter(c => ((c.cidade || '').trim() || 'Sem cidade') === _qvCidade).length;
+    document.getElementById('qv-sub').textContent = _qvCidade ? `${_qvCidade} · ${n} cliente${n !== 1 ? 's' : ''}` : 'Escolha a cidade';
+  }
+
+  // Lista
+  const lista = _qvListaAtual();
+  const cont = document.getElementById('qv-lista');
+  if (!lista.length) {
+    cont.innerHTML = `<div style="text-align:center;padding:22px 16px;color:var(--texto3);font-size:13px;">Nenhum cliente aqui${_qvModo === 'cliente' ? ' nesse raio — arraste para ampliar' : ''}.</div>`;
+  } else {
+    const anchorTop = (_qvModo === 'cliente') ? _qvCardAncora() : '';
+    cont.innerHTML = anchorTop + lista.map(x => {
+      const sel = _qvSel.has(x.cliente.id);
+      const cor = x.nota >= 7 ? 'var(--verde)' : x.nota >= 4.5 ? 'var(--amarelo)' : 'var(--texto2)';
+      const bgN = x.nota >= 7 ? 'rgba(0,214,143,.15)' : x.nota >= 4.5 ? 'rgba(255,192,67,.15)' : 'rgba(255,255,255,.06)';
+      const rat = _rationaleForaRota(x.cliente, x.notaInfo);
+      const distTxt = x.dist != null ? (x.dist < 1 ? `${Math.round(x.dist * 1000)} m` : `${x.dist.toFixed(1)} km`) : '';
+      const linha2 = rat ? `${rat.texto}${distTxt ? ' · a ' + distTxt : ''}` : (distTxt ? 'a ' + distTxt : (x.cliente.loja || ''));
+      const linha2cor = rat ? rat.cor : 'var(--texto2)';
+      return `<div onclick="fecharModal('modal-quem-visitar');setTimeout(()=>abrirDetalhe('${x.cliente.id}','clientes'),200)" style="display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid ${sel ? 'rgba(0,214,143,.4)' : 'var(--borda)'};border-radius:12px;padding:9px 10px;margin-bottom:7px;cursor:pointer;">
+        <span style="width:34px;height:34px;border-radius:50%;background:${bgN};color:${cor};display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;flex-shrink:0;font-family:'DM Sans',sans-serif;">${x.nota.toFixed(1).replace('.', ',')}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Sans',sans-serif;">${esc(x.cliente.nome)}</div>
+          <div style="font-size:10.5px;color:${linha2cor};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(linha2)}</div>
+        </div>
+        <button onclick="event.stopPropagation();qvToggleSel('${x.cliente.id}')" aria-label="Marcar ${esc(x.cliente.nome)}" style="width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;${sel ? 'background:var(--verde);border:none;' : 'background:transparent;border:2px solid var(--texto3);'}">${sel ? '<span style="color:#04231A;font-size:14px;font-weight:800;">✓</span>' : ''}</button>
+      </div>`;
+    }).join('');
+  }
+  _qvAtualizarBotao();
+}
+
+function _qvCardAncora() {
+  const a = getClientes().find(c => c.id === _qvAnchorId);
+  if (!a) return '';
+  const ni = _notaForaRota(a);
+  const cor = ni.nota >= 7 ? 'var(--verde)' : ni.nota >= 4.5 ? 'var(--amarelo)' : 'var(--texto2)';
+  return `<div onclick="fecharModal('modal-quem-visitar');setTimeout(()=>abrirDetalhe('${a.id}','clientes'),200)" style="display:flex;align-items:center;gap:10px;background:rgba(56,189,248,.07);border:1.5px solid rgba(56,189,248,.35);border-radius:12px;padding:9px 10px;margin-bottom:11px;cursor:pointer;">
+    <span style="font-size:17px;flex-shrink:0;">📍</span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Sans',sans-serif;">${esc(a.nome)} <span style="font-size:10px;font-weight:600;color:#7DD3FC;">· ponto de partida</span></div>
+      <div style="font-size:10.5px;color:var(--texto2);">${esc(a.loja || '')}${a.cidade ? ' · ' + esc(a.cidade) : ''}</div>
+    </div>
+    <span style="width:28px;height:28px;border-radius:50%;background:rgba(0,214,143,.12);color:${cor};display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;flex-shrink:0;font-family:'DM Sans',sans-serif;">${ni.nota.toFixed(1).replace('.', ',')}</span>
+  </div>`;
+}
+
+function _qvPintarOrdem() {
+  const pot = document.getElementById('qv-ord-pot');
+  const prox = document.getElementById('qv-ord-prox');
+  const on = (el, cor, bg) => { el.style.background = bg; el.style.border = `1.5px solid ${cor}`; el.style.color = cor; };
+  const off = el => { el.style.background = 'var(--bg3)'; el.style.border = '1px solid var(--borda)'; el.style.color = 'var(--texto2)'; };
+  if (_qvOrdem === 'potencial') { on(pot, 'var(--verde)', 'rgba(0,214,143,.14)'); off(prox); }
+  else { on(prox, '#38BDF8', 'rgba(56,189,248,.14)'); off(pot); }
+}
+
+function _qvAtualizarBotao() {
+  const n = _qvSel.size;
+  const el = document.getElementById('qv-btn-label');
+  if (el) el.textContent = n > 0 ? `Enviar rota via WhatsApp (${n})` : 'Enviar rota via WhatsApp';
+}
+
+function qvSelecionarCidade(i) {
+  _qvCidade = _qvCidadesLista[i];
+  renderizarQuemVisitar();
+}
+function qvSetRaio(v) { _qvRaio = Number(v); renderizarQuemVisitar(); }
+function qvSetOrdem(m) { _qvOrdem = m; renderizarQuemVisitar(); }
+function qvToggleSel(id) {
+  if (_qvSel.has(id)) _qvSel.delete(id); else _qvSel.add(id);
+  renderizarQuemVisitar();
+}
+function qvLimparAncora() {
+  _qvModo = 'cidade';
+  _qvAnchorId = null;
+  const inp = document.getElementById('qv-busca'); if (inp) inp.value = '';
+  document.getElementById('qv-autocomplete').style.display = 'none';
+  renderizarQuemVisitar();
+}
+
+// Busca: mostra autocomplete de clientes; se casar cidade, filtra o carrossel
+function qvBuscaInput(txt) {
+  _qvBusca = txt;
+  const termo = _normRM(txt);
+  const ac = document.getElementById('qv-autocomplete');
+  if (!termo) { ac.style.display = 'none'; return; }
+  const matches = getClientesAtivos()
+    .filter(c => _normRM(c.nome).includes(termo) || _normRM(c.loja).includes(termo))
+    .slice(0, 6);
+  if (!matches.length) { ac.style.display = 'none'; return; }
+  ac.innerHTML = matches.map(c => {
+    const ni = _notaForaRota(c);
+    const cor = ni.nota >= 7 ? 'var(--verde)' : ni.nota >= 4.5 ? 'var(--amarelo)' : 'var(--texto2)';
+    return `<div onclick="qvAncorarCliente('${c.id}')" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-bottom:1px solid var(--borda);cursor:pointer;">
+      <span style="width:30px;height:30px;border-radius:50%;background:var(--bg3);color:${cor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;font-family:'DM Sans',sans-serif;">${ni.nota.toFixed(1).replace('.', ',')}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12.5px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.nome)}</div>
+        <div style="font-size:10.5px;color:var(--texto2);">${esc(c.loja || '')}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div>
+      </div>
+      <span style="color:var(--texto3);font-size:15px;">›</span>
+    </div>`;
+  }).join('');
+  ac.style.display = 'block';
+}
+
+function qvAncorarCliente(id) {
+  const c = getClientes().find(x => x.id === id);
+  if (!c) return;
+  if (!c.lat || !c.lng) { toast('Esse cliente ainda não tem localização no mapa.'); return; }
+  _qvModo = 'cliente';
+  _qvAnchorId = id;
+  _qvSel.clear();
+  _qvRaio = 15;
+  document.getElementById('qv-raio-slider').value = 15;
+  document.getElementById('qv-busca').value = '';
+  document.getElementById('qv-autocomplete').style.display = 'none';
+  renderizarQuemVisitar();
+}
+
+// Link individual do mapa: coordenada quando existe, senão busca por endereço
+function _qvMapsLink(c) {
+  if (c.lat && c.lng) return `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}`;
+  const end = [c.endereco || c.enderecoPendente, c.cidade, c.uf, 'Brasil'].filter(Boolean).join(', ');
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`;
+}
+
+function enviarQuemVisitarWhatsApp() {
+  const cfg = getConfig();
+  if (!cfg.wppRep) { toast('Cadastre seu WhatsApp em Configurações primeiro 📲'); return; }
+  let lista = _qvListaAtual();
+  if (_qvSel.size > 0) lista = lista.filter(x => _qvSel.has(x.cliente.id)); // marcados; sem marcar = todos
+  if (!lista.length) { toast('Nenhum cliente para enviar.'); return; }
+
+  const hoje = new Date();
+  const dataTxt = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+  const titulo = _qvModo === 'cliente'
+    ? `PERTO DE ${(getClientes().find(c => c.id === _qvAnchorId) || {}).nome?.toUpperCase() || ''}`
+    : `QUEM VISITAR — ${(_qvCidade || '').toUpperCase()}`;
+  let msg = `📍 *${titulo}*\n_${dataTxt} · ${lista.length} cliente${lista.length > 1 ? 's' : ''} · Carteira Viva_\n`;
+  lista.forEach((x, i) => {
+    const c = x.cliente;
+    const rat = _rationaleForaRota(c, x.notaInfo);
+    const distTxt = x.dist != null ? ` · ${x.dist < 1 ? Math.round(x.dist * 1000) + 'm' : x.dist.toFixed(1) + 'km'}` : '';
+    msg += `\n${'━'.repeat(14)}\n`;
+    msg += `*${i + 1}. ${c.nome.toUpperCase()}*${c.loja ? ' — ' + c.loja : ''}${distTxt}\n`;
+    if (rat) msg += `${rat.texto}\n`;
+    msg += `📍 Abrir no mapa: ${_qvMapsLink(c)}\n`;
+  });
+  msg += `\n_Carteira Viva — seu copiloto na estrada_ 🚗`;
+  fecharModal('modal-quem-visitar');
   _wppAbrir(msg);
 }
 

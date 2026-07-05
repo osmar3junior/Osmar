@@ -830,7 +830,7 @@ if ('serviceWorker' in navigator) {
     <!-- BOTÃO ROTA MANUAL DA SEMANA -->
     <button onclick="abrirRotaManual()" style="width:100%;background:linear-gradient(135deg,#0B1626,#14263E);border:1.5px solid rgba(56,189,248,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:40px;height:40px;background:rgba(56,189,248,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">✋</div>
+        <div style="width:40px;height:40px;background:rgba(56,189,248,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🗓️</div>
         <div style="text-align:left;">
           <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Monte o seu planejamento semanal de visita</div>
           <div style="font-size:11px;color:var(--texto2);">Você escolhe os clientes, o app confere se cabe no dia</div>
@@ -2205,6 +2205,18 @@ if ('serviceWorker' in navigator) {
     <div id="encaixe-rm-msg" style="background:rgba(255,77,106,.08);border:1px solid rgba(255,77,106,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--texto);line-height:1.5;"></div>
     <div style="font-size:11px;color:var(--texto3);margin-bottom:6px;">Onde o app consegue encaixar:</div>
     <div id="encaixe-rm-opcoes"></div>
+  </div>
+</div>
+
+<!-- MODAL MOVER CLIENTE PARA OUTRO DIA -->
+<div class="modal-overlay" id="modal-mover-dia">
+  <div class="modal-box" style="padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">🗓️ Mover para qual dia?</div>
+      <button onclick="fecharModal('modal-mover-dia')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div id="mover-dia-sub" class="modal-sub" style="margin-bottom:14px;"></div>
+    <div id="mover-dia-chips" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;"></div>
   </div>
 </div>
 
@@ -7914,7 +7926,7 @@ let _rmMarcasExp = [];         // marcas do cliente expandido (p/ onclick por í
 let _rmClientes = [];
 let _rmCidadesLista = [];
 let _rmMaxPot = 0;             // maior potencial da carteira (normaliza a nota)
-let _smExpandido = null;       // dia aberto na tela da semana
+let _smAbertos = new Set();    // dias abertos na tela da semana (vários ao mesmo tempo)
 let _rmHoraSel = '';           // 🔒 horário escolhido no cartão expandido (passo 1)
 let _rmHoraAberto = false;     // seletor de hora visível no cartão?
 
@@ -8383,7 +8395,9 @@ function _statusDiaRM(calc, dia, cfg) {
 
 function abrirSemanaManual() {
   fecharModal('modal-rota-manual');
-  _smExpandido = null;
+  // Já abre todos os dias que têm cliente — o rep ajusta a semana inteira numa tela só
+  const rm = getRotaManual();
+  _smAbertos = new Set(RM_DIAS.filter(d => (rm.dias[d] || []).length));
   setTimeout(() => {
     renderizarSemanaManual();
     document.getElementById('modal-semana-manual').classList.add('aberto');
@@ -8401,11 +8415,10 @@ function renderizarSemanaManual() {
     kmTotal += calc.dist;
     calc.items.forEach(x => cidades.add((x.c.cidade || '').trim() || '—'));
     const st = _statusDiaRM(calc, d, cfg);
-    const aberto = _smExpandido === d;
+    const aberto = _smAbertos.has(d);
     const estourou = st && st.txt.indexOf('🔴') === 0;
     let inner = '';
     if (aberto && calc.items.length) {
-      const prox = RM_DIAS[(RM_DIAS.indexOf(d) + 1) % RM_DIAS.length];
       inner = '<div style="margin-top:8px;">' + calc.items.map((x, i) => {
         // Lacuna visível antes de uma âncora (tempo parado esperando o horário)
         let lacuna = '';
@@ -8428,7 +8441,7 @@ function renderizarSemanaManual() {
             ${atrasoLinha}
           </div>
           <button onclick="event.stopPropagation();abrirHoraRM('${x.it.id}')" title="${x.fixo ? 'Mudar/remover horário fixo' : 'Fixar horário com o cliente'}" style="background:${x.fixo ? 'rgba(56,189,248,.14)' : 'var(--bg2)'};border:1px solid ${x.fixo ? 'rgba(56,189,248,.4)' : 'var(--borda)'};border-radius:8px;width:26px;height:26px;color:${x.fixo ? '#7DD3FC' : 'var(--texto2)'};font-size:12px;cursor:pointer;flex-shrink:0;">🕐</button>
-          <button onclick="event.stopPropagation();moverClienteRM('${x.it.id}','${prox}')" title="Mover para ${RM_NOMES[prox]}" style="background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:5px 7px;color:var(--texto2);font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'DM Sans',sans-serif;">→ ${RM_ABREV[prox]}</button>
+          <button onclick="event.stopPropagation();abrirMoverDia('${x.it.id}')" title="Mover para outro dia" style="background:var(--bg2);border:1px solid var(--borda);border-radius:8px;padding:5px 8px;color:var(--texto2);font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'DM Sans',sans-serif;">🗓️ mover</button>
           <button onclick="event.stopPropagation();removerClienteRMSemana('${x.it.id}')" style="background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.35);border-radius:8px;width:26px;height:26px;color:var(--vermelho);font-size:12px;cursor:pointer;flex-shrink:0;">✕</button>
         </div>`;
       }).join('')
@@ -8436,7 +8449,7 @@ function renderizarSemanaManual() {
       + `<div style="font-size:9.5px;color:var(--texto3);text-align:center;margin-top:5px;">Cada cliente vai com o link do Google Maps</div>`
       + '</div>';
     }
-    return `<div onclick="_smExpandido=_smExpandido==='${d}'?null:'${d}';renderizarSemanaManual();" style="background:var(--bg3);border:1px solid ${estourou ? 'rgba(255,77,106,.45)' : 'var(--borda)'};border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;">
+    return `<div onclick="_smToggleDia('${d}')" style="background:var(--bg3);border:1px solid ${estourou ? 'rgba(255,77,106,.45)' : 'var(--borda)'};border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <span style="font-size:14px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;">${RM_NOMES[d]}</span>
         <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -8453,6 +8466,12 @@ function renderizarSemanaManual() {
     : 'Nenhum cliente ainda — volte com ‹ e escolha os clientes da sua semana.';
 }
 
+// Abre/fecha um dia SEM mexer nos outros (vários abertos ao mesmo tempo)
+function _smToggleDia(d) {
+  if (_smAbertos.has(d)) _smAbertos.delete(d); else _smAbertos.add(d);
+  renderizarSemanaManual();
+}
+
 // ---- Apagar rota (semana inteira ou um dia) ----
 function apagarSemanaRM() {
   const rm = getRotaManual();
@@ -8461,7 +8480,7 @@ function apagarSemanaRM() {
   if (!confirm(`Apagar a rota da semana inteira? (${total} cliente${total > 1 ? 's' : ''})`)) return;
   RM_DIAS.forEach(d => rm.dias[d] = []);
   salvarRotaManual(rm);
-  _smExpandido = null;
+  _smAbertos.clear();
   renderizarSemanaManual();
   toast('🗑️ Semana apagada — começar do zero');
 }
@@ -8522,6 +8541,31 @@ function removerHoraRM() {
     toast('Horário removido — o app volta a encaixar sozinho');
   }
   fecharModal('modal-hora-rm');
+}
+
+// Seletor de dia (substitui o antigo "→ próximo dia") — o rep escolhe qualquer dia
+let _moverDiaId = null;
+function abrirMoverDia(id) {
+  _moverDiaId = id;
+  const entrada = _rmEntradaDo(id);
+  const diaAtual = entrada ? entrada.dia : null;
+  const c = getClientes().find(x => x.id === id);
+  document.getElementById('mover-dia-sub').textContent =
+    `${c ? c.nome : 'Cliente'}${diaAtual ? ' está na ' + RM_NOMES[diaAtual].toLowerCase() : ''} · escolha o novo dia`;
+  const cfg = getConfig();
+  document.getElementById('mover-dia-chips').innerHTML = RM_DIAS.map(d => {
+    const ehAtual = d === diaAtual;
+    const dimSab = d === 'sab' && !cfg.sabAtivo;
+    return `<button ${ehAtual ? 'disabled' : `onclick="confirmarMoverDia('${d}')"`} style="padding:12px 4px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:${ehAtual ? 'default' : 'pointer'};${ehAtual ? 'background:rgba(56,189,248,.14);border:1.5px solid rgba(56,189,248,.4);color:#7DD3FC;' : 'background:var(--bg3);border:1px solid var(--borda);color:var(--texto);'}${dimSab ? 'opacity:.5;' : ''}">${RM_NOMES[d]}${ehAtual ? '<div style="font-size:9px;font-weight:600;opacity:.8;">está aqui</div>' : ''}</button>`;
+  }).join('');
+  document.getElementById('modal-mover-dia').classList.add('aberto');
+}
+function confirmarMoverDia(dia) {
+  const id = _moverDiaId; _moverDiaId = null;
+  fecharModal('modal-mover-dia');
+  if (!id) return;
+  _smAbertos.add(dia); // deixa o dia destino aberto pra ver onde o cliente caiu
+  moverClienteRM(id, dia);
 }
 
 function moverClienteRM(id, dia) {
@@ -11391,19 +11435,80 @@ function _renderMarcasGrid() {
   }).join('') + (mostrar < 10 ? `<div style="font-size:10px;color:var(--texto3);margin-top:5px;padding:0 2px;">preencha e salve (✓) para adicionar mais · máx. 10</div>` : '');
 }
 
+// Conta o que será apagado ao remover uma marca (metas, clientes, vendas)
+function _impactoExclusaoMarca(nome) {
+  const alvo = nome.trim().toLowerCase();
+  const metas = (getConfig().metas || []).filter(m => (m.marca || '').trim().toLowerCase() === alvo).length;
+  let clientes = 0, vendas = 0;
+  getClientes().forEach(c => {
+    const marcasCli = (c.marcas || []).filter(Boolean).map(m => m.trim().toLowerCase());
+    if (marcasCli.includes(alvo)) clientes++;
+    (c.historico || []).forEach(h => {
+      if (h.motivo !== 'fechou_pedido') return;
+      if (h.pedidos && h.pedidos.length) {
+        if (h.pedidos.some(p => (p.marca || '').trim().toLowerCase() === alvo)) vendas++;
+      } else if (marcasCli.length === 1 && marcasCli[0] === alvo) {
+        vendas++; // venda antiga (sem detalhe por marca) de cliente que só tem essa marca
+      }
+    });
+  });
+  return { metas, clientes, vendas };
+}
+
+// A configuração é soberana: remover a marca apaga TUDO ligado a ela —
+// metas, tempo de visita, a marca no perfil de cada cliente e as vendas dela.
 function excluirMarca(i) {
   const cfg = getConfig();
   const marcas = cfg.marcas || Array(10).fill('');
   const nome = marcas[i];
   if (!nome || !nome.trim()) return;
-  if (!confirm(`Remover a marca "${nome}" das suas representações?`)) return;
+  const alvo = nome.trim().toLowerCase();
+  const imp = _impactoExclusaoMarca(nome);
+
+  let aviso = `Remover a marca "${nome}"?\n\nA configuração é soberana — vou apagar TUDO ligado a ela:`;
+  aviso += `\n• ${imp.metas} meta(s)`;
+  aviso += `\n• a marca em ${imp.clientes} cliente(s)`;
+  aviso += `\n• ${imp.vendas} venda(s) no histórico`;
+  aviso += `\n\n⚠️ Não dá para desfazer. Confirmar?`;
+  if (!confirm(aviso)) return;
+
+  // 1) Config: tira a marca, as metas dela e o tempo de visita dela
   marcas.splice(i, 1);
   cfg.marcas = marcas;
+  cfg.metas = (cfg.metas || []).filter(m => (m.marca || '').trim().toLowerCase() !== alvo);
+  if (cfg.tempoVisitaMarca) { delete cfg.tempoVisitaMarca[nome]; delete cfg.tempoVisitaMarca[nome.trim()]; }
   salvarConfigData(cfg);
+
+  // 2) Clientes: remove as vendas da marca do histórico e a marca do perfil
+  const clientes = getClientes();
+  clientes.forEach(c => {
+    const marcasCliOrig = (c.marcas || []).filter(Boolean).map(m => m.trim().toLowerCase());
+    if (c.historico && c.historico.length) {
+      c.historico = c.historico.filter(h => {
+        if (h.motivo !== 'fechou_pedido') return true;
+        if (h.pedidos && h.pedidos.length) {
+          const restantes = h.pedidos.filter(p => (p.marca || '').trim().toLowerCase() !== alvo);
+          if (!restantes.length) return false; // o pedido era só dessa marca → some o contato inteiro
+          h.pedidos = restantes;
+          h.pedidoValor = restantes.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+          if (restantes[0].qtd != null) h.pedidoQtd = restantes[0].qtd; else delete h.pedidoQtd;
+          if (restantes[0].unidade) h.pedidoUnidade = restantes[0].unidade;
+          return true;
+        }
+        // venda antiga sem detalhe: remove só se a marca era a ÚNICA do cliente
+        return !(marcasCliOrig.length === 1 && marcasCliOrig[0] === alvo);
+      });
+    }
+    if (c.marcas) c.marcas = c.marcas.filter(m => (m || '').trim().toLowerCase() !== alvo);
+  });
+  salvarClientes(clientes);
+  _invalidarCacheClientes();
+
   _renderMarcasGrid();
-  renderizarMetasConfig(cfg);
+  renderizarMetasConfig(getConfig());
   renderizarMeuDiaConfig();
-  toast('Marca "' + nome + '" removida');
+  atualizarSemaforoDash();
+  toast(`Marca "${nome}" e tudo ligado a ela foram removidos`);
 }
 
 function salvarMarcaUnica(i) {

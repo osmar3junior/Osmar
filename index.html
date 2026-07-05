@@ -887,21 +887,6 @@ if ('serviceWorker' in navigator) {
       </div>
     </button>
 
-    <!-- BOTÃO GERENTE VIRTUAL -->
-    <button onclick="abrirGerenteVirtual()" style="width:100%;background:linear-gradient(135deg,#1e0a4a,#2d1470);border:1.5px solid rgba(124,58,237,.45);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:40px;height:40px;background:rgba(124,58,237,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🤖</div>
-        <div style="text-align:left;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Gestor IA</span>
-            <span style="background:rgba(124,58,237,.3);border:1px solid rgba(167,139,250,.5);border-radius:20px;padding:2px 8px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;color:#A78BFA;letter-spacing:.4px;">TESTANDO RESPOSTAS DA IA</span>
-          </div>
-          <div style="font-size:11px;color:#A78BFA;">Seu consultor inteligente · Marcas · Ações</div>
-        </div>
-      </div>
-      <div style="color:#7C3AED;font-size:20px;">›</div>
-    </button>
-
     <!-- BOTÃO FINALIZAR DIA -->
     <button onclick="abrirFinalizarDia()" style="width:100%;background:linear-gradient(135deg,#10192b,#16243f);border:1.5px solid rgba(56,113,189,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:12px;">
@@ -939,6 +924,21 @@ if ('serviceWorker' in navigator) {
         <span id="desp-badge-dash" style="display:none;font-size:11px;font-weight:700;color:#FBB52C;background:rgba(251,191,36,.14);border-radius:8px;padding:3px 8px;white-space:nowrap;"></span>
         <div style="color:#FBB52C;font-size:20px;">›</div>
       </div>
+    </button>
+
+    <!-- BOTÃO GERENTE VIRTUAL (por último) -->
+    <button onclick="abrirGerenteVirtual()" style="width:100%;background:linear-gradient(135deg,#1e0a4a,#2d1470);border:1.5px solid rgba(124,58,237,.45);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(124,58,237,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🤖</div>
+        <div style="text-align:left;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Gestor IA</span>
+            <span style="background:rgba(124,58,237,.3);border:1px solid rgba(167,139,250,.5);border-radius:20px;padding:2px 8px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;color:#A78BFA;letter-spacing:.4px;">TESTANDO RESPOSTAS DA IA</span>
+          </div>
+          <div style="font-size:11px;color:#A78BFA;">Seu consultor inteligente · Marcas · Ações</div>
+        </div>
+      </div>
+      <div style="color:#7C3AED;font-size:20px;">›</div>
     </button>
 
     <!-- BLOCO ARQUIVO (fechados / inadimplentes) -->
@@ -2115,7 +2115,7 @@ if ('serviceWorker' in navigator) {
 <div class="modal-overlay" id="modal-rota-manual">
   <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">✋ Planejamento semanal de visita</div>
+      <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">🗓️ Planejamento semanal de visita</div>
       <button onclick="fecharModal('modal-rota-manual')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
     </div>
     <div class="modal-sub" style="margin-bottom:12px;">Marque o dia, busque e toque nos clientes. A nota de 0 a 10 mostra se vale a visita nesta semana.</div>
@@ -7696,6 +7696,8 @@ function abrirOportunidades() {
       const potC = calcularPotencialCliente(c);
       Object.values(potC).forEach(pv => { _rmMaxPot = Math.max(_rmMaxPot, pv.max || pv.avg || 0); });
     });
+    // Ranking pela nota 0-10 que o rep vê no card (maior chance de compra primeiro)
+    opps.sort((a, b) => notaClienteRM(b.c) - notaClienteRM(a.c));
     const lista = document.getElementById('opp-lista');
     if (!opps.length) {
       lista.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--texto2);font-size:13px;line-height:1.6;">Configure o <strong style="color:var(--texto);">giro ideal</strong> nas metas de cada marca para o app calcular as oportunidades.</div>';
@@ -7720,7 +7722,7 @@ function abrirOportunidades() {
             ${_badgeNotaRM(notaClienteRM(o.c))}
             <div style="min-width:0;">
               <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(o.c.nome)}</div>
-              <div style="font-size:11px;color:var(--texto2);">${esc(o.c.loja||'')}${distTxt?' · <strong style="color:var(--texto);">'+distTxt+'</strong>':''}</div>
+              <div style="font-size:11px;color:var(--texto2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(o.c.loja||'')}${o.c.cidade?' · '+esc(o.c.cidade):''}${distTxt?' · <strong style="color:var(--texto);">'+distTxt+'</strong>':''}</div>
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0;">
@@ -13320,15 +13322,12 @@ function renderRelVendas() {
     }).join('');
   }
 
-  // Botão e-mail
+  // Enviar relatório — dois botões diretos (um toque cada), sempre visíveis
   html += `<div id="rel-vendas-envio" style="margin-top:16px;">
-    <button onclick="toggleEnvioVendas()" style="width:100%;background:rgba(0,214,143,.1);border:1.5px solid rgba(0,214,143,.4);border-radius:12px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📤 Enviar relatório detalhado</button>
-    <div id="envio-vendas-opcoes" style="display:none;margin-top:8px;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
-      <div style="font-size:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;margin-bottom:10px;text-align:center;">Para onde enviar o relatório?</div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="enviarRelVendasWhatsapp()" style="flex:1;background:rgba(34,197,94,.1);border:1.5px solid rgba(34,197,94,.35);border-radius:10px;padding:12px 8px;color:#4ade80;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">💬 WhatsApp</button>
-        <button onclick="enviarRelVendasEmailRep()" style="flex:1;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.35);border-radius:10px;padding:12px 8px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📧 E-mail</button>
-      </div>
+    <div style="font-size:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;margin-bottom:8px;text-align:center;">📤 Enviar este relatório detalhado</div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="enviarRelVendasWhatsapp()" style="flex:1;background:rgba(34,197,94,.1);border:1.5px solid rgba(34,197,94,.4);border-radius:11px;padding:13px 8px;color:#4ade80;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">💬 WhatsApp</button>
+      <button onclick="enviarRelVendasEmailRep()" style="flex:1;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.4);border-radius:11px;padding:13px 8px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📧 E-mail</button>
     </div>
   </div>`;
 
@@ -13464,7 +13463,6 @@ function enviarRelVendasWhatsapp() {
     ? `https://wa.me/55${wpp}?text=${encodeURIComponent(txt)}`
     : `https://wa.me/?text=${encodeURIComponent(txt)}`;
   window.open(url, '_blank');
-  document.getElementById('envio-vendas-opcoes').style.display = 'none';
 }
 
 function enviarRelVendasEmailRep() {
@@ -13474,7 +13472,6 @@ function enviarRelVendasEmailRep() {
   const periodoLabel = _relPeriodoVendas==='hoje'?'Hoje':_relPeriodoVendas==='semana'?'7 dias':'Este mês';
   const marcaLabel = _relMarcaVendas || 'Geral';
   window.open(`mailto:${dest}?subject=${encodeURIComponent('Relatório de Vendas — '+periodoLabel+' — '+marcaLabel)}&body=${encodeURIComponent(txt)}`);
-  document.getElementById('envio-vendas-opcoes').style.display = 'none';
 }
 
 function abrirRelVendasHtml() {

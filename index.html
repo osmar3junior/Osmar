@@ -807,11 +807,11 @@ if ('serviceWorker' in navigator) {
         <div class="resumo-numero" id="num-essa-semana">0</div>
         <div class="resumo-link">Ver lista →</div>
       </div>
-      <div class="resumo-card roxo" onclick="irPara('esquecidos')">
-        <span class="resumo-card-icone">👻</span>
-        <div class="resumo-label">Esquecidos</div>
-        <div class="resumo-numero" id="num-esquecidos">0</div>
-        <div class="resumo-link">Ver lista →</div>
+      <div class="resumo-card roxo" onclick="abrirRelatorios()">
+        <span class="resumo-card-icone">📊</span>
+        <div class="resumo-label">Meta &amp; Real + Análises</div>
+        <div class="resumo-numero" id="num-metas" style="font-size:24px;">—</div>
+        <div class="resumo-link">Abrir →</div>
       </div>
     </div>
 
@@ -912,18 +912,6 @@ if ('serviceWorker' in navigator) {
         </div>
       </div>
       <div style="color:#5C8FCF;font-size:20px;">›</div>
-    </button>
-
-    <!-- BOTÃO RELATÓRIOS META -->
-    <button onclick="abrirRelatorios()" id="btn-relatorios" style="width:100%;background:linear-gradient(135deg,#1f0a00,#321400);border:1.5px solid rgba(249,115,22,.35);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:40px;height:40px;background:rgba(249,115,22,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">📊</div>
-        <div style="text-align:left;">
-          <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Meus relatórios</div>
-          <div style="font-size:11px;color:var(--texto2);">Metas · Vendas · Comparativo · Ações</div>
-        </div>
-      </div>
-      <div id="dash-meta-semaforo" style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:80px;"></div>
     </button>
 
     <!-- BOTÃO NA ESTRADA -->
@@ -1138,12 +1126,12 @@ if ('serviceWorker' in navigator) {
       <!-- LEMBRETE RÁPIDO -->
       <div style="background:var(--bg2);border:1px solid var(--borda);border-radius:14px;padding:16px;margin-bottom:20px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:11px;font-weight:700;color:var(--amarelo);text-transform:uppercase;letter-spacing:1px;">⚡ Lembrete rápido</div>
-          <button id="btn-salvar-lembrete" onclick="salvarLembrete()" style="display:none;background:var(--verde);border:none;border-radius:7px;padding:5px 12px;color:#000;font-size:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">Salvar</button>
+          <div style="font-size:11px;font-weight:700;color:var(--amarelo);text-transform:uppercase;letter-spacing:1px;">📋 Condições comerciais do cliente</div>
+          <button id="btn-salvar-lembrete" onclick="salvarLembrete()" style="display:none;background:var(--verde);border:none;border-radius:7px;padding:5px 12px;color:#000;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Salvar</button>
         </div>
         <textarea
           id="det-lembrete"
-          placeholder="Anote algo importante sobre este cliente... prazo combinado, nome do comprador, preferências, observações..."
+          placeholder="Insira aqui as condições comerciais: prazo de pagamento, desconto, tabela, comprador, preferências de entrega..."
           oninput="onLembreteInput()"
           style="width:100%;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:11px 13px;color:var(--texto);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;height:80px;line-height:1.5;transition:border-color .2s;"
           onfocus="this.style.borderColor='var(--amarelo)';document.getElementById('btn-salvar-lembrete').style.display='block'"
@@ -6292,7 +6280,7 @@ function atualizarDashboard() {
     }
   }
   document.getElementById('num-essa-semana').textContent = semana.length;
-  document.getElementById('num-esquecidos').textContent = esquecidos.length;
+  const _elEsq = document.getElementById('num-esquecidos'); if (_elEsq) _elEsq.textContent = esquecidos.length;
   const _elF = document.getElementById('num-fechados'); if (_elF) _elF.textContent = getClientesArquivados('fechado').length;
   const _elI = document.getElementById('num-inadimplentes'); if (_elI) _elI.textContent = getClientesArquivados('inadimplente').length;
 
@@ -12580,19 +12568,14 @@ function _dotClasseTend(pct) {
 }
 
 function atualizarSemaforoDash() {
-  const el = document.getElementById('dash-meta-semaforo');
+  // Alimenta o número do quadrante "Meta & Real + Análises": % realizado médio das metas
+  const el = document.getElementById('num-metas');
   if (!el) return;
   const metas = getMetasConfig();
-  if (!metas.length) { el.innerHTML = '<span style="font-size:11px;color:var(--texto3);">Sem metas</span>'; return; }
-  el.innerHTML = metas.map(meta => {
-    const real = calcularRealMarca(meta);
-    const pct  = calcularTendencia(meta, real);
-    const dot  = _dotClasseTend(pct);
-    return `<div style="display:flex;align-items:center;gap:5px;">
-      <span style="font-size:11px;color:var(--texto2);max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${meta.marca}</span>
-      <div class="semaforo-dot ${dot}"></div>
-    </div>`;
-  }).join('');
+  if (!metas.length) { el.textContent = '—'; return; }
+  const pcts = metas.map(m => { const real = calcularRealMarca(m); return m.valor > 0 ? (real / m.valor) * 100 : 0; });
+  const media = Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length);
+  el.textContent = media > 999 ? '999+' : media + '%';
 }
 
 let _relAbaAtiva = 'metas';
@@ -13543,10 +13526,10 @@ function abrirRelComparativoHtml() {
   const Y=hoje.getFullYear(), M=hoje.getMonth(), D=hoje.getDate();
   const soma = (de,ate) => _somaVendasMarca(de,ate,_relMarcaComp);
   const marcaLabel = _relMarcaComp||'Geral';
-  const inicioMes=new Date(Y,M,1), inicioMesAnt=new Date(Y,M-1,1), fimMesAnt=new Date(Y,M-1,D,23,59,59);
+  const inicioMes=new Date(Y,M,1), inicioMesAnt=new Date(Y,M-1,1), fimMesAnt=new Date(Y,M,0,23,59,59);
   const q=Math.floor(M/3), inicioTri=new Date(Y,q*3,1), inicioTriAnt=new Date(Y,q*3-3,1);
-  const diasTri=Math.round((hoje-inicioTri)/86400000), fimTriAnt=new Date(inicioTriAnt.getTime()+diasTri*86400000);
-  const inicioAno=new Date(Y,0,1), inicioAnoAnt=new Date(Y-1,0,1), fimAnoAnt=new Date(Y-1,M,D,23,59,59);
+  const fimTriAnt=new Date(inicioTri.getTime()-1);
+  const inicioAno=new Date(Y,0,1), inicioAnoAnt=new Date(Y-1,0,1), fimAnoAnt=new Date(Y,0,0,23,59,59);
   const mA=soma(inicioMes,hoje), mB=soma(inicioMesAnt,fimMesAnt);
   const tA=soma(inicioTri,hoje), tB=soma(inicioTriAnt,fimTriAnt);
   const aA=soma(inicioAno,hoje), aB=soma(inicioAnoAnt,fimAnoAnt);
@@ -13618,10 +13601,10 @@ function enviarRelComparativoEmail() {
   const marcaLabel = _relMarcaComp || 'Geral';
   const dtFmt = hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-  const inicioMes=new Date(Y,M,1), inicioMesAnt=new Date(Y,M-1,1), fimMesAnt=new Date(Y,M-1,D,23,59,59);
+  const inicioMes=new Date(Y,M,1), inicioMesAnt=new Date(Y,M-1,1), fimMesAnt=new Date(Y,M,0,23,59,59);
   const q=Math.floor(M/3), inicioTri=new Date(Y,q*3,1), inicioTriAnt=new Date(Y,q*3-3,1);
-  const diasTri=Math.round((hoje-inicioTri)/86400000), fimTriAnt=new Date(inicioTriAnt.getTime()+diasTri*86400000);
-  const inicioAno=new Date(Y,0,1), inicioAnoAnt=new Date(Y-1,0,1), fimAnoAnt=new Date(Y-1,M,D,23,59,59);
+  const fimTriAnt=new Date(inicioTri.getTime()-1);
+  const inicioAno=new Date(Y,0,1), inicioAnoAnt=new Date(Y-1,0,1), fimAnoAnt=new Date(Y,0,0,23,59,59);
 
   const mA=soma(inicioMes,hoje), mB=soma(inicioMesAnt,fimMesAnt);
   const tA=soma(inicioTri,hoje), tB=soma(inicioTriAnt,fimTriAnt);
@@ -13629,7 +13612,7 @@ function enviarRelComparativoEmail() {
 
   let corpo = `RELATÓRIO COMPARATIVO — ${marcaLabel.toUpperCase()}\n`;
   corpo += `Gerado em ${dtFmt} | Carteira Viva\n`;
-  corpo += `(comparação até o mesmo dia do período anterior)\n`;
+  corpo += `(período atual até hoje vs período anterior completo)\n`;
   corpo += `${'─'.repeat(40)}\n\n`;
   corpo += `MÊS X MÊS ANTERIOR\n`;
   corpo += `Este mês:    ${fmtR(mA)}\n`;
@@ -13815,18 +13798,17 @@ function abrirDrilldown(tipo) {
   let deA, ateA, deB, ateB, tituloP, subA, subB;
   if (tipo === 'mes') {
     deA = new Date(Y,M,1); ateA = hoje;
-    deB = new Date(Y,M-1,1); ateB = new Date(Y,M-1,D,23,59,59);
+    deB = new Date(Y,M-1,1); ateB = new Date(Y,M,0,23,59,59);
     tituloP = 'Mês x mês anterior'; subA = 'Este mês'; subB = 'Mês passado';
   } else if (tipo === 'tri') {
     const q = Math.floor(M/3);
     deA = new Date(Y,q*3,1); ateA = hoje;
     deB = new Date(Y,q*3-3,1);
-    const diasQ = Math.round((hoje-deA)/86400000);
-    ateB = new Date(deB.getTime()+diasQ*86400000);
+    ateB = new Date(deA.getTime()-1);
     tituloP = 'Trimestre x anterior'; subA = 'Este trimestre'; subB = 'Trim. anterior';
   } else {
     deA = new Date(Y,0,1); ateA = hoje;
-    deB = new Date(Y-1,0,1); ateB = new Date(Y-1,M,D,23,59,59);
+    deB = new Date(Y-1,0,1); ateB = new Date(Y,0,0,23,59,59);
     tituloP = 'Ano x ano anterior'; subA = `${Y}`; subB = `${Y-1}`;
   }
 
@@ -13974,19 +13956,19 @@ function renderRelComparativo() {
   const hoje = new Date();
   const Y = hoje.getFullYear(), M = hoje.getMonth(), D = hoje.getDate();
 
-  const inicioMes      = new Date(Y, M, 1);
-  const inicioMesAnt   = new Date(Y, M - 1, 1);
-  const fimMesAntMesmo = new Date(Y, M - 1, D, 23, 59, 59);
+  // Período anterior COMPLETO (não "até o mesmo dia") — reflete vendas retroativas
+  const inicioMes    = new Date(Y, M, 1);
+  const inicioMesAnt = new Date(Y, M - 1, 1);
+  const fimMesAnt    = new Date(Y, M, 0, 23, 59, 59);          // último dia do mês passado
 
   const q = Math.floor(M / 3);
-  const inicioTri     = new Date(Y, q * 3, 1);
-  const inicioTriAnt  = new Date(Y, q * 3 - 3, 1);
-  const diasNoTri     = Math.round((hoje - inicioTri) / 86400000);
-  const fimTriAntMesmo = new Date(inicioTriAnt.getTime() + diasNoTri * 86400000);
+  const inicioTri    = new Date(Y, q * 3, 1);
+  const inicioTriAnt = new Date(Y, q * 3 - 3, 1);
+  const fimTriAnt    = new Date(inicioTri.getTime() - 1);      // véspera do trimestre atual
 
-  const inicioAno     = new Date(Y, 0, 1);
-  const inicioAnoAnt  = new Date(Y - 1, 0, 1);
-  const fimAnoAntMesmo = new Date(Y - 1, M, D, 23, 59, 59);
+  const inicioAno    = new Date(Y, 0, 1);
+  const inicioAnoAnt = new Date(Y - 1, 0, 1);
+  const fimAnoAnt    = new Date(Y, 0, 0, 23, 59, 59);          // 31/12 do ano passado
 
   const soma = (de, ate) => _somaVendasMarca(de, ate, _relMarcaComp);
 
@@ -14027,10 +14009,10 @@ function renderRelComparativo() {
 
   cont.innerHTML = `
     <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;-webkit-overflow-scrolling:touch;">${chips.join('')}</div>
-    <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;line-height:1.5;">${tituloFiltro} · comparação até o mesmo dia do período anterior.</div>
-    ${card('Mês x mês anterior',       ['Este mês',        'Mês passado'],    soma(inicioMes, hoje),    soma(inicioMesAnt, fimMesAntMesmo),   'mes')}
-    ${card('Trimestre x anterior',     ['Este trimestre',  'Trim. anterior'], soma(inicioTri, hoje),    soma(inicioTriAnt, fimTriAntMesmo),   'tri')}
-    ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAntMesmo),   'ano')}
+    <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;line-height:1.5;">${tituloFiltro} · período atual (até hoje) vs período anterior completo.</div>
+    ${card('Mês x mês anterior',       ['Este mês',        'Mês passado'],    soma(inicioMes, hoje),    soma(inicioMesAnt, fimMesAnt),   'mes')}
+    ${card('Trimestre x anterior',     ['Este trimestre',  'Trim. anterior'], soma(inicioTri, hoje),    soma(inicioTriAnt, fimTriAnt),   'tri')}
+    ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAnt),   'ano')}
     <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-top:10px;">
       <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;margin-bottom:4px;">⬇️ Exportar Excel analítico</div>
       <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:12px;line-height:1.5;">3 abas: Resumo Geral · Por Cliente · Analítico (pedido a pedido com SKU, valor e canal).</div>

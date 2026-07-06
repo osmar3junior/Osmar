@@ -791,7 +791,7 @@ if ('serviceWorker' in navigator) {
     <div class="resumo-grid">
       <div class="resumo-card verde" onclick="irPara('clientes')">
         <span class="resumo-card-icone">👥</span>
-        <div class="resumo-label">Base total</div>
+        <div class="resumo-label">Clientes por Prioridade</div>
         <div class="resumo-numero" id="num-total">0</div>
         <div class="resumo-link">Ver todos →</div>
       </div>
@@ -1086,7 +1086,7 @@ if ('serviceWorker' in navigator) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         </button>
       </div>
-      <button id="btn-fora-rota-detalhe" onclick="abrirForaDaRota()" style="display:none;width:100%;margin-top:8px;background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.4);border-radius:11px;padding:11px 8px;align-items:center;justify-content:center;gap:6px;color:#A78BFA;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;">📦 Pedido fora da rota</button>
+      <button id="btn-fora-rota-detalhe" onclick="abrirForaDaRota()" style="display:none;width:100%;margin-top:8px;background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.4);border-radius:11px;padding:11px 8px;align-items:center;justify-content:center;gap:6px;color:#A78BFA;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;">👀 Quem por perto pode comprar?</button>
     </div>
   </div>
   <div class="detalhe-content">
@@ -1963,7 +1963,6 @@ if ('serviceWorker' in navigator) {
     </div>
     <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="ec-cidade" placeholder="CIDADE" style="text-transform:uppercase;"></div>
     <div class="campo-grupo"><label class="campo-label">WhatsApp</label><input type="tel" class="campo-input" id="ec-telefone" placeholder="(00) 00000-0000"></div>
-    <div class="campo-grupo"><label class="campo-label">E-mail</label><input type="email" class="campo-input" id="ec-email" placeholder="email@cliente.com"></div>
     <div class="campo-grupo"><label class="campo-label">Marcas representadas <span style="color:var(--texto3);font-weight:400;">(até 5)</span></label><div class="sku-grid" id="ec-marcas-grid"></div></div>
 
     <!-- ENDEREÇO COM VALIDAÇÃO -->
@@ -2425,10 +2424,10 @@ if ('serviceWorker' in navigator) {
 <div class="modal-overlay" id="modal-fora-rota">
   <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:20px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <div class="modal-titulo" style="margin-bottom:2px;">📦 Pedido fora da rota</div>
+      <div class="modal-titulo" style="margin-bottom:2px;">👀 Quem por perto pode comprar?</div>
       <button onclick="fecharModal('modal-fora-rota')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
     </div>
-    <div style="font-size:12px;color:var(--texto2);line-height:1.5;margin-bottom:10px;">Você saiu da rota — veja quem por perto tem mais chance de comprar, com nota de 0 a 10.</div>
+    <div style="font-size:12px;color:var(--texto2);line-height:1.5;margin-bottom:10px;">Veja quem por perto tem mais chance de comprar, com nota de 0 a 10.</div>
     <div id="fr-subtitulo" style="font-size:12px;color:var(--texto3);margin-bottom:16px;">Clientes perto de -</div>
 
     <div style="background:var(--bg2);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-bottom:14px;">
@@ -8877,6 +8876,40 @@ function _filtrarPorMarca(clientes) {
   return clientes.filter(c => (c.marcas || []).map(m => (m||'').trim().toLowerCase()).includes(marcaFiltroAtual.trim().toLowerCase()));
 }
 
+// Valor total do cliente respeitando o filtro de marca: filtrou Lupo → só o que
+// vendeu de Lupo (não o total de todas as marcas). Sem filtro → total geral.
+function _valorClienteFiltrado(c) {
+  const m = (marcaFiltroAtual || '').trim().toLowerCase();
+  if (!m) return getPedidosCliente(c).reduce((s, h) => s + (h.pedidoValor || 0), 0);
+  const marcasCli = (c.marcas || []).filter(Boolean).map(x => x.trim().toLowerCase());
+  let tot = 0;
+  (c.historico || []).forEach(h => {
+    if (h.motivo !== 'fechou_pedido') return;
+    if (h.pedidos && h.pedidos.length) {
+      h.pedidos.forEach(p => { if ((p.marca || '').trim().toLowerCase() === m) tot += Number(p.valor) || 0; });
+    } else if (marcasCli.length === 1 && marcasCli[0] === m) {
+      tot += Number(h.pedidoValor) || 0; // venda antiga sem detalhe, cliente só dessa marca
+    }
+  });
+  return tot;
+}
+
+// Datas de compra respeitando o filtro de marca (para o "Pronto para comprar")
+function _datasClienteFiltrado(c) {
+  const m = (marcaFiltroAtual || '').trim().toLowerCase();
+  const marcasCli = (c.marcas || []).filter(Boolean).map(x => x.trim().toLowerCase());
+  const out = [];
+  (c.historico || []).forEach(h => {
+    if (h.motivo !== 'fechou_pedido') return;
+    if (!m) { if (h.pedidoValor) out.push(new Date(h.data)); return; }
+    const tem = (h.pedidos && h.pedidos.length)
+      ? h.pedidos.some(p => (p.marca || '').trim().toLowerCase() === m)
+      : (marcasCli.length === 1 && marcasCli[0] === m);
+    if (tem) out.push(new Date(h.data));
+  });
+  return out.sort((a, b) => a - b);
+}
+
 function renderizarChipsMarca() {
   const wrap = document.getElementById('chips-marca-wrap');
   const inner = document.getElementById('chips-marca-inner');
@@ -8932,7 +8965,7 @@ function getPedidosCliente(c) {
 function renderizarTop20() {
   const lista = document.getElementById('lista-clientes');
   const ranking = _filtrarPorMarca(getClientes())
-    .map(c => ({ c, total: getPedidosCliente(c).reduce((s, h) => s + h.pedidoValor, 0) }))
+    .map(c => ({ c, total: _valorClienteFiltrado(c) }))
     .filter(x => x.total > 0)
     .sort((a, b) => b.total - a.total)
     .slice(0, 20);
@@ -8957,7 +8990,7 @@ function renderizarTop20() {
 function renderizarProbabilidade() {
   const lista = document.getElementById('lista-clientes');
   const candidatos = _filtrarPorMarca(getClientes()).map(c => {
-    const datas = getPedidosCliente(c).map(h => new Date(h.data)).sort((a, b) => a - b);
+    const datas = _datasClienteFiltrado(c);
     if (datas.length < 2) return null;
     let intervalos = [];
     for (let i = 1; i < datas.length; i++) intervalos.push((datas[i] - datas[i-1]) / 86400000);
@@ -9062,7 +9095,7 @@ function renderizarPorCidade() {
         <div onclick="toggleCidade('${cid}')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;">
           <div style="width:44px;height:44px;background:rgba(0,0,0,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🏙️</div>
           <div style="flex:1;">
-            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:${urg.textColor};">${cidade}</div>
+            <div style="font-family:'DM Sans',sans-serif;font-size:15.5px;font-weight:700;letter-spacing:.2px;color:${urg.textColor};">${cidade}</div>
             <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
               <span style="font-size:11px;color:${urg.textColor};opacity:.7;">${cs.length} cliente${cs.length>1?'s':''}</span>
               ${urgentes>0?`<span style="font-size:11px;color:#FF4D6A;font-weight:600;">🔴 ${urgentes}</span>`:''}
@@ -11093,7 +11126,6 @@ function abrirModalEditarCliente() {
   document.getElementById('ec-segmento').value = cliente.segmento || 'geral';
   document.getElementById('ec-cidade').value = cliente.cidade || '';
   document.getElementById('ec-telefone').value = cliente.telefone || '';
-  document.getElementById('ec-email').value = cliente.emailCliente || '';
   renderizarMarcasGrid('ec-marcas-grid', cliente.marcas || []);
   document.getElementById('ec-endereco').value = cliente.enderecoPendente || cliente.endereco || '';
   // Reseta validação
@@ -11123,7 +11155,6 @@ function salvarEdicaoCliente() {
   clientes[idx].segmento = document.getElementById('ec-segmento').value || 'geral';
   clientes[idx].cidade = document.getElementById('ec-cidade').value.trim().toUpperCase();
   clientes[idx].telefone = document.getElementById('ec-telefone').value.trim();
-  clientes[idx].emailCliente = document.getElementById('ec-email').value.trim();
   clientes[idx].marcas = getMarcasSelecionadas('ec-marcas-grid');
 
   const endDigitado = document.getElementById('ec-endereco').value.trim();

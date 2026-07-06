@@ -4977,11 +4977,21 @@ function abrirNotificacoes() {
       const qd = diff === 0 ? '<b style="color:#00D68F;">chega HOJE</b>' : diff === 1 ? 'chega amanhã' : `chega em ${diff} dias`;
       const parcela = num ? `${num}ª de ${total} entregas · ` : '';
       const dtFmt2 = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      html += linhaAlerta('📦','rgba(0,214,143,.4)','rgba(0,214,143,.07)',
-        `${esc(c.nome)}${c.loja ? ' — ' + esc(c.loja) : ''}`,
-        `${parcela}${p.marca ? esc(p.marca) + ' · ' : ''}${qd} (${dtFmt2}) — avise o cliente e confirme o recebimento`,
-        `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${c.id}','clientes'),200)`
-      );
+      const tel = (c.telefone || c.wpp || '').replace(/\D/g, '');
+      const nome = (c.nome || '').split(' ')[0];
+      const msg = `Oi ${nome}, tudo bem por aí? 😊 A sua mercadoria deve chegar nos próximos dias. Qualquer coisa que precisar, estou à disposição!`;
+      const url = tel ? `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      html += `<div style="background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.25);border-radius:12px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+          <span style="font-size:20px;flex-shrink:0;">📦</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--texto);">${esc(c.nome)}${c.loja ? ' — ' + esc(c.loja) : ''}</div>
+            <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${parcela}${p.marca ? esc(p.marca) + ' · ' : ''}${qd} (${dtFmt2})</div>
+            <div style="font-size:11px;color:#00D68F;margin-top:2px;font-style:italic;">Avisar que está chegando é o capricho que fideliza</div>
+          </div>
+        </div>
+        <button onclick="window.open('${url}','_blank')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Avisar o cliente no WhatsApp</button>
+      </div>`;
     });
   }
 
@@ -5010,7 +5020,7 @@ function abrirNotificacoes() {
             <div style="font-size:11px;color:#38BDF8;margin-top:2px;font-style:italic;">Pergunte se chegou tudo certo — é o momento ideal para o próximo pedido</div>
           </div>
         </div>
-        <button onclick="fecharModal('modal-notificacoes');_wppAbrir('Oi ${nomeCliente.replace(/'/g,"\\'")}! 👋 Passando para saber se o pedido${marcaMsg.replace(/'/g,"\\'")} chegou direitinho. Qualquer dúvida é só me chamar! 😊')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Enviar mensagem de pós-venda</button>
+        <button onclick="window.open('${urlWpp}','_blank')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Enviar mensagem de pós-venda</button>
       </div>`;
     });
   }
@@ -5045,10 +5055,8 @@ function _abrirGatilhoCliente(clienteId) {
   const msg = `Olá, ${nome}! Tudo bem? 😊 ${urgTxt}${marcasTxt} Fica à vontade para já ir pensando no que precisa. 🙌`;
   const tel = c.telefone ? c.telefone.replace(/\D/g,'') : '';
   if (!tel) { toast('Cliente sem WhatsApp cadastrado'); abrirDetalhe(clienteId,'clientes'); return; }
-  if (confirm(`Enviar mensagem de antecipação para ${c.nome}?\n\n"${msg}"`)) {
-    window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
-  }
-  abrirDetalhe(clienteId, 'clientes');
+  // Abre direto o WhatsApp do cliente com a mensagem pronta (rep edita se quiser)
+  window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 function _atualizarBadgeNotif() {
@@ -5129,7 +5137,7 @@ function calcularGatilhosAntecipacao() {
   clientes.forEach(c => {
     const diff = getDiffDiasCliente(c);
     if (diff === null || diff <= 0) return;
-    const gatilhoDia = diasConfig.find(d => diff <= d && diff > (d - 3));
+    const gatilhoDia = diasConfig.find(d => diff <= d && diff > (d - 2)); // janela de 2 dias por gatilho
     if (!gatilhoDia) return;
     const marcasAlerta = alertasMarca.filter(a => a.clienteId === c.id);
     const dataVisita = new Date();

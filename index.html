@@ -4773,7 +4773,13 @@ async function _licencaCarregar() {
     } catch (e) { console.log('[LIC] busca falhou:', e?.message || e); }
   }
   if (row) {
-    _licenca = { plano: row.plano, status: row.status, valida_ate: row.valida_ate, origem: 'nuvem' };
+    // Blindagem: aceita "Pro", "PRO ", " Ativa" etc. — linhas digitadas à mão no painel
+    _licenca = {
+      plano: String(row.plano || '').trim().toLowerCase(),
+      status: String(row.status || '').trim().toLowerCase(),
+      valida_ate: row.valida_ate,
+      origem: 'nuvem'
+    };
     setData(_licCacheKey(), _licenca);
   } else {
     const cache = getData(_licCacheKey());

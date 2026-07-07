@@ -1630,7 +1630,7 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
 
-    <div class="config-secao" style="background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(79,70,229,.04));border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:16px;">
+    <div class="config-secao" id="secao-groq" style="background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(79,70,229,.04));border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:16px;">
       <div class="config-secao-titulo">🤖 Gestor IA</div>
       <div class="config-secao-sub">Ative seu consultor inteligente: o Gestor IA analisa suas marcas, sua carteira e sugere ações para você bater a meta. Cole sua chave gratuita do Groq. <span onclick="abrirGuiaApi()" style="color:#A78BFA;cursor:pointer;font-weight:600;">Ver passo a passo →</span></div>
       <input type="text" class="campo-input" id="cfg-groq-key" placeholder="gsk_..." style="margin-top:8px;font-family:monospace;font-size:13px;letter-spacing:.5px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -1655,6 +1655,17 @@ if ('serviceWorker' in navigator) {
         <div id="cfg-colecoes-lista"></div>
         <button type="button" onclick="restaurarColecoesCfg()" style="width:100%;background:transparent;border:1px dashed var(--borda);border-radius:10px;padding:10px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">↺ Restaurar padrão do mercado</button>
       </div>
+    </div>
+
+    <div class="config-secao">
+      <div class="config-secao-titulo">💳 Meu plano</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px;">
+        <div style="min-width:0;">
+          <div id="lic-plano-nome" style="font-size:14px;font-weight:800;color:var(--texto);font-family:'DM Sans',sans-serif;">…</div>
+          <div id="lic-plano-sub" style="font-size:11px;color:var(--texto3);margin-top:2px;line-height:1.45;"></div>
+        </div>
+      </div>
+      <button id="lic-plano-btn" style="display:none;width:100%;margin-top:10px;background:rgba(124,58,237,.12);border:1.5px solid rgba(124,58,237,.4);border-radius:10px;padding:12px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;"></button>
     </div>
 
     <div class="config-secao">
@@ -2568,7 +2579,7 @@ if ('serviceWorker' in navigator) {
       <div style="font-size:32px;margin-bottom:10px;">⚠️</div>
       <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;margin-bottom:6px;">Não foi possível gerar a análise</div>
       <div style="font-size:12px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;" id="gerente-erro-msg"></div>
-      <button onclick="abrirConfiguracoes()" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 16px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⚙️ Configurar chave Groq</button>
+      <button id="btn-cfg-groq-erro" onclick="abrirConfiguracoes()" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 16px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⚙️ Configurar chave Groq</button>
     </div>
 
   </div>
@@ -2865,6 +2876,42 @@ if ('serviceWorker' in navigator) {
     <div id="import-preview"></div>
 
     <button class="btn-primario" onclick="confirmarImportacao()" id="import-btn-confirmar" style="margin-top:8px;">✅ Importar</button>
+  </div>
+</div>
+
+<!-- MODAL UPGRADE — recurso exclusivo do plano Pro -->
+<div class="modal-overlay" id="modal-upgrade">
+  <div class="modal-box" style="max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="modal-titulo" style="margin-bottom:0;">🔒 Recurso do plano Pro</div>
+      <button onclick="fecharModal('modal-upgrade')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="background:rgba(124,58,237,.08);border:1.5px solid rgba(124,58,237,.35);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div id="upgrade-recurso-titulo" style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:800;color:var(--texto);margin-bottom:4px;"></div>
+      <div id="upgrade-recurso-sub" style="font-size:12px;color:var(--texto2);line-height:1.55;"></div>
+    </div>
+    <div style="font-size:12px;color:var(--texto2);line-height:1.7;margin-bottom:14px;font-family:'DM Sans',sans-serif;">
+      O <strong style="color:var(--texto);">Pro</strong> é o seu gerente comercial no bolso:<br>
+      🤖 Gestor IA ilimitado, sem configurar nada<br>
+      📦 Pedido programado com várias entregas<br>
+      🧥 Inteligência de coleções da confecção<br>
+      🔍 Importação em massa por CNPJ
+    </div>
+    <button class="btn-primario" onclick="_upgradeIrParaCheckout()">⭐ Quero o Pro</button>
+    <div style="font-size:11px;color:var(--texto3);margin-top:10px;line-height:1.5;text-align:center;">Já assinou? Use no app o mesmo e-mail da compra — a liberação é automática em poucos minutos.</div>
+  </div>
+</div>
+
+<!-- TELA DE BLOQUEIO — assinatura vencida/cancelada -->
+<div id="lic-bloqueio" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(8,11,16,.97);align-items:center;justify-content:center;padding:24px;">
+  <div class="modal-box" style="max-width:360px;width:100%;text-align:center;">
+    <div style="font-size:40px;margin-bottom:10px;">⏸️</div>
+    <div class="modal-titulo" style="margin-bottom:6px;">Sua assinatura venceu</div>
+    <div style="font-size:12.5px;color:var(--texto2);line-height:1.6;margin-bottom:6px;font-family:'DM Sans',sans-serif;">Renove para continuar usando o Carteira Viva.</div>
+    <div style="font-size:11.5px;color:var(--verde);font-weight:700;margin-bottom:16px;font-family:'DM Sans',sans-serif;">🔒 Fique tranquilo: seus clientes e pedidos estão salvos e seguros.</div>
+    <button class="btn-primario" onclick="window.open(URL_CHECKOUT_RENOVAR,'_blank')">🔄 Renovar assinatura</button>
+    <button onclick="toast('🔄 Verificando...');_licencaCarregar()" style="width:100%;margin-top:10px;background:rgba(0,214,143,.08);border:1.5px solid rgba(0,214,143,.35);border-radius:10px;padding:12px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✅ Já renovei — verificar de novo</button>
+    <button onclick="sair()" style="width:100%;margin-top:10px;background:transparent;border:1px solid var(--borda);border-radius:10px;padding:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Sair da conta</button>
   </div>
 </div>
 
@@ -4678,6 +4725,155 @@ function getConfig() {
 }
 function salvarConfigData(cfg) { setData('cv_config_' + usuarioAtual.email, cfg); _invalidarCacheConfig(); _sbPushConfig(); }
 
+// ===== LICENÇA / PLANOS (trava de assinatura) =====
+// Dia 3 do manual: troque os '#' pelos links de checkout da Kiwify.
+const URL_CHECKOUT_PRO = '#';
+const URL_CHECKOUT_RENOVAR = '#';
+// Dia 5 do manual: depois de publicar a Edge Function "gestor-ia" no Supabase
+// (com o secret GROQ_API_KEY), mude para true — o Gestor IA passa a usar a SUA
+// chave no servidor e o cliente não precisa mais configurar nada.
+const USAR_PROXY_IA = false;
+const URL_FUNC_GESTOR_IA = _SB_URL + '/functions/v1/gestor-ia';
+const TRIAL_DIAS = 30; // 30 dias: tempo p/ o rep alimentar a carteira e criar dependência do app
+const _LIC_PLANOS_PRO = ['pro', 'fundador', 'trial'];
+
+let _licenca = null; // null = ainda não carregada (não trava nada até carregar)
+
+function _licCacheKey() { return 'cv_licenca_' + (usuarioAtual?.email || '').trim().toLowerCase(); }
+
+function _licDiasRestantes() {
+  if (!_licenca || !_licenca.valida_ate) return null;
+  return Math.ceil((new Date(_licenca.valida_ate) - new Date()) / 86400000);
+}
+function _licValida() {
+  if (!_licenca) return true; // carregando — não bloqueia o rep
+  if (_licenca.status !== 'ativa') return false;
+  const d = _licDiasRestantes();
+  return d === null || d > 0;
+}
+function _licEhPro() {
+  if (!_licenca) return true;
+  return _licValida() && _LIC_PLANOS_PRO.includes(_licenca.plano);
+}
+// Porteiro dos recursos Pro: deixa passar ou mostra o modal de upgrade.
+function exigirPro(recurso) {
+  if (_licEhPro()) return true;
+  abrirModalUpgrade(recurso);
+  return false;
+}
+
+async function _licencaCarregar() {
+  if (!usuarioAtual) return;
+  const email = (usuarioAtual.email || '').trim().toLowerCase();
+  let row = null, buscou = false;
+  if (navigator.onLine && (_sbUserId || await _sbGarantirSessao())) {
+    try {
+      const { data, error } = await _sb.from('licencas').select('plano,status,valida_ate').ilike('email', email).maybeSingle();
+      if (!error) { row = data || null; buscou = true; }
+    } catch (e) { console.log('[LIC] busca falhou:', e?.message || e); }
+  }
+  if (row) {
+    _licenca = { plano: row.plano, status: row.status, valida_ate: row.valida_ate, origem: 'nuvem' };
+    setData(_licCacheKey(), _licenca);
+  } else {
+    const cache = getData(_licCacheKey());
+    if (cache && cache.origem === 'nuvem' && !buscou) {
+      // Sem como consultar agora (offline/sessão expirada) — vale o que se sabia por último.
+      _licenca = cache;
+    } else {
+      _licIniciarTrial(email);
+    }
+  }
+  _licAplicarUI();
+}
+
+// Sem linha na tabela licencas = teste grátis de TRIAL_DIAS dias (com cara de Pro).
+function _licIniciarTrial(email) {
+  const cfg = getConfig();
+  let inicio = cfg.trialInicio || getData('cv_trial_inicio_' + email);
+  if (!inicio) {
+    inicio = new Date().toISOString();
+    setData('cv_trial_inicio_' + email, inicio);
+    try { cfg.trialInicio = inicio; salvarConfigData(cfg); } catch (e) {}
+  } else if (!cfg.trialInicio) {
+    try { cfg.trialInicio = inicio; salvarConfigData(cfg); } catch (e) {}
+  }
+  const fim = new Date(new Date(inicio).getTime() + TRIAL_DIAS * 86400000);
+  _licenca = { plano: 'trial', status: 'ativa', valida_ate: fim.toISOString(), origem: 'trial' };
+  setData(_licCacheKey(), _licenca);
+}
+
+function _licAplicarUI() {
+  const bloq = document.getElementById('lic-bloqueio');
+  if (bloq) bloq.style.display = _licValida() ? 'none' : 'flex';
+  _licAtualizarSecaoPlano();
+  // Aviso do teste grátis: no máximo 1 vez por dia
+  if (_licenca && _licenca.plano === 'trial' && _licValida()) {
+    const hoje = new Date().toISOString().slice(0, 10);
+    if (getData('cv_trial_aviso') !== hoje) {
+      setData('cv_trial_aviso', hoje);
+      const d = _licDiasRestantes();
+      toast(`⏳ Teste grátis do Pro: ${d === 1 ? 'último dia' : 'faltam ' + d + ' dias'}`);
+    }
+  }
+}
+
+function _licAtualizarSecaoPlano() {
+  const nome = document.getElementById('lic-plano-nome');
+  const sub  = document.getElementById('lic-plano-sub');
+  const btn  = document.getElementById('lic-plano-btn');
+  if (!nome || !sub || !btn) return;
+  const rotulos = { trial: '⏳ Teste grátis (Pro)', essencial: 'Essencial', pro: '⭐ Pro', fundador: '🏆 Fundador (Pro vitalício)' };
+  if (!_licenca) { nome.textContent = '…'; sub.textContent = 'Verificando sua assinatura'; btn.style.display = 'none'; return; }
+  nome.textContent = rotulos[_licenca.plano] || _licenca.plano;
+  const d = _licDiasRestantes();
+  if (!_licValida()) {
+    sub.textContent = 'Assinatura vencida — renove para continuar';
+    btn.textContent = '🔄 Renovar assinatura';
+    btn.style.display = 'block';
+    btn.onclick = () => window.open(URL_CHECKOUT_RENOVAR, '_blank');
+  } else if (_licenca.plano === 'trial') {
+    sub.textContent = d === 1 ? 'Último dia de teste — assine para não perder o Pro' : `Faltam ${d} dias de teste grátis`;
+    btn.textContent = '⭐ Assinar o Pro';
+    btn.style.display = 'block';
+    btn.onclick = () => window.open(URL_CHECKOUT_PRO, '_blank');
+  } else if (_licenca.plano === 'essencial') {
+    sub.textContent = 'Seu plano está ativo';
+    btn.textContent = '⭐ Subir para o Pro (Gestor IA e mais)';
+    btn.style.display = 'block';
+    btn.onclick = () => window.open(URL_CHECKOUT_PRO, '_blank');
+  } else {
+    sub.textContent = 'Seu plano está ativo. Bom trabalho! 👊';
+    btn.style.display = 'none';
+  }
+}
+
+const _LIC_RECURSOS = {
+  gestor:     ['🤖 Gestor IA', 'Seu gerente comercial no bolso: analisa sua carteira, suas marcas e diz quem atacar para bater a meta.'],
+  programado: ['📦 Pedido programado', 'Lance várias entregas com data e valor — e o app cobra o giro na data certa, sem você lembrar de nada.'],
+  colecao:    ['🧥 Inteligência de coleções', 'O app avisa a janela de venda de cada coleção e prioriza na rota quem ainda não fez pedido.'],
+  cnpj:       ['🔍 Importação em massa por CNPJ', 'Cole uma lista de CNPJs e o app busca nome, endereço e ponto no mapa de cada cliente sozinho.']
+};
+function abrirModalUpgrade(recurso) {
+  const info = _LIC_RECURSOS[recurso] || ['Recurso Pro', 'Este recurso faz parte do plano Pro.'];
+  const t = document.getElementById('upgrade-recurso-titulo');
+  const s = document.getElementById('upgrade-recurso-sub');
+  if (t) t.textContent = info[0];
+  if (s) s.textContent = info[1];
+  document.getElementById('modal-upgrade').classList.add('aberto');
+}
+function _upgradeIrParaCheckout() { window.open(URL_CHECKOUT_PRO, '_blank'); }
+// App fica dias aberto no celular do rep: reconfere a licença a cada 6 horas.
+setInterval(() => { if (usuarioAtual) _licencaCarregar(); }, 6 * 3600 * 1000);
+// Com o proxy de IA ligado, o rep não precisa mais de chave Groq — some com essa UI.
+window.addEventListener('DOMContentLoaded', () => {
+  if (!USAR_PROXY_IA) return;
+  const _sg = document.getElementById('secao-groq');
+  if (_sg) _sg.style.display = 'none';
+  const _bg = document.getElementById('btn-cfg-groq-erro');
+  if (_bg) _bg.style.display = 'none';
+});
+
 // ===== AUTH =====
 // Segurança: a senha NUNCA é guardada em texto puro. Guardamos só um hash
 // derivado (PBKDF2 + salt) para validar o login offline. Com internet, o
@@ -4726,6 +4922,7 @@ async function fazerLogin() {
     setData('cv_session', usuarioAtual);
     irPara('dashboard');
     _sbAuth(email, senha);
+    setTimeout(_licencaCarregar, 2500); // espera a sessão da nuvem firmar para checar a assinatura
     setTimeout(_checarOnboarding, 2500); // espera o pull da nuvem antes de decidir mostrar o assistente
     setTimeout(_checarPlanoMes, 4000);   // no 1º acesso do mês, convida a planejar (não empilha sobre o onboarding)
   } else {
@@ -4754,6 +4951,7 @@ async function _sbRecuperarLogin(email, senha) {
     // Puxa todos os dados do Supabase
     await _sbPull();
     irPara('dashboard');
+    _licencaCarregar();
     toast('✅ Dados recuperados da nuvem!');
   } catch(e) {
     console.log('[SB] erro recuperação:', e);
@@ -4791,12 +4989,16 @@ async function fazerCadastro() {
   setData('cv_session', usuarioAtual);
   irPara('dashboard');
   _sbAuth(email, senha);
+  setTimeout(_licencaCarregar, 2500); // novo rep: inicia o teste grátis de 30 dias
   setTimeout(_checarOnboarding, 600); // novo rep: mostra o assistente de boas-vindas
 }
 function sair() {
   if (!confirm('Deseja mesmo sair?\n\nSeus dados continuam salvos, mas você vai precisar entrar com email e senha de novo.')) return;
   usuarioAtual = null;
   _sbUserId = null;
+  _licenca = null;
+  const bloqEl = document.getElementById('lic-bloqueio');
+  if (bloqEl) bloqEl.style.display = 'none';
   localStorage.removeItem('cv_session');
   _sb.auth.signOut().catch(() => {});
   irPara('login');
@@ -5694,7 +5896,7 @@ function irPara(tela) {
   }
   if (tela === 'clientes') { renderizarChipsMarca(); renderizarClientes(); setTimeout(_resetScroll, 50); }
   if (tela === 'esquecidos') renderizarEsquecidos();
-  if (tela === 'config') carregarConfig();
+  if (tela === 'config') { carregarConfig(); _licAtualizarSecaoPlano(); }
   if (tela === 'mapa') setTimeout(() => renderizarMapa(), 150);
 }
 
@@ -8824,6 +9026,7 @@ function restaurarColecoesCfg() {
 }
 function toggleSazonalCfg() {
   const cfg = getConfig();
+  if (!cfg.sazonalAtivo && !exigirPro('colecao')) return; // ligar é recurso Pro (desligar é sempre livre)
   cfg.sazonalAtivo = !cfg.sazonalAtivo;
   if (cfg.sazonalAtivo) cfg.sazonalConviteVisto = true; // ativou — convite cumpriu o papel
   salvarConfigData(cfg);
@@ -11966,6 +12169,7 @@ function _mostrarConfirmacaoEntrega(idx, dataObj) {
 
 // ===== PEDIDO PROGRAMADO (várias entregas com data e valor) =====
 function _progAtivar(i) {
+  if (!exigirPro('programado')) return;
   window._pedidoEntregasProg = window._pedidoEntregasProg || [];
   if (!window._pedidoEntregasProg[i] || !window._pedidoEntregasProg[i].length) {
     window._pedidoEntregasProg[i] = [{ data: '', valor: 0 }, { data: '', valor: 0 }];
@@ -12641,6 +12845,7 @@ function _gerenteCfgHash() {
 }
 
 function abrirGerenteVirtual() {
+  if (!exigirPro('gestor')) return;
   document.getElementById('modal-gerente').classList.add('aberto');
   document.getElementById('gerente-loading').style.display = 'none';
   document.getElementById('gerente-resultado').style.display = 'none';
@@ -12976,7 +13181,7 @@ async function gerarAnaliseGerente(forcar=false) {
   document.getElementById('gerente-resultado').style.display = 'none';
   document.getElementById('gerente-erro').style.display = 'none';
 
-  if (!apiKey) {
+  if (!USAR_PROXY_IA && !apiKey) {
     document.getElementById('gerente-loading').style.display = 'none';
     document.getElementById('gerente-erro').style.display = 'block';
     document.getElementById('gerente-erro-msg').textContent = 'Configure sua chave Groq em Configurações para ativar o Gestor IA.';
@@ -13075,11 +13280,22 @@ Responda APENAS com JSON válido, sem texto antes ou depois:
       if (el) el.textContent = txt;
     };
 
+    // Caminho da chamada: direto na Groq (chave do rep) ou pela Edge Function (sua chave)
+    let _iaUrl = 'https://api.groq.com/openai/v1/chat/completions';
+    let _iaHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
+    if (USAR_PROXY_IA) {
+      const { data: _sessProxy } = await _sb.auth.getSession();
+      const _tok = _sessProxy?.session?.access_token;
+      if (!_tok) throw new Error('Sua sessão da nuvem expirou. Saia e entre de novo para usar o Gestor IA.');
+      _iaUrl = URL_FUNC_GESTOR_IA;
+      _iaHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_tok}`, 'apikey': _SB_KEY };
+    }
+
     let r;
     for (let tentativa = 1; tentativa <= 3; tentativa++) {
-      r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      r = await fetch(_iaUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        headers: _iaHeaders,
         body: JSON.stringify(body)
       });
       if ((r.status === 503 || r.status === 500) && tentativa < 3) {
@@ -13089,7 +13305,9 @@ Responda APENAS com JSON válido, sem texto antes ou depois:
       }
       break;
     }
-    if (r.status === 401) throw new Error('Chave inválida. Verifique sua chave Groq em Configurações.');
+    if (USAR_PROXY_IA && r.status === 403) throw new Error('O Gestor IA é exclusivo do plano Pro. Assine para destravar seu gerente comercial de bolso.');
+    if (USAR_PROXY_IA && r.status === 429) throw new Error('Você atingiu o limite de análises de hoje. Volte amanhã! 👊');
+    if (r.status === 401) throw new Error(USAR_PROXY_IA ? 'Sessão expirada. Saia e entre de novo no app.' : 'Chave inválida. Verifique sua chave Groq em Configurações.');
     if (r.status === 429) throw new Error('Limite de uso atingido. Aguarde 1 minuto e tente de novo.');
     if (r.status === 503 || r.status === 500) throw new Error('Servidor da IA temporariamente sobrecarregado. Tente novamente em 1-2 minutos.');
     if (!r.ok) throw new Error('Erro na API ('+r.status+'). Tente novamente.');
@@ -15905,6 +16123,7 @@ function _acharDuplicata(novo, existentes) {
 // Em ambas o app busca nome/endereço + geolocaliza (GPS) cada empresa e cai no
 // mesmo fluxo de prévia/confirmação da importação normal.
 function abrirImportCnpj() {
+  if (!exigirPro('cnpj')) return;
   document.getElementById('import-cnpj-textarea').value = '';
   document.getElementById('import-cnpj-contagem').textContent = '';
   document.getElementById('import-cnpj-input-view').style.display = 'block';
@@ -16910,12 +17129,14 @@ function ajustarAlturaListaMotivos() {
       if (sbSession?.user) {
         _sbUserId = sbSession.user.id;
         setTimeout(_sbPull, 1200);
+        setTimeout(_licencaCarregar, 1800); // checa a assinatura com a sessão já restaurada
         setTimeout(_sbReenviarPendentes, 2500); // reenvia o que ficou pendente da sessão anterior
       } else {
         // Sessão da nuvem expirou. Por segurança não guardamos a senha para
         // reautenticar sozinho — o rep segue trabalhando local/offline e a
         // nuvem reativa no próximo login manual.
         _sbSetStatus('⚠️ Entre novamente para reativar a nuvem');
+        _licencaCarregar(); // sem sessão: usa a última licença conhecida (cache)
       }
     }).catch(() => {});
   } else {

@@ -371,6 +371,9 @@ if ('serviceWorker' in navigator) {
   .motivo-item:active,.motivo-item.selecionado { border-color:var(--verde); background:rgba(0,200,150,.05); }
   .motivo-emoji { font-size:18px; width:24px; text-align:center; }
   .motivo-texto { font-size:14px; flex:1; line-height:1.3; }
+  .motivo-reprog { border-color:rgba(91,155,255,.4); }
+  .motivo-reprog:active { border-color:#5B9BFF; background:rgba(91,155,255,.07); }
+  .chip-reprog:active { border-color:#5B9BFF; color:#5B9BFF; background:rgba(91,155,255,.12); }
   .campo-obs { width:100%; background:var(--bg3); border:1px solid var(--borda); border-radius:10px; padding:12px 14px; color:var(--texto); font-family:'DM Sans',sans-serif; font-size:14px; outline:none; resize:none; height:80px; margin-bottom:16px; }
   .campo-obs:focus { border-color:var(--verde); }
   .campo-obs::placeholder { color:var(--texto3); }
@@ -11101,6 +11104,82 @@ function selecionarMotivo(el, motivo) {
   selecionarMotivoLista(el, motivo);
 }
 
+// ===== REPROGRAMAR VISITA =====
+// Cliente na rua empurrou a visita: apenas reagenda a data de retorno. Não
+// registra nada no histórico (nada foi vendido/tratado) — reusa dataRetornoCustom,
+// o mesmo mecanismo tolerante do "editar data de retorno" do detalhe do cliente.
+function _htmlReprogramarVisita() {
+  const hoje = new Date().toISOString().slice(0, 10);
+  return `
+    <div class="motivo-item motivo-reprog" onclick="_toggleReprogPanel(event)">
+      <span class="motivo-emoji">🔁</span>
+      <span class="motivo-texto">Reprogramar visita</span>
+      <span id="reprog-chevron" style="color:#5B9BFF;font-size:18px;transition:transform .2s;">›</span>
+    </div>
+    <div id="reprog-panel" style="display:none;margin:-2px 0 8px;padding:11px 12px;background:rgba(91,155,255,.06);border:1px solid rgba(91,155,255,.3);border-radius:10px;">
+      <div style="font-size:11px;color:var(--texto2);margin-bottom:8px;">📆 O cliente pediu pra você voltar depois? Escolha quando:</div>
+      <div style="display:flex;gap:5px;">
+        <button class="chip-data-ct chip-reprog" onclick="_reprogramarVisita(7)">7 dias</button>
+        <button class="chip-data-ct chip-reprog" onclick="_reprogramarVisita(15)">15 dias</button>
+        <button class="chip-data-ct chip-reprog" onclick="_reprogramarVisita(30)">30 dias</button>
+        <div style="flex:.7;position:relative;">
+          <button class="chip-data-ct chip-reprog" style="width:100%;pointer-events:none;">📅</button>
+          <input type="date" min="${hoje}" onchange="_reprogramarVisitaData(this.value)"
+            style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:1;">
+        </div>
+      </div>
+    </div>`;
+}
+
+function _toggleReprogPanel(e) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('reprog-panel');
+  const chev = document.getElementById('reprog-chevron');
+  if (!panel) return;
+  const abrir = panel.style.display === 'none';
+  panel.style.display = abrir ? 'block' : 'none';
+  if (chev) chev.style.transform = abrir ? 'rotate(90deg)' : '';
+}
+
+function _reprogramarVisita(dias) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + dias);
+  _aplicarReprogramacao(d.toISOString().slice(0, 10));
+}
+
+function _reprogramarVisitaData(valor) {
+  if (valor) _aplicarReprogramacao(valor);
+}
+
+function _aplicarReprogramacao(iso) {
+  const clientes = getClientes();
+  const idx = clientes.findIndex(c => c.id === clienteAtualId);
+  if (idx === -1) return;
+  clientes[idx].dataRetornoCustom = iso;
+  salvarClientes(clientes);
+  const dFmt = new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const diff = diffDiasCalendario(iso + 'T00:00:00');
+  fecharModal('modal-contato');
+  atualizarDashboard();
+  abrirDetalhe(clienteAtualId, telaAnteriorDetalhe);
+  toast(`🔁 Visita reprogramada para ${dFmt}${diff > 0 ? ` (${diff}d)` : ''}`);
+  // Se a visita veio da rota de hoje, pula pro próximo cliente (igual ao salvarContato)
+  if (window._vindoDaRota) {
+    const proxIdx = window._rotaIdx + 1;
+    window._vindoDaRota = false;
+    if (proxIdx < rotaDeHojeClientes.length) {
+      const prox = rotaDeHojeClientes[proxIdx];
+      window._rotaIdx = proxIdx;
+      window._vindoDaRota = true;
+      setTimeout(() => { toast(`➡️ Próximo da rota: ${prox.nome}`); abrirDetalhe(prox.id, 'mapa'); }, 700);
+    } else {
+      window._rotaIdx = null;
+      setTimeout(() => toast('🎉 Rota de hoje concluída!'), 700);
+    }
+  }
+}
+
 function salvarContato() {
   document.getElementById('modal-pedido').classList.remove('aberto');
   if (!motivoSelecionado) { toast('Selecione o motivo'); return; }
@@ -16757,17 +16836,23 @@ function renderizarListaMotivos() {
   const customs = getMotivosCustom();
 
   // Renderiza motivos base na ordem salva
+  let reprogInjetado = false;
   let html = ordem.map(motivo => {
     const base = MOTIVOS_BASE[motivo];
     if (!base) return '';
-    return `
+    let item = `
       <div class="motivo-item" data-motivo="${motivo}"
         onclick="selecionarMotivoLista(this,'${motivo}')"
         ondblclick="selecionarESalvar(this,'${motivo}')">
         <span class="motivo-emoji">${base.label.split(' ')[0]}</span>
         <span class="motivo-texto">${base.label.split(' ').slice(1).join(' ') || base.label}</span>
       </div>`;
+    // "Reprogramar visita" fica logo abaixo de "Fechou pedido"
+    if (motivo === 'fechou_pedido') { item += _htmlReprogramarVisita(); reprogInjetado = true; }
+    return item;
   }).join('');
+  // Fallback: se o rep tirou "Fechou pedido" da ordem, mostra no topo mesmo assim
+  if (!reprogInjetado) html = _htmlReprogramarVisita() + html;
 
   // Separador e motivos personalizados — exibe preenchidos + 1 vazio (máx 6)
   const preenchidos = customs.filter(v => v.trim() !== '').length;

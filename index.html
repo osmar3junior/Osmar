@@ -5184,7 +5184,7 @@ function abrirNotificacoes() {
   const chegando = _calcularEntregasChegando();
   if (chegando.length) {
     html += `<div style="font-size:10px;font-weight:700;color:#00D68F;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">📦 Entrega chegando</div>`;
-    chegando.forEach(({ c, p, diff, data, num, total }) => {
+    chegando.forEach(({ c, p, diff, data, dt, num, total }) => {
       const qd = diff === 0 ? '<b style="color:#00D68F;">chega HOJE</b>' : diff === 1 ? 'chega amanhã' : `chega em ${diff} dias`;
       const parcela = num ? `${num}ª de ${total} entregas · ` : '';
       const dtFmt2 = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
@@ -5200,6 +5200,7 @@ function abrirNotificacoes() {
             <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${parcela}${p.marca ? esc(p.marca) + ' · ' : ''}${qd} (${dtFmt2})</div>
             <div style="font-size:11px;color:#00D68F;margin-top:2px;font-style:italic;">Avisar que está chegando é o capricho que fideliza</div>
           </div>
+          <button onclick="_marcarEntregaAvisada('${c.id}','${dt}')" title="Parar de lembrar desta entrega" style="flex-shrink:0;align-self:flex-start;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:5px 9px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Já avisei</button>
         </div>
         <button onclick="window.open('${url}','_blank')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Avisar o cliente no WhatsApp</button>
       </div>`;
@@ -12592,15 +12593,31 @@ function _calcularEntregasChegando() {
           ? p.entregas.map(e => e.data).filter(Boolean)
           : (p.dataEntregaPrevista ? [p.dataEntregaPrevista] : []);
         datas.forEach((dt, ei) => {
+          if (c.entregasAvisadas && c.entregasAvisadas[dt]) return; // rep tocou em "Já avisei"
           const d = new Date(dt + 'T00:00:00');
           const diff = Math.round((d - hoje) / 86400000);
           if (diff < 0 || diff > 2) return;
-          out.push({ c, p, diff, data: d, num: datas.length > 1 ? ei + 1 : null, total: datas.length > 1 ? datas.length : null });
+          out.push({ c, p, diff, data: d, dt, num: datas.length > 1 ? ei + 1 : null, total: datas.length > 1 ? datas.length : null });
         });
       });
     });
   });
   return out.sort((a, b) => a.diff - b.diff);
+}
+
+// "Já avisei": o rep já avisou o cliente que a entrega está chegando — silencia SÓ
+// esse lembrete (o pós-venda "chegou há X dias" segue normal). Marca por cliente+data
+// da entrega em c.entregasAvisadas → sincroniza entre aparelhos via merge de clientes.
+function _marcarEntregaAvisada(clienteId, dt) {
+  const clientes = getClientes();
+  const idx = clientes.findIndex(c => c.id === clienteId);
+  if (idx === -1) return;
+  if (!clientes[idx].entregasAvisadas) clientes[idx].entregasAvisadas = {};
+  clientes[idx].entregasAvisadas[dt] = true;
+  salvarClientes(clientes);
+  toast('✅ Ok! Não vou mais lembrar dessa entrega');
+  _atualizarBadgeNotif();
+  abrirNotificacoes(); // re-renderiza o painel sem o card
 }
 
 // Retorna marcas que passaram da metade do período e estão abaixo do ritmo necessário

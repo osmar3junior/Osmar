@@ -21,6 +21,63 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
+<!-- ════════════════════════════════════════════════════════════════════════
+     © 2026 Carteira Viva — Osmar Ferreira Jr. Todos os direitos reservados.
+     Software proprietário. É PROIBIDA a cópia, redistribuição, revenda ou
+     hospedagem não autorizada, no todo ou em parte. contato@carteiraviva.com.br
+     ════════════════════════════════════════════════════════════════════════ -->
+<script>
+/* TRAVA DE DOMÍNIO (anti-cópia) — deixa o app rodar só nos SEUS endereços.
+
+   >> COMO ATIVAR (leva 30 segundos, faça quando tiver calma):
+      1) Abra o app pelo endereço REAL onde os reps usam.
+      2) Aperte F12 → aba "Console" → digite:  location.hostname
+      3) Confira se o que apareceu está na lista DOMINIOS_AUTORIZADOS abaixo
+         (se não estiver, adicione).
+      4) Troque  GUARD_ENFORCAR  de  false  para  true  e suba o arquivo.
+
+   Enquanto GUARD_ENFORCAR = false, a trava NÃO bloqueia ninguém (só registra
+   um aviso no console). Por isso é 100% seguro subir hoje: nenhum rep trava.
+   Seus ambientes de teste (localhost, 127.0.0.1, arquivo local) nunca travam. */
+(function(){
+  var DOMINIOS_AUTORIZADOS = [
+    'carteiraviva.com.br',
+    'www.carteiraviva.com.br',
+    'app.carteiraviva.com.br'
+    // ↑ ajuste/adicione o(s) endereço(s) reais do app aqui
+  ];
+  var GUARD_ENFORCAR = false; // ← vire true SÓ depois de confirmar o domínio real
+
+  var host = (location.hostname || '').toLowerCase();
+  var testeLocal = host === 'localhost' || host === '127.0.0.1' || host === '' ||
+                   host === '::1' || /\.local$/.test(host) || location.protocol === 'file:';
+  var autorizado = testeLocal || DOMINIOS_AUTORIZADOS.indexOf(host) !== -1;
+  if (autorizado) return;
+
+  if (!GUARD_ENFORCAR) {
+    console.warn('[Carteira Viva] Domínio não reconhecido: "' + host + '". ' +
+      'Trava em MODO MONITOR (não bloqueia). Ative GUARD_ENFORCAR quando confirmar o domínio.');
+    return;
+  }
+
+  // Cópia não autorizada → não deixa o app subir
+  try { window.stop(); } catch(e){}
+  document.documentElement.innerHTML =
+    '<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>Carteira Viva</title>' +
+    '<div style="font-family:system-ui,-apple-system,sans-serif;background:#0A0E14;color:#E5E7EB;' +
+    'min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;' +
+    'padding:32px;box-sizing:border-box;"><div style="max-width:420px;">' +
+    '<div style="font-size:44px;margin-bottom:16px;">🔒</div>' +
+    '<div style="font-size:19px;font-weight:800;margin-bottom:10px;">Cópia não autorizada</div>' +
+    '<div style="font-size:14px;line-height:1.6;color:#9CA3AF;">Este é o aplicativo ' +
+    '<b style="color:#00D68F;">Carteira Viva</b>, software proprietário. Esta hospedagem não é ' +
+    'autorizada.<br><br>Acesse pelo endereço oficial ou fale com ' +
+    '<b style="color:#E5E7EB;">contato@carteiraviva.com.br</b>.</div></div></div>';
+  throw new Error('Carteira Viva: host não autorizado (' + host + ')');
+})();
+</script>
+
 <script>
 (function() {
   function gerarIcone(size) {

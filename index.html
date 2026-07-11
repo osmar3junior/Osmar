@@ -388,7 +388,25 @@ if ('serviceWorker' in navigator) {
   /* CONFIGURAÇÕES */
   #tela-config { background:var(--bg); }
   .config-content { padding:20px; flex:1; overflow-y:auto; padding-bottom:80px; }
-  .config-secao { margin-bottom:28px; }
+  .config-secao { margin-bottom:28px; position:relative; }
+  /* ===== CONFIG V2: check por seção + índice de grupos ===== */
+  .config-secao.tem-check > .config-secao-titulo { padding-right:48px; }
+  .config-secao.tem-selo > .config-secao-titulo { padding-right:118px; }
+  .sec-check { position:absolute; top:-4px; right:0; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; border:1.5px solid var(--borda); background:var(--bg3); color:var(--texto3); cursor:default; font-family:'DM Sans',sans-serif; transition:border-color .2s,background .2s,color .2s; }
+  .sec-check.on { border-color:var(--verde); background:linear-gradient(135deg,var(--verde),var(--verde-escuro)); color:#04231A; cursor:pointer; animation:cfgPulsa 1s ease-in-out infinite; }
+  .sec-check.ok { border-color:rgba(0,214,143,.5); background:rgba(0,214,143,.15); color:var(--verde); animation:none; }
+  @keyframes cfgPulsa { 0%,100%{box-shadow:0 0 0 0 rgba(0,214,143,0);transform:scale(1);} 50%{box-shadow:0 0 0 6px rgba(0,214,143,.25);transform:scale(1.08);} }
+  .config-secao.cfg-dirty { outline:1.5px solid rgba(0,214,143,.45); outline-offset:10px; border-radius:14px; }
+  .cfg-aviso-dirty { display:none; font-size:11px; color:var(--verde); font-weight:700; margin-top:10px; }
+  .config-secao.cfg-dirty .cfg-aviso-dirty { display:block; }
+  .selo-auto { position:absolute; top:0; right:0; display:inline-flex; align-items:center; gap:4px; background:var(--bg3); border:1px solid var(--borda); border-radius:999px; padding:5px 10px; color:var(--texto3); font-size:10px; font-weight:700; white-space:nowrap; font-family:'DM Sans',sans-serif; transition:border-color .25s,background .25s,color .25s; }
+  .selo-auto.flash { border-color:rgba(0,214,143,.45); background:rgba(0,214,143,.1); color:var(--verde); }
+  .cfg-indice { display:flex; gap:7px; overflow-x:auto; padding:2px 2px 12px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .cfg-indice::-webkit-scrollbar { display:none; }
+  .idx-chip { flex-shrink:0; display:inline-flex; align-items:center; gap:6px; background:var(--bg3); border:1px solid var(--borda); border-radius:999px; padding:8px 13px; font-size:12px; font-weight:700; color:var(--texto2); white-space:nowrap; cursor:pointer; font-family:'DM Sans',sans-serif; }
+  .idx-chip.ativo { background:rgba(0,214,143,.12); border-color:rgba(0,214,143,.45); color:var(--verde); }
+  .grupo-cap { display:flex; align-items:center; gap:8px; margin:18px 2px 12px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--texto3); font-family:'DM Sans',sans-serif; }
+  .grupo-cap .grupo-linha { flex:1; height:1px; background:var(--borda); }
   .config-secao-titulo { font-size:15px; font-weight:700; margin-bottom:4px; letter-spacing:-.2px; }
   .config-secao-sub { font-size:13px; color:var(--texto2); margin-bottom:16px; line-height:1.4; }
   .config-item { background:var(--bg2); border:1px solid var(--borda); border-radius:12px; padding:14px 16px; margin-bottom:8px; }
@@ -1365,7 +1383,7 @@ if ('serviceWorker' in navigator) {
 <div class="tela" id="tela-config">
   <div class="header">
     <div class="header-logo" onclick="irPara('dashboard')" style="cursor:pointer;"><div class="header-logo-icon"><svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="5" y="22" width="5" height="9" rx="1.5" fill="white" opacity=".8"/><rect x="13" y="16" width="5" height="15" rx="1.5" fill="white" opacity=".9"/><rect x="21" y="10" width="5" height="21" rx="1.5" fill="white"/><path d="M28 5L31 5L31 8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 11L31 5" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg></div></div>
-    <button class="header-btn" onclick="salvarConfig()">Salvar</button>
+    <button class="header-btn" onclick="salvarConfig()">Salvar tudo</button>
   </div>
   <div class="config-content">
 
@@ -11888,7 +11906,120 @@ function salvarNovoCliente() {
 }
 
 // ===== CONFIG =====
+// ===== CONFIG V2: índice por grupos + check de salvar por seção =====
+// Seções que precisam de salvamento manual ganham um ✓ no canto (acende e pisca
+// quando o rep mexe); seções que já persistem sozinhas ganham o selo "salva sozinho".
+const _CFGV2_GRUPOS = [
+  { id:'voce',    label:'🙂 Você',    secoes:['Seu nome','E-mail para relatórios','Seu WhatsApp'] },
+  { id:'vendas',  label:'🏷️ Vendas',  secoes:['Unidades de venda','Suas representações','Metas por marca','Margem de segurança'] },
+  { id:'rotina',  label:'🗓️ Rotina',  secoes:['Prazos por motivo','Clientes esquecidos','Meu dia de visitas'] },
+  { id:'avisos',  label:'🔔 Avisos',  secoes:['Gatilho de antecipação','Acompanhamento de entregas'] },
+  { id:'sistema', label:'🔧 Sistema', secoes:['Senha de acesso','Importar base','Gestor IA','outros segmentos','Meu plano','boas-vindas'] }
+];
+const _CFGV2_CHECK = ['Prazos por motivo','Clientes esquecidos','Seu nome','E-mail para relatórios','Seu WhatsApp'];
+const _CFGV2_AUTO  = ['Unidades de venda','Suas representações','Meu dia de visitas','Metas por marca','Margem de segurança','Gatilho de antecipação','Acompanhamento de entregas','boas-vindas','outros segmentos'];
+
+function _cfgTituloDe(sec) {
+  return (sec.querySelector('.config-secao-titulo')?.textContent || '').trim();
+}
+
+function _cfgV2Init() {
+  const cont = document.querySelector('#tela-config .config-content');
+  if (!cont || cont.dataset.v2) return; // roda uma vez só
+  cont.dataset.v2 = '1';
+
+  const diretos = [...cont.children];
+  const secoes = diretos.filter(el => el.classList && el.classList.contains('config-secao'));
+  const btnSalvarFim = diretos.find(el => el.matches && el.matches('button.btn-primario'));
+  const secFeedback = secoes.find(s => s.querySelector('#cfg-feedback-txt'));
+  const usados = new Set();
+
+  // Barra de índice (rola direto pro grupo)
+  const idx = document.createElement('div');
+  idx.className = 'cfg-indice';
+  idx.innerHTML = _CFGV2_GRUPOS.map(g =>
+    `<span class="idx-chip" data-grupo="${g.id}" onclick="_cfgIrGrupo('${g.id}',this)">${g.label}</span>`
+  ).join('');
+
+  // Ordem final: índice → grupos (cabeçalho + seções) → sobras → salvar tudo → feedback
+  cont.appendChild(idx);
+  _CFGV2_GRUPOS.forEach(g => {
+    const doGrupo = g.secoes
+      .map(t => secoes.find(s => s !== secFeedback && !usados.has(s) && _cfgTituloDe(s).includes(t)))
+      .filter(Boolean);
+    if (!doGrupo.length) return;
+    const cap = document.createElement('div');
+    cap.className = 'grupo-cap';
+    cap.id = 'cfg-grupo-' + g.id;
+    cap.innerHTML = `${g.label} <span class="grupo-linha"></span>`;
+    cont.appendChild(cap);
+    doGrupo.forEach(s => { usados.add(s); cont.appendChild(s); });
+  });
+  secoes.forEach(s => { if (!usados.has(s) && s !== secFeedback) cont.appendChild(s); });
+  if (btnSalvarFim) cont.appendChild(btnSalvarFim);
+  if (secFeedback) cont.appendChild(secFeedback);
+
+  // Injeta o ✓ (salvamento manual) ou o selo ⚡ (persistência automática)
+  secoes.forEach(s => {
+    const t = _cfgTituloDe(s);
+    if (_CFGV2_CHECK.some(x => t.includes(x))) {
+      s.classList.add('tem-check');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sec-check';
+      b.textContent = '✓';
+      b.title = 'Salvar esta seção';
+      b.onclick = () => _cfgSalvarSecao(s, b);
+      s.prepend(b);
+      const av = document.createElement('div');
+      av.className = 'cfg-aviso-dirty';
+      av.textContent = '● Alteração feita — toque no ✓ para salvar';
+      s.appendChild(av);
+    } else if (_CFGV2_AUTO.some(x => t.includes(x))) {
+      s.classList.add('tem-selo');
+      const selo = document.createElement('span');
+      selo.className = 'selo-auto';
+      selo.textContent = '⚡ salva sozinho';
+      s.prepend(selo);
+    }
+  });
+
+  // Acende o ✓ quando o rep altera algo na seção; nas automáticas, pisca "✓ salvo"
+  const marcar = e => {
+    const sec = e.target.closest('.config-secao');
+    if (!sec) return;
+    const chk = sec.querySelector(':scope > .sec-check');
+    if (chk) { chk.classList.add('on'); chk.classList.remove('ok'); sec.classList.add('cfg-dirty'); return; }
+    const selo = sec.querySelector(':scope > .selo-auto');
+    if (selo && e.type === 'change') {
+      selo.textContent = '✓ salvo';
+      selo.classList.add('flash');
+      clearTimeout(selo._t);
+      selo._t = setTimeout(() => { selo.textContent = '⚡ salva sozinho'; selo.classList.remove('flash'); }, 1600);
+    }
+  };
+  cont.addEventListener('input', marcar);
+  cont.addEventListener('change', marcar);
+}
+
+function _cfgSalvarSecao(sec, btn) {
+  if (!btn.classList.contains('on')) return; // nada mudou — check apagado não faz nada
+  salvarConfig(); // grava tudo (idempotente); o feedback visual é o da seção
+  document.querySelectorAll('#tela-config .config-secao.cfg-dirty').forEach(s => s.classList.remove('cfg-dirty'));
+  document.querySelectorAll('#tela-config .sec-check.on').forEach(c => c.classList.remove('on'));
+  btn.classList.add('ok');
+  setTimeout(() => btn.classList.remove('ok'), 1800);
+}
+
+function _cfgIrGrupo(id, chip) {
+  document.querySelectorAll('#tela-config .idx-chip').forEach(c => c.classList.remove('ativo'));
+  if (chip) chip.classList.add('ativo');
+  const alvo = document.getElementById('cfg-grupo-' + id);
+  if (alvo) alvo.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
 function carregarConfig() {
+  _cfgV2Init(); // organiza a tela em grupos + injeta checks/selos (1ª vez)
   _limparOrfaos(); // some com metas/vendas de marcas já removidas de "Suas representações"
   const cfg = getConfig();
   Object.keys(MOTIVOS_BASE).forEach(k => {
@@ -12227,6 +12358,9 @@ function salvarConfig() {
   cfg.bufferMeta = _bufEl ? Number(_bufEl.value) : 20;
   salvarConfigData(cfg);
   atualizarSemaforoDash();
+  // Config v2: salvar (de qualquer botão) apaga os checks acesos das seções
+  document.querySelectorAll('#tela-config .config-secao.cfg-dirty').forEach(s => s.classList.remove('cfg-dirty'));
+  document.querySelectorAll('#tela-config .sec-check.on').forEach(c => c.classList.remove('on'));
   toast('Configurações salvas!');
 }
 

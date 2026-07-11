@@ -1620,6 +1620,12 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="config-secao">
+      <div class="config-secao-titulo">🙂 Seu nome</div>
+      <div class="config-secao-sub">É assim que o app te chama na tela inicial e nas suas mensagens. Use seu primeiro nome ou como prefere ser chamado.</div>
+      <input type="text" class="campo-input" id="cfg-nome-rep" placeholder="Ex: Osmar" style="margin-top:4px;">
+    </div>
+
+    <div class="config-secao">
       <div class="config-secao-titulo">📧 E-mail para relatórios</div>
       <div class="config-secao-sub">Seu e-mail é preenchido automaticamente ao gerar o relatório do dia. Você ainda pode adicionar um C/C na hora de enviar.</div>
       <input type="email" class="campo-input" id="cfg-email-rep" placeholder="seu@email.com" style="margin-top:4px;">
@@ -6546,7 +6552,8 @@ function atualizarDashboard() {
   const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   const subEl = document.querySelector('.saudacao-sub');
   if (subEl) subEl.textContent = saud;
-  document.getElementById('dash-nome').textContent = usuarioAtual.nome.split(' ')[0];
+  const _nomeDash = (usuarioAtual.nome || '').trim();
+  document.getElementById('dash-nome').textContent = (_nomeDash.includes('@') ? _nomeDash.split('@')[0] : _nomeDash).split(' ')[0] || 'Rep';
   migrarArquivo();
   atualizarSemaforoDash();
   atualizarBadgeDespesas();
@@ -11890,6 +11897,9 @@ function carregarConfig() {
   });
   document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 50;
   document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
+  const _nomeAtualRep = (usuarioAtual?.nome || '').trim();
+  const _campoNomeRep = document.getElementById('cfg-nome-rep');
+  if (_campoNomeRep) _campoNomeRep.value = _nomeAtualRep.includes('@') ? '' : _nomeAtualRep; // não mostra e-mail no campo
   _renderNotifEntregaToggle(cfg.notificacaoEntrega || null);
   _renderGatilhoConfig(cfg);
   _renderOnbToggle(cfg.onboardingFeito);
@@ -12196,6 +12206,17 @@ function salvarConfig() {
   cfg.skusCustom = (cfg.skusCustom || []).filter(v => (v || '').trim());
   cfg.marcas = Array.from({length:10}, (_, i) => (document.getElementById('marca-' + i)?.value || '').trim());
   cfg.emailRep = (document.getElementById('cfg-email-rep')?.value || '').trim();
+  // Nome do rep: atualiza como o app te chama (painel + mensagens) e sincroniza.
+  const _nomeRepNovo = (document.getElementById('cfg-nome-rep')?.value || '').trim();
+  if (_nomeRepNovo && usuarioAtual) {
+    usuarioAtual.nome = _nomeRepNovo;
+    setData('cv_session', usuarioAtual);
+    const _us = getUsuarios();
+    if (_us[usuarioAtual.email]) { _us[usuarioAtual.email].nome = _nomeRepNovo; setData('cv_usuarios', _us); } // preserva salt/senhaHash
+    cfg._nomeRep = _nomeRepNovo; // vai junto no push da config p/ o Supabase
+    const _dn = document.getElementById('dash-nome');
+    if (_dn) _dn.textContent = _nomeRepNovo.split(' ')[0];
+  }
   cfg.notificacaoEntrega = document.getElementById('cfg-notif-entrega-todas-toggle')?.dataset.ativo === 'true' ? 'todas'
     : document.getElementById('cfg-notif-entrega-escolher-toggle')?.dataset.ativo === 'true' ? 'escolher' : null;
   cfg.gatilhoAnticAtivo = document.getElementById('cfg-gatilho-toggle')?.dataset.ativo === 'true';

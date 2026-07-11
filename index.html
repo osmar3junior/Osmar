@@ -839,6 +839,14 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
   <div id="sb-status" style="display:none;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:5px 12px;font-size:11px;color:var(--texto2);text-align:center;margin:8px 20px 0;"></div>
+  <!-- Banner do teste grátis: some ao assinar (só aparece p/ plano trial) -->
+  <div id="trial-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(0,214,143,.08),rgba(0,214,143,.03));border:1px solid rgba(0,214,143,.3);border-radius:12px;padding:10px 14px;margin:10px 20px 0;">
+    <div style="min-width:0;">
+      <div id="trial-banner-titulo" style="font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:700;color:var(--texto);"></div>
+      <div style="font-size:10.5px;color:var(--texto2);margin-top:1px;">Você está usando o Pro completo</div>
+    </div>
+    <button onclick="_assinarAgora()" style="flex-shrink:0;background:var(--verde);border:none;border-radius:9px;padding:9px 14px;color:#04110B;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">⭐ Assinar agora</button>
+  </div>
   <div class="dash-content">
     <div class="saudacao">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
@@ -4786,7 +4794,7 @@ function getConfig() {
 function salvarConfigData(cfg) { setData('cv_config_' + usuarioAtual.email, cfg); _invalidarCacheConfig(); _sbPushConfig(); }
 
 // ===== LICENÇA / PLANOS (trava de assinatura) =====
-// Dia 3 do manual: troque os '#' pelos links de checkout da Kiwify.
+// Troque os '#' pelos links de assinatura do gateway (Mercado Pago/Asaas/Stripe).
 const URL_CHECKOUT_PRO = '#';
 const URL_CHECKOUT_RENOVAR = '#';
 // Dia 5 do manual: depois de publicar a Edge Function "gestor-ia" no Supabase
@@ -4794,7 +4802,15 @@ const URL_CHECKOUT_RENOVAR = '#';
 // chave no servidor e o cliente não precisa mais configurar nada.
 const USAR_PROXY_IA = false;
 const URL_FUNC_GESTOR_IA = _SB_URL + '/functions/v1/gestor-ia';
-const TRIAL_DIAS = 30; // 30 dias: tempo p/ o rep alimentar a carteira e criar dependência do app
+// Teste grátis: 14 dias p/ quem se cadastrar a partir do corte (decisão 2026-07: 30d
+// esfriava a decisão de compra). Quem começou o teste ANTES do corte mantém os 30
+// dias prometidos — mudar a regra no meio bloquearia rep em produção do dia 15 em diante.
+const TRIAL_DIAS = 14;
+const TRIAL_DIAS_ANTIGO = 30;
+const TRIAL_CORTE = '2026-07-16'; // trials iniciados antes desta data seguem a regra antiga
+function _trialDiasDe(inicioIso) {
+  return (inicioIso || '') < TRIAL_CORTE ? TRIAL_DIAS_ANTIGO : TRIAL_DIAS;
+}
 const _LIC_PLANOS_PRO = ['pro', 'fundador', 'trial'];
 
 let _licenca = null; // null = ainda não carregada (não trava nada até carregar)
@@ -4864,7 +4880,7 @@ function _licIniciarTrial(email) {
   } else if (!cfg.trialInicio) {
     try { cfg.trialInicio = inicio; salvarConfigData(cfg); } catch (e) {}
   }
-  const fim = new Date(new Date(inicio).getTime() + TRIAL_DIAS * 86400000);
+  const fim = new Date(new Date(inicio).getTime() + _trialDiasDe(inicio) * 86400000);
   _licenca = { plano: 'trial', status: 'ativa', valida_ate: fim.toISOString(), origem: 'trial' };
   setData(_licCacheKey(), _licenca);
 }
@@ -4873,6 +4889,22 @@ function _licAplicarUI() {
   const bloq = document.getElementById('lic-bloqueio');
   if (bloq) bloq.style.display = _licValida() ? 'none' : 'flex';
   _licAtualizarSecaoPlano();
+  // Banner "Assinar agora" no painel: visível o teste inteiro (desde o dia 1);
+  // nos 3 últimos dias fica âmbar p/ criar urgência. Some ao virar assinante.
+  const banner = document.getElementById('trial-banner');
+  if (banner) {
+    const emTrial = _licenca && _licenca.plano === 'trial' && _licValida();
+    banner.style.display = emTrial ? 'flex' : 'none';
+    if (emTrial) {
+      const d = _licDiasRestantes();
+      const tit = document.getElementById('trial-banner-titulo');
+      if (tit) tit.textContent = d === 1 ? '⏳ Último dia do teste grátis!' : `⏳ Teste grátis: faltam ${d} dias`;
+      if (d <= 3) {
+        banner.style.borderColor = 'rgba(251,191,36,.45)';
+        banner.style.background = 'linear-gradient(135deg,rgba(251,191,36,.10),rgba(251,191,36,.03))';
+      }
+    }
+  }
   // Aviso do teste grátis: no máximo 1 vez por dia
   if (_licenca && _licenca.plano === 'trial' && _licValida()) {
     const hoje = new Date().toISOString().slice(0, 10);
@@ -4929,6 +4961,13 @@ function abrirModalUpgrade(recurso) {
   document.getElementById('modal-upgrade').classList.add('aberto');
 }
 function _upgradeIrParaCheckout() { window.open(URL_CHECKOUT_PRO, '_blank'); }
+// Botão "Assinar agora" do banner: vai pro checkout; enquanto o link não estiver
+// configurado (URL '#'), cai no e-mail de contato p/ não abrir aba em branco.
+function _assinarAgora() {
+  if (URL_CHECKOUT_PRO && URL_CHECKOUT_PRO !== '#') { window.open(URL_CHECKOUT_PRO, '_blank'); return; }
+  window.open('mailto:contato@carteiraviva.com.br?subject=' + encodeURIComponent('Quero assinar o Carteira Viva') +
+    '&body=' + encodeURIComponent('Olá! Estou no teste grátis e quero assinar o Carteira Viva.'), '_blank');
+}
 // App fica dias aberto no celular do rep: reconfere a licença a cada 6 horas.
 setInterval(() => { if (usuarioAtual) _licencaCarregar(); }, 6 * 3600 * 1000);
 // Com o proxy de IA ligado, o rep não precisa mais de chave Groq — some com essa UI.
@@ -5055,7 +5094,7 @@ async function fazerCadastro() {
   setData('cv_session', usuarioAtual);
   irPara('dashboard');
   _sbAuth(email, senha);
-  setTimeout(_licencaCarregar, 2500); // novo rep: inicia o teste grátis de 30 dias
+  setTimeout(_licencaCarregar, 2500); // novo rep: inicia o teste grátis (TRIAL_DIAS)
   setTimeout(_checarOnboarding, 600); // novo rep: mostra o assistente de boas-vindas
 }
 function sair() {
@@ -5294,6 +5333,20 @@ function abrirNotificacoes() {
     });
   }
 
+  // Endereços para validar (cliente com endereço digitado mas sem coordenada no mapa)
+  const pendentesEnd = clientes.filter(c => c.enderecoPendente && !c.lat);
+  if (pendentesEnd.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#00D68F;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">📍 Endereços para validar</div>`;
+    pendentesEnd.forEach(c => {
+      const cidTxt = c.cidade ? esc(c.cidade) + ' · ' : '';
+      html += linhaAlerta('📍','rgba(0,214,143,.4)','rgba(0,214,143,.07)',
+        `${esc(c.nome)}${c.loja ? ' — ' + esc(c.loja) : ''}`,
+        `${cidTxt}sem localização no mapa — toque para validar`,
+        `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${c.id}','mapa'),200)`
+      );
+    });
+  }
+
   if (!html) {
     html = `<div style="text-align:center;padding:32px 16px;">
       <div style="font-size:32px;margin-bottom:12px;">✅</div>
@@ -5335,7 +5388,8 @@ function _atualizarBadgeNotif() {
   const atrasadas = _getMetasAtrasadas();
   const postVendaCount = _calcularPostVendaEntregas().length;
   const entregasHoje = _calcularEntregasChegando().filter(e => e.diff === 0).length;
-  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length + postVendaCount + entregasHoje;
+  const pendEndCount = getClientesAtivos().filter(c => c.enderecoPendente && !c.lat).length;
+  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length + postVendaCount + entregasHoje + pendEndCount;
   const badge = document.getElementById('notif-badge');
   const btn = badge?.parentElement;
   if (!badge) return;
@@ -9890,31 +9944,38 @@ function confirmarSugestao(idx) {
     : `<span style="color:var(--verde);">✅ Endereço validado!</span> <span style="color:var(--texto3);">(mapa não tem o nº exato — alfinete fica próximo)</span>`;
 }
 
-function verificarEnderecosPendentes() {
+async function verificarEnderecosPendentes() {
   if (!navigator.onLine) return;
   const clientes = getClientes();
   const pendentes = clientes.filter(c => c.enderecoPendente && !c.lat);
   if (pendentes.length === 0) return;
 
-  toast(`📍 ${pendentes.length} endereço(s) pendente(s) para validar`);
-  setTimeout(() => {
-    pendentes.forEach(async c => {
-      try {
-        const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(c.enderecoPendente + ', Brasil')}&format=json&limit=1`);
-        const res = await resp.json();
-        if (res && res.length > 0) {
-          const idx = clientes.findIndex(cl => cl.id === c.id);
-          if (idx !== -1) {
-            clientes[idx].lat = res[0].lat;
-            clientes[idx].lng = res[0].lon;
-            clientes[idx].endereco = clientes[idx].endereco || c.enderecoPendente;
-            delete clientes[idx].enderecoPendente;
-            salvarClientes(clientes);
-          }
+  // Tenta resolver sozinho no fundo; o que o Nominatim não achar vira card
+  // acionável no 🔔 (rep valida no cliente por check-in ou corrigindo o endereço).
+  let resolveu = false;
+  for (const c of pendentes) {
+    try {
+      const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(c.enderecoPendente + ', Brasil')}&format=json&limit=1`);
+      const res = await resp.json();
+      if (res && res.length > 0) {
+        const idx = clientes.findIndex(cl => cl.id === c.id);
+        if (idx !== -1) {
+          clientes[idx].lat = res[0].lat;
+          clientes[idx].lng = res[0].lon;
+          clientes[idx].endereco = clientes[idx].endereco || c.enderecoPendente;
+          delete clientes[idx].enderecoPendente;
+          resolveu = true;
         }
-      } catch(e) {}
-    });
-  }, 2000);
+      }
+    } catch(e) {}
+  }
+  if (resolveu) salvarClientes(clientes);
+
+  const restam = getClientes().filter(c => c.enderecoPendente && !c.lat).length;
+  if (typeof _atualizarBadgeNotif === 'function') _atualizarBadgeNotif();
+  if (restam > 0) {
+    toast(`📍 ${restam} endereço${restam > 1 ? 's' : ''} para validar — toque no 🔔`);
+  }
 }
 
 // ===== ADICIONAR ENDEREÇO AO CLIENTE ATUAL =====

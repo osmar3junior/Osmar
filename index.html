@@ -717,7 +717,7 @@ if ('serviceWorker' in navigator) {
   .guia-step-num { width:28px; height:28px; border-radius:50%; background:var(--verde); color:#04231A; font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'Syne',sans-serif; margin-top:2px; }
   .guia-step-text { font-size:13px; color:var(--texto2); line-height:1.65; }
 
-  .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--bg3); border:1px solid var(--verde); color:var(--verde); padding:10px 20px; border-radius:20px; font-size:13px; font-weight:500; opacity:0; transition:opacity .3s,transform .3s; z-index:300; white-space:nowrap; }
+  .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--bg3); border:1px solid var(--verde); color:var(--verde); padding:12px 20px; border-radius:16px; font-size:13px; font-weight:500; opacity:0; transition:opacity .3s,transform .3s; z-index:300; white-space:normal; width:max-content; max-width:min(88vw,360px); text-align:center; line-height:1.4; box-sizing:border-box; box-shadow:0 8px 24px rgba(0,0,0,.4); }
   .toast.visivel { opacity:1; transform:translateX(-50%) translateY(0); }
 
   /* EMPTY */
@@ -16144,7 +16144,9 @@ function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('visivel');
-  setTimeout(() => el.classList.remove('visivel'), 2500);
+  clearTimeout(el._t); // evita que um toast anterior esconda o novo
+  const dur = Math.min(5000, Math.max(2500, msg.length * 55)); // mais tempo p/ frase maior
+  el._t = setTimeout(() => el.classList.remove('visivel'), dur);
 }
 document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('aberto'); }));
 

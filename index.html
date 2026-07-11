@@ -281,27 +281,32 @@ if ('serviceWorker' in navigator) {
   /* DASHBOARD */
   #tela-dashboard { background:var(--bg); }
   .dash-content { padding:20px; flex:1; overflow-y:auto; padding-bottom:80px; }
-  .saudacao { margin-bottom:24px; }
-  .saudacao-sub { font-size:12px; color:var(--texto2); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
-  .saudacao-nome { font-size:22px; font-weight:800; letter-spacing:-.3px; }
+  .saudacao { display:flex; align-items:baseline; gap:8px; margin-bottom:14px; }
+  .saudacao-sub { font-size:11px; color:var(--texto2); text-transform:uppercase; letter-spacing:1px; }
+  .saudacao-nome { font-size:20px; font-weight:800; letter-spacing:-.3px; }
 
-  .resumo-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:28px; }
-  .resumo-card { border-radius:18px; padding:16px; position:relative; overflow:hidden; transition:transform .1s, box-shadow .1s; cursor:pointer; border:none; }
+  .resumo-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .resumo-card { border-radius:15px; padding:11px 12px; position:relative; overflow:hidden; transition:transform .1s, box-shadow .1s; cursor:pointer; border:none; }
   .resumo-card:active { transform:translateY(5px); }
   .resumo-card.verde  { background:linear-gradient(145deg,#006644,#004D33); }
   .resumo-card.vermelho { background:linear-gradient(145deg,#8B1A2A,#6B1020); }
   .resumo-card.amarelo  { background:linear-gradient(145deg,#7A5500,#5C3F00); }
   .resumo-card.roxo   { background:linear-gradient(145deg,#3D2080,#2D1660); }
   .resumo-card.azul   { background:linear-gradient(145deg,#1A4A8A,#0F3068); }
-  .resumo-card-icone { font-size:22px; margin-bottom:8px; display:block; }
-  .resumo-numero { font-family:'DM Sans',sans-serif; font-size:42px; font-weight:800; line-height:1; letter-spacing:-2px; color:#fff; }
-  .resumo-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; margin-bottom:6px; }
+  .resumo-card.laranja { background:linear-gradient(145deg,#8A4210,#6B300A); }
+  .resumo-topo { display:flex; align-items:center; gap:7px; margin-bottom:6px; }
+  .resumo-card-icone { font-size:16px; flex-shrink:0; display:block; }
+  .resumo-numero { font-family:'DM Sans',sans-serif; font-size:27px; font-weight:800; line-height:1; letter-spacing:-1px; color:#fff; }
+  .resumo-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; line-height:1.25; }
+  .resumo-card.laranja .resumo-label { color:rgba(255,180,120,.8); }
+  .resumo-card.laranja .resumo-link { color:rgba(255,180,120,.9); }
+  .resumo-card.azul .resumo-link { color:rgba(150,200,255,.9); }
   .resumo-card.verde  .resumo-label { color:rgba(100,255,180,.75); }
   .resumo-card.vermelho .resumo-label { color:rgba(255,160,170,.75); }
   .resumo-card.amarelo  .resumo-label { color:rgba(255,210,100,.75); }
   .resumo-card.roxo   .resumo-label { color:rgba(200,180,255,.75); }
   .resumo-card.azul   .resumo-label { color:rgba(150,200,255,.75); }
-  .resumo-link { font-size:10px; font-weight:600; margin-top:8px; opacity:.6; }
+  .resumo-link { font-size:9.5px; font-weight:600; margin-top:5px; opacity:.6; }
   .resumo-card.verde  .resumo-link { color:rgba(100,255,180,.9); }
   .resumo-card.vermelho .resumo-link { color:rgba(255,160,170,.9); }
   .resumo-card.amarelo  .resumo-link { color:rgba(255,210,100,.9); }
@@ -407,6 +412,9 @@ if ('serviceWorker' in navigator) {
   .idx-chip.ativo { background:rgba(0,214,143,.12); border-color:rgba(0,214,143,.45); color:var(--verde); }
   .grupo-cap { display:flex; align-items:center; gap:8px; margin:18px 2px 12px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--texto3); font-family:'DM Sans',sans-serif; }
   .grupo-cap .grupo-linha { flex:1; height:1px; background:var(--borda); }
+  /* Marca da oportunidade: respira devagar p/ lembrar o rep qual marca vender (sutil, sem poluir) */
+  @keyframes marcaRespira { 0%,100% { border-color:rgba(255,192,67,.25); color:rgba(255,192,67,.8); } 50% { border-color:rgba(255,192,67,.65); color:#FFC043; } }
+  .marca-opp-pulsa { display:inline-flex; align-items:center; font-size:12px; font-weight:700; padding:2px 9px; border-radius:999px; border:1px solid rgba(255,192,67,.25); background:rgba(255,192,67,.07); color:rgba(255,192,67,.8); animation:marcaRespira 2.4s ease-in-out infinite; font-family:'DM Sans',sans-serif; }
   .config-secao-titulo { font-size:15px; font-weight:700; margin-bottom:4px; letter-spacing:-.2px; }
   .config-secao-sub { font-size:13px; color:var(--texto2); margin-bottom:16px; line-height:1.4; }
   .config-item { background:var(--bg2); border:1px solid var(--borda); border-radius:12px; padding:14px 16px; margin-bottom:8px; }
@@ -867,37 +875,39 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="dash-content">
     <div class="saudacao">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-        <div class="saudacao-sub">Bom dia</div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-        <div class="saudacao-nome" id="dash-nome">Carregando...</div>
-      </div>
+      <span class="saudacao-sub">Bom dia,</span>
+      <span class="saudacao-nome" id="dash-nome">Carregando...</span>
     </div>
     <div class="resumo-grid">
       <div class="resumo-card verde" onclick="irPara('clientes')">
-        <span class="resumo-card-icone">👥</span>
-        <div class="resumo-label">Clientes por Prioridade</div>
+        <div class="resumo-topo"><span class="resumo-card-icone">👥</span><span class="resumo-label">Clientes por Prioridade</span></div>
         <div class="resumo-numero" id="num-total">0</div>
         <div class="resumo-link">Ver todos →</div>
       </div>
       <div class="resumo-card vermelho" onclick="abrirFiltrado('urgentes')">
-        <span class="resumo-card-icone">🔔</span>
-        <div class="resumo-label">Visitas atrasadas</div>
+        <div class="resumo-topo"><span class="resumo-card-icone">🔔</span><span class="resumo-label">Visitas atrasadas</span></div>
         <div class="resumo-numero" id="num-urgentes">0</div>
         <div class="resumo-link">Ver lista →</div>
       </div>
       <div class="resumo-card amarelo" onclick="abrirFiltrado('semana')">
-        <span class="resumo-card-icone">📅</span>
-        <div class="resumo-label">Essa semana</div>
+        <div class="resumo-topo"><span class="resumo-card-icone">📅</span><span class="resumo-label">Essa semana</span></div>
         <div class="resumo-numero" id="num-essa-semana">0</div>
         <div class="resumo-link">Ver lista →</div>
       </div>
       <div class="resumo-card roxo" onclick="abrirRelatorios()">
-        <span class="resumo-card-icone">📊</span>
-        <div class="resumo-label">Meta &amp; Real + Análises</div>
-        <div class="resumo-numero" id="num-metas" style="font-size:24px;">—</div>
+        <div class="resumo-topo"><span class="resumo-card-icone">📊</span><span class="resumo-label">Meta &amp; Real + Análises</span></div>
+        <div class="resumo-numero" id="num-metas" style="font-size:22px;">—</div>
         <div class="resumo-link">Abrir →</div>
+      </div>
+      <div class="resumo-card azul" onclick="abrirRelatorios();setTimeout(()=>trocarAbaRelatorio('acoes'),150)">
+        <div class="resumo-topo"><span class="resumo-card-icone">📡</span><span class="resumo-label">Radar de Clientes</span></div>
+        <div class="resumo-numero" id="num-radar">—</div>
+        <div class="resumo-link">Quem te ajuda a bater a meta →</div>
+      </div>
+      <div class="resumo-card laranja" onclick="abrirDespesas()">
+        <div class="resumo-topo"><span class="resumo-card-icone">🧾</span><span class="resumo-label">Despesas da rota</span></div>
+        <div class="resumo-numero" id="num-despesas" style="font-size:22px;">—</div>
+        <div class="resumo-link">Lançar agora →</div>
       </div>
     </div>
 
@@ -997,21 +1007,7 @@ if ('serviceWorker' in navigator) {
       <div style="color:#38BDF8;font-size:20px;">›</div>
     </button>
 
-    <!-- BOTÃO DESPESAS DA ROTA -->
-    <button onclick="abrirDespesas()" style="width:100%;background:linear-gradient(135deg,#1a1508,#2a2210);border:1.5px solid rgba(251,191,36,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:40px;height:40px;background:rgba(251,191,36,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">💰</div>
-        <div style="text-align:left;">
-          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Despesas da rota</div>
-          <div style="font-size:11px;color:var(--texto2);">Combustível · hotel · alimentação</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span id="desp-badge-dash" style="display:none;font-size:11px;font-weight:700;color:#FBB52C;background:rgba(251,191,36,.14);border-radius:8px;padding:3px 8px;white-space:nowrap;"></span>
-        <div style="color:#FBB52C;font-size:20px;">›</div>
-      </div>
-    </button>
-
+    <!-- Despesas da rota virou quadrante no resumo-grid (2026-07-11) -->
     <!-- BOTÃO GERENTE VIRTUAL (por último) -->
     <button onclick="abrirGerenteVirtual()" style="width:100%;background:linear-gradient(135deg,#1e0a4a,#2d1470);border:1.5px solid rgba(124,58,237,.45);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:12px;">
@@ -1096,7 +1092,7 @@ if ('serviceWorker' in navigator) {
   <div class="search-bar" id="busca-wrapper">
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
-      <input type="text" class="campo-input search-input" id="busca-cliente" placeholder="Buscar cliente ou loja..." oninput="filtrarClientes()">
+      <input type="text" class="campo-input search-input" id="busca-cliente" placeholder="Buscar cliente, loja ou cidade..." oninput="filtrarClientes()">
     </div>
   </div>
   <div class="cliente-lista" id="lista-clientes">
@@ -1805,7 +1801,7 @@ if ('serviceWorker' in navigator) {
     <button class="nav-item" onclick="irPara('dashboard')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Início</span></button>
     <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon">👥</span><span class="nav-item-label">Clientes</span></button>
     <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:10px;">Add Cliente</span></button>
-    <button class="nav-item" onclick="irPara('esquecidos')"><span class="nav-item-icon">👻</span><span class="nav-item-label">Esquecidos</span></button>
+    <button class="nav-item" onclick="irPara('mapa')"><span class="nav-item-icon">🗺️</span><span class="nav-item-label">Mapa</span></button>
     <button class="nav-item ativo" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
   </div>
 </div>
@@ -2143,9 +2139,9 @@ if ('serviceWorker' in navigator) {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div class="modal-titulo" style="margin-bottom:0;">🗺️ Rota prevista para hoje</div>
       <div style="display:flex;align-items:center;gap:6px;">
-        <button onclick="fecharModal('modal-rota-hoje');setTimeout(()=>document.getElementById('modal-rota-wpp').classList.add('aberto'),200)" title="Enviar rota para WhatsApp" style="display:flex;align-items:center;gap:5px;background:#25D366;border:none;border-radius:9px;padding:6px 10px;cursor:pointer;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
-          <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#fff;">Enviar ▾</span>
+        <button onclick="fecharModal('modal-rota-hoje');setTimeout(()=>document.getElementById('modal-rota-wpp').classList.add('aberto'),200)" title="Enviar rota para WhatsApp" style="display:flex;align-items:center;gap:4px;background:rgba(37,211,102,.14);border:1px solid rgba(37,211,102,.45);border-radius:999px;padding:5px 10px;cursor:pointer;flex-shrink:0;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+          <span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:#25D366;">Enviar</span>
         </button>
         <button onclick="fecharModal('modal-rota-hoje')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
       </div>
@@ -2302,8 +2298,10 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <!-- MODAL MOVER CLIENTE PARA OUTRO DIA -->
-<div class="modal-overlay" id="modal-mover-dia">
-  <div class="modal-box" style="padding-bottom:24px;">
+<!-- Centralizado na vertical de propósito: colado no fundo, os botões de dia caíam
+     na zona de gestos do Android e o toque era roubado pelo sistema (bug do Osmar) -->
+<div class="modal-overlay" id="modal-mover-dia" style="align-items:center;padding:20px;z-index:340;">
+  <div class="modal-box" style="padding-bottom:24px;border-radius:20px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">🗓️ Mover para qual dia?</div>
       <button onclick="fecharModal('modal-mover-dia')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
@@ -2568,7 +2566,7 @@ if ('serviceWorker' in navigator) {
       <button class="rel-tab ativa" data-tab="metas" onclick="trocarAbaRelatorio('metas')">🎯 Metas</button>
       <button class="rel-tab" data-tab="vendas" onclick="trocarAbaRelatorio('vendas')">💰 Vendas</button>
       <button class="rel-tab" data-tab="comparativo" onclick="trocarAbaRelatorio('comparativo')">📈 Análises</button>
-      <button class="rel-tab" data-tab="acoes" onclick="trocarAbaRelatorio('acoes')">🔍 Raio X</button>
+      <button class="rel-tab" data-tab="acoes" onclick="trocarAbaRelatorio('acoes')">📡 Radar</button>
     </div>
 
     <!-- ABA METAS -->
@@ -6563,15 +6561,37 @@ function getUrgenciaLabel(d) {
   return `Retomar em ${dts} (${d}d)`;
 }
 
+// Card "Radar de Clientes": quantas marcas têm meta faltando E pelo menos um
+// cliente da marca sem compra no período com potencial > 0 (mesma regra do
+// bloco "Quem te ajuda a bater a meta" do renderRelAcoes)
+function _radarMarcasCount() {
+  try {
+    const ativos = getClientesAtivos();
+    return getMetasConfig().filter(meta => {
+      if (!((meta.valor - calcularRealMarca(meta)) > 0)) return false;
+      const mN = (meta.marca || '').trim().toLowerCase();
+      const { inicio, fim } = _periodoMeta(meta);
+      return ativos.some(c => {
+        if (!(c.marcas || []).some(m => (m || '').trim().toLowerCase() === mN)) return false;
+        if (_comprouMarcaNoPeriodo(c, mN, inicio, fim)) return false;
+        const pv = calcularPotencialCliente(c)[meta.marca] || {};
+        return (pv.max || pv.avg || 0) > 0;
+      });
+    }).length;
+  } catch(e) { return 0; }
+}
+
 // ===== DASHBOARD =====
 function atualizarDashboard() {
   if (!usuarioAtual) return;
   const h = new Date().getHours();
   const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   const subEl = document.querySelector('.saudacao-sub');
-  if (subEl) subEl.textContent = saud;
+  if (subEl) subEl.textContent = saud + ',';
   const _nomeDash = (usuarioAtual.nome || '').trim();
   document.getElementById('dash-nome').textContent = (_nomeDash.includes('@') ? _nomeDash.split('@')[0] : _nomeDash).split(' ')[0] || 'Rep';
+  const _elRadar = document.getElementById('num-radar');
+  if (_elRadar) _elRadar.textContent = _radarMarcasCount();
   migrarArquivo();
   atualizarSemaforoDash();
   atualizarBadgeDespesas();
@@ -8074,7 +8094,7 @@ function abrirOportunidades() {
       const rationaleLine = rationale
         ? `<div style="font-size:11px;color:${rationale.cor};margin-top:5px;font-style:italic;font-family:'DM Sans',sans-serif;">${rationale.texto}</div>`
         : '';
-      return `<div onclick="fecharOportunidades();setTimeout(()=>abrirDetalhe('${o.c.id}','clientes'),200)" style="background:var(--bg3);border:1px solid ${o.mat>=1?'rgba(0,214,143,.25)':'var(--borda)'};border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;">
+      return `<div onclick="fecharOportunidades();setTimeout(()=>abrirDetalhe('${o.c.id}','oportunidades'),200)" style="background:var(--bg3);border:1px solid ${o.mat>=1?'rgba(0,214,143,.25)':'var(--borda)'};border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
           <div style="display:flex;align-items:center;gap:9px;min-width:0;">
             ${_badgeNotaRM(notaClienteRM(o.c))}
@@ -8089,7 +8109,7 @@ function abrirOportunidades() {
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-          <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,.75);">${esc(o.marca)}</span>
+          <span class="marca-opp-pulsa">🏷️ ${esc(o.marca)}</span>
           ${o.mat>=1?'<span class="foco-badge">FOCO</span>':''}
           <span style="font-size:11px;color:${corBarra};font-weight:600;">${labelMat}</span>
         </div>
@@ -8904,7 +8924,7 @@ function abrirMoverDia(id) {
   document.getElementById('mover-dia-chips').innerHTML = RM_DIAS.map(d => {
     const ehAtual = d === diaAtual;
     const dimSab = d === 'sab' && !cfg.sabAtivo;
-    return `<button ${ehAtual ? 'disabled' : `onclick="confirmarMoverDia('${d}')"`} style="padding:12px 4px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:${ehAtual ? 'default' : 'pointer'};${ehAtual ? 'background:rgba(56,189,248,.14);border:1.5px solid rgba(56,189,248,.4);color:#7DD3FC;' : 'background:var(--bg3);border:1px solid var(--borda);color:var(--texto);'}${dimSab ? 'opacity:.5;' : ''}">${RM_NOMES[d]}${ehAtual ? '<div style="font-size:9px;font-weight:600;opacity:.8;">está aqui</div>' : ''}</button>`;
+    return `<button ${ehAtual ? 'disabled' : `onclick="confirmarMoverDia('${d}')"`} style="padding:14px 4px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;-webkit-user-select:none;user-select:none;touch-action:manipulation;cursor:${ehAtual ? 'default' : 'pointer'};${ehAtual ? 'background:rgba(56,189,248,.14);border:1.5px solid rgba(56,189,248,.4);color:#7DD3FC;' : 'background:var(--bg3);border:1px solid var(--borda);color:var(--texto);'}${dimSab ? 'opacity:.5;' : ''}">${RM_NOMES[d]}${ehAtual ? '<div style="font-size:9px;font-weight:600;opacity:.8;">está aqui</div>' : ''}</button>`;
   }).join('');
   document.getElementById('modal-mover-dia').classList.add('aberto');
 }
@@ -10396,7 +10416,10 @@ function renderizarClientes(filtro = '') {
   const clientes = _filtrarPorMarca(getClientesAtivos());
   const lista = document.getElementById('lista-clientes');
   const filtrados = (filtro
-    ? clientes.filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()) || c.loja.toLowerCase().includes(filtro.toLowerCase()))
+    ? clientes.filter(c => {
+        const f = filtro.toLowerCase();
+        return c.nome.toLowerCase().includes(f) || c.loja.toLowerCase().includes(f) || (c.cidade || '').toLowerCase().includes(f);
+      })
     : [...clientes]).sort((a, b) => {
     const getDiff = c => {
       const d = getDiffDiasCliente(c);
@@ -10630,6 +10653,10 @@ function abrirDetalhe(clienteId, telaOrigem) {
       const f = document.getElementById('tela-filtrada');
       f.style.display = 'flex';
       f.classList.add('ativa');
+    } else if (telaAnteriorDetalhe === 'oportunidades') {
+      // Veio de "Oportunidades agora": voltar reabre a lista de oportunidades
+      irPara('dashboard');
+      setTimeout(abrirOportunidades, 250);
     } else {
       irPara(telaAnteriorDetalhe);
     }
@@ -11773,7 +11800,7 @@ function confirmarExcluirCliente() {
   if (cl) { cl._del = true; cl._mod = Date.now(); }
   salvarClientes(raw);
   fecharModal('modal-editar-cliente');
-  irPara(telaAnteriorDetalhe);
+  irPara(telaAnteriorDetalhe === 'oportunidades' ? 'dashboard' : telaAnteriorDetalhe); // 'oportunidades' não é tela
   toast('Cliente excluído');
 }
 
@@ -14298,7 +14325,7 @@ function abrirRelComparativoHtml() {
   const inicioMes=new Date(Y,M,1), inicioMesAnt=new Date(Y,M-1,1), fimMesAnt=new Date(Y,M,0,23,59,59);
   const q=Math.floor(M/3), inicioTri=new Date(Y,q*3,1), inicioTriAnt=new Date(Y,q*3-3,1);
   const fimTriAnt=new Date(inicioTri.getTime()-1);
-  const inicioAno=new Date(Y,0,1), inicioAnoAnt=new Date(Y-1,0,1), fimAnoAnt=new Date(Y,0,0,23,59,59);
+  const inicioAno=new Date(Y,0,1), inicioAnoAnt=new Date(Y-1,0,1), fimAnoAnt=new Date(Y-1,M+1,0,23,59,59); // ano passado até o fim do mês atual
   const mA=soma(inicioMes,hoje), mB=soma(inicioMesAnt,fimMesAnt);
   const tA=soma(inicioTri,hoje), tB=soma(inicioTriAnt,fimTriAnt);
   const aA=soma(inicioAno,hoje), aB=soma(inicioAnoAnt,fimAnoAnt);
@@ -14306,9 +14333,9 @@ function abrirRelComparativoHtml() {
   const html = _gerarHtmlRelatorio(
     `Comparativo — ${marcaLabel}`, '#1e3a5f',
     [{ tipo:'comp', titulo:'Desempenho por período', dados:[
-      {titulo:'Mês x mês anterior',     sub:['Este mês','Mês passado'],    atual:fmtR(mA), anterior:fmtR(mB), diff:pctN(mA,mB)},
-      {titulo:'Trimestre x anterior',   sub:['Este trim.','Trim. anterior'],atual:fmtR(tA), anterior:fmtR(tB), diff:pctN(tA,tB)},
-      {titulo:'Ano x ano anterior',     sub:['Este ano','Ano passado'],    atual:fmtR(aA), anterior:fmtR(aB), diff:pctN(aA,aB)},
+      {titulo:'Mês atual x mês anterior', sub:[`${_MZ3[M]} (até hoje)`,`${_MZ3[(M+11)%12]} completo`], atual:fmtR(mA), anterior:fmtR(mB), diff:pctN(mA,mB)},
+      {titulo:'Trimestre atual x trimestre anterior', sub:[`${q+1}º tri (até hoje)`, q===0?`4º tri ${Y-1}`:`${q}º tri completo`], atual:fmtR(tA), anterior:fmtR(tB), diff:pctN(tA,tB)},
+      {titulo:'Ano atual x ano anterior — até a data', sub:[`${Y} até ${_MZ3[M]}`,`${Y-1} até ${_MZ3[M]}`], atual:fmtR(aA), anterior:fmtR(aB), diff:pctN(aA,aB)},
     ]}]
   );
   const w = window.open('','_blank');
@@ -14373,7 +14400,7 @@ function enviarRelComparativoEmail() {
   const inicioMes=new Date(Y,M,1), inicioMesAnt=new Date(Y,M-1,1), fimMesAnt=new Date(Y,M,0,23,59,59);
   const q=Math.floor(M/3), inicioTri=new Date(Y,q*3,1), inicioTriAnt=new Date(Y,q*3-3,1);
   const fimTriAnt=new Date(inicioTri.getTime()-1);
-  const inicioAno=new Date(Y,0,1), inicioAnoAnt=new Date(Y-1,0,1), fimAnoAnt=new Date(Y,0,0,23,59,59);
+  const inicioAno=new Date(Y,0,1), inicioAnoAnt=new Date(Y-1,0,1), fimAnoAnt=new Date(Y-1,M+1,0,23,59,59); // ano passado até o fim do mês atual
 
   const mA=soma(inicioMes,hoje), mB=soma(inicioMesAnt,fimMesAnt);
   const tA=soma(inicioTri,hoje), tB=soma(inicioTriAnt,fimTriAnt);
@@ -14381,19 +14408,19 @@ function enviarRelComparativoEmail() {
 
   let corpo = `RELATÓRIO COMPARATIVO — ${marcaLabel.toUpperCase()}\n`;
   corpo += `Gerado em ${dtFmt} | Carteira Viva\n`;
-  corpo += `(período atual até hoje vs período anterior completo)\n`;
+  corpo += `(mês/trimestre: atual até hoje vs anterior completo · ano: os dois até o fim de ${_MZ3[M]})\n`;
   corpo += `${'─'.repeat(40)}\n\n`;
-  corpo += `MÊS X MÊS ANTERIOR\n`;
-  corpo += `Este mês:    ${fmtR(mA)}\n`;
-  corpo += `Mês passado: ${fmtR(mB)}\n`;
+  corpo += `MÊS ATUAL X MÊS ANTERIOR\n`;
+  corpo += `${_MZ3[M]} (até hoje):     ${fmtR(mA)}\n`;
+  corpo += `${_MZ3[(M+11)%12]} completo:       ${fmtR(mB)}\n`;
   corpo += `Variação:    ${pct(mA,mB)}\n\n`;
-  corpo += `TRIMESTRE X ANTERIOR\n`;
-  corpo += `Este trim.:  ${fmtR(tA)}\n`;
-  corpo += `Trim. ant.:  ${fmtR(tB)}\n`;
+  corpo += `TRIMESTRE ATUAL X TRIMESTRE ANTERIOR\n`;
+  corpo += `${q+1}º tri (até hoje):  ${fmtR(tA)}\n`;
+  corpo += `${q===0?`4º tri ${Y-1}`:`${q}º tri completo`}: ${fmtR(tB)}\n`;
   corpo += `Variação:    ${pct(tA,tB)}\n\n`;
-  corpo += `ANO X ANO ANTERIOR\n`;
-  corpo += `Este ano:    ${fmtR(aA)}\n`;
-  corpo += `Ano passado: ${fmtR(aB)}\n`;
+  corpo += `ANO ATUAL X ANO ANTERIOR — ATÉ A DATA\n`;
+  corpo += `${Y} até ${_MZ3[M]}:  ${fmtR(aA)}\n`;
+  corpo += `${Y-1} até ${_MZ3[M]}:  ${fmtR(aB)}\n`;
   corpo += `Variação:    ${pct(aA,aB)}\n`;
   corpo += `\n${'─'.repeat(40)}\nCarteira Viva — seu copiloto na estrada`;
 
@@ -14568,17 +14595,17 @@ function abrirDrilldown(tipo) {
   if (tipo === 'mes') {
     deA = new Date(Y,M,1); ateA = hoje;
     deB = new Date(Y,M-1,1); ateB = new Date(Y,M,0,23,59,59);
-    tituloP = 'Mês x mês anterior'; subA = 'Este mês'; subB = 'Mês passado';
+    tituloP = 'Mês atual x mês anterior'; subA = `${_MZ3[M]} (até hoje)`; subB = `${_MZ3[(M+11)%12]} completo`;
   } else if (tipo === 'tri') {
     const q = Math.floor(M/3);
     deA = new Date(Y,q*3,1); ateA = hoje;
     deB = new Date(Y,q*3-3,1);
     ateB = new Date(deA.getTime()-1);
-    tituloP = 'Trimestre x anterior'; subA = 'Este trimestre'; subB = 'Trim. anterior';
+    tituloP = 'Trimestre atual x trimestre anterior'; subA = `${q+1}º tri (até hoje)`; subB = q === 0 ? `4º tri ${Y-1}` : `${q}º tri completo`;
   } else {
     deA = new Date(Y,0,1); ateA = hoje;
-    deB = new Date(Y-1,0,1); ateB = new Date(Y,0,0,23,59,59);
-    tituloP = 'Ano x ano anterior'; subA = `${Y}`; subB = `${Y-1}`;
+    deB = new Date(Y-1,0,1); ateB = new Date(Y-1,M+1,0,23,59,59); // ano passado até o fim do mês atual
+    tituloP = 'Ano atual x ano anterior — até a data'; subA = `${Y} até ${_MZ3[M]}`; subB = `${Y-1} até ${_MZ3[M]}`;
   }
 
   // Coleta vendas dos dois períodos
@@ -14719,6 +14746,8 @@ function abrirDrilldown(tipo) {
   document.getElementById('modal-drilldown').classList.add('aberto');
 }
 
+const _MZ3 = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
 function renderRelComparativo() {
   const cont = document.getElementById('rel-aba-comparativo');
   if (!cont) return;
@@ -14737,7 +14766,9 @@ function renderRelComparativo() {
 
   const inicioAno    = new Date(Y, 0, 1);
   const inicioAnoAnt = new Date(Y - 1, 0, 1);
-  const fimAnoAnt    = new Date(Y, 0, 0, 23, 59, 59);          // 31/12 do ano passado
+  // Ano anterior ATÉ A DATA: compara mês a mês fechado — jan..fim do mês atual
+  // nos dois anos (decisão Osmar 2026-07-11; antes era o ano passado inteiro)
+  const fimAnoAnt    = new Date(Y - 1, M + 1, 0, 23, 59, 59);  // ano passado até o fim do mês atual
 
   const soma = (de, ate) => _somaVendasMarca(de, ate, _relMarcaComp);
 
@@ -14778,10 +14809,10 @@ function renderRelComparativo() {
 
   cont.innerHTML = `
     <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;-webkit-overflow-scrolling:touch;">${chips.join('')}</div>
-    <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;line-height:1.5;">${tituloFiltro} · período atual (até hoje) vs período anterior completo.</div>
-    ${card('Mês x mês anterior',       ['Este mês',        'Mês passado'],    soma(inicioMes, hoje),    soma(inicioMesAnt, fimMesAnt),   'mes')}
-    ${card('Trimestre x anterior',     ['Este trimestre',  'Trim. anterior'], soma(inicioTri, hoje),    soma(inicioTriAnt, fimTriAnt),   'tri')}
-    ${card('Ano x ano anterior',       ['Este ano',        'Ano passado'],    soma(inicioAno, hoje),    soma(inicioAnoAnt, fimAnoAnt),   'ano')}
+    <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:14px;line-height:1.5;">${tituloFiltro} · mês e trimestre: atual (até hoje) vs anterior completo · ano: os dois até o fim de ${_MZ3[M]}.</div>
+    ${card('Mês atual x mês anterior', [`${_MZ3[M]} (até hoje)`, `${_MZ3[(M+11)%12]} completo`], soma(inicioMes, hoje), soma(inicioMesAnt, fimMesAnt), 'mes')}
+    ${card('Trimestre atual x trimestre anterior', [`${q+1}º tri (até hoje)`, q === 0 ? `4º tri ${Y-1} completo` : `${q}º tri completo`], soma(inicioTri, hoje), soma(inicioTriAnt, fimTriAnt), 'tri')}
+    ${card('Ano atual x ano anterior — até a data', [`${Y} até ${_MZ3[M]}`, `${Y-1} até ${_MZ3[M]}`], soma(inicioAno, hoje), soma(inicioAnoAnt, fimAnoAnt), 'ano')}
     <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-top:10px;">
       <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;margin-bottom:4px;">⬇️ Exportar Excel analítico</div>
       <div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:12px;line-height:1.5;">3 abas: Resumo Geral · Por Cliente · Analítico (pedido a pedido com SKU, valor e canal).</div>
@@ -17058,6 +17089,9 @@ function renderizarDespesas() {
 function atualizarBadgeDespesas() {
   const mes   = new Date().toISOString().slice(0,7);
   const total = getDespesas().filter(d=>d.data.startsWith(mes)).reduce((s,d)=>s+d.valor,0);
+  // Card do painel: saldo gasto no mês
+  const numEl = document.getElementById('num-despesas');
+  if (numEl) numEl.textContent = 'R$ ' + fmtK(total);
   const badge = document.getElementById('desp-badge-dash');
   if (!badge) return;
   if (total > 0) { badge.style.display='inline-block'; badge.textContent='R$ '+fmtValorDesp(total); }

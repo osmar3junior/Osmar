@@ -11565,12 +11565,23 @@ function salvarContato() {
         if (!menorRetorno || retorno < menorRetorno.data) menorRetorno = { data: retorno, marca };
       });
       if (menorRetorno) {
-        const iso = menorRetorno.data.toISOString().slice(0,10);
-        clientes[idx].dataRetornoCustom = iso;
-        toast(`🎉 Pedido registrado! · 🏷️ ${menorRetorno.marca} — retorno sugerido ${menorRetorno.data.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}`);
-      } else {
-        toast('🎉 Pedido registrado!');
+        clientes[idx].dataRetornoCustom = menorRetorno.data.toISOString().slice(0,10);
       }
+      // Mensagem: fala da MARCA VENDIDA (não da que puxa o retorno) e parabeniza
+      // se for a 1ª venda dessa marca neste cliente — dá credibilidade ao rep.
+      const _vendidas = [...marcasVendidas];
+      const _histAnterior = clientes[idx].historico.filter(h => h !== contato);
+      const _novas = _vendidas.filter(mk =>
+        !_histAnterior.some(h => h.motivo === 'fechou_pedido' && (h.pedidos || []).some(p => p.marca === mk))
+      );
+      let _msg;
+      if (_vendidas.length === 1) _msg = `✅ Venda de ${_vendidas[0]} registrada!`;
+      else if (_vendidas.length > 1) _msg = `✅ Venda registrada! 🏷️ ${_vendidas.join(', ')}`;
+      else _msg = '🎉 Pedido registrado!';
+      if (_novas.length === 1) _msg += ` · 🎉 Parabéns por mais uma marca incluída no cliente!`;
+      else if (_novas.length > 1) _msg += ` · 🎉 Parabéns! ${_novas.length} marcas novas neste cliente!`;
+      if (menorRetorno) _msg += ` · 🔔 próxima visita ~${menorRetorno.data.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}`;
+      toast(_msg);
     } else {
       toast('Contato registrado!');
     }

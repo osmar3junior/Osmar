@@ -1797,11 +1797,11 @@ if ('serviceWorker' in navigator) {
         <button onclick="fecharModal('modal-contato')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
       </div>
       <div class="modal-sub">Toque uma vez para selecionar · <strong style="color:var(--verde)">Toque duas vezes para salvar direto</strong></div>
-      <div style="font-size:11px;color:var(--texto3);margin-bottom:8px;">☰ Segure e arraste para reordenar</div>
 
       <!-- Seletor de data retroativa -->
       <div style="margin-bottom:10px;">
-        <div style="font-size:10px;color:var(--texto3);margin-bottom:5px;letter-spacing:.4px;">📅 DATA DO REGISTRO</div>
+        <div style="font-size:10px;color:var(--texto3);margin-bottom:2px;letter-spacing:.4px;">📅 QUANDO ACONTECEU?</div>
+        <div style="font-size:11px;color:var(--texto2);margin-bottom:6px;line-height:1.4;">Esqueceu de lançar? Registre hoje com a data real — use o 📅 para vendas ou visitas de dias atrás.</div>
         <div style="display:flex;gap:5px;">
           <button class="chip-data-ct ativo" data-dias="0" onclick="_selecionarDataCt(0,this)">Hoje</button>
           <button class="chip-data-ct" data-dias="1" onclick="_selecionarDataCt(1,this)">Ontem</button>
@@ -2059,6 +2059,9 @@ if ('serviceWorker' in navigator) {
       <div id="end-sugestoes" style="display:none;margin-top:8px;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;overflow:hidden;"></div>
       <!-- Endereço pendente aviso -->
       <div id="end-pendente-aviso" style="display:none;margin-top:6px;font-size:11px;color:var(--amarelo);">⏳ Sem internet — endereço salvo como pendente. Será validado quando conectar.</div>
+      <!-- GPS: capturar localização exata na porta da loja -->
+      <button onclick="_gpsNaLoja()" id="btn-gps-loja" style="width:100%;margin-top:9px;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(167,139,250,.12);border:1.5px solid rgba(167,139,250,.45);border-radius:11px;padding:12px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer;">📡 Estou na loja — usar GPS</button>
+      <div style="font-size:11px;color:#A78BFA;opacity:.85;margin-top:7px;text-align:center;font-weight:600;">Captura a localização exata daqui — mais preciso</div>
     </div>
 
     <div class="modal-btns">
@@ -5342,7 +5345,7 @@ function abrirNotificacoes() {
       html += linhaAlerta('📍','rgba(0,214,143,.4)','rgba(0,214,143,.07)',
         `${esc(c.nome)}${c.loja ? ' — ' + esc(c.loja) : ''}`,
         `${cidTxt}sem localização no mapa — toque para validar`,
-        `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${c.id}','mapa'),200)`
+        `fecharModal('modal-notificacoes');setTimeout(()=>{abrirDetalhe('${c.id}','mapa');setTimeout(()=>abrirModalEditarCliente(true),320);},200)`
       );
     });
   }
@@ -9979,6 +9982,46 @@ async function verificarEnderecosPendentes() {
 }
 
 // ===== ADICIONAR ENDEREÇO AO CLIENTE ATUAL =====
+// GPS "Estou na loja" (dentro do modal Editar cliente): captura a coordenada
+// exata daqui, reverse-geocoda, PREENCHE o campo de endereço e marca como
+// validado — o rep confere e toca em Salvar (não grava por trás do formulário).
+function _gpsNaLoja() {
+  if (!navigator.geolocation) { toast('GPS não disponível neste aparelho'); return; }
+  const btn = document.getElementById('btn-gps-loja');
+  const statusEl = document.getElementById('end-status');
+  if (btn) { btn.dataset.txt = btn.innerHTML; btn.innerHTML = '📡 Capturando...'; btn.style.opacity = '.7'; }
+  toast('📡 Capturando sua localização...');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const { latitude: lat, longitude: lng } = pos.coords;
+    let ruaCompleta = '', cidade = '';
+    try {
+      const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=pt-BR`);
+      const data = await resp.json();
+      const addr = data.address || {};
+      const rua = [addr.road, addr.house_number].filter(Boolean).join(', ');
+      const bairro = addr.suburb || addr.neighbourhood || '';
+      cidade = addr.city || addr.town || addr.village || '';
+      ruaCompleta = rua ? (bairro ? `${rua} — ${bairro}` : rua) : '';
+    } catch(e) {}
+    const display = ruaCompleta || 'Localização capturada (GPS)';
+    const campo = document.getElementById('ec-endereco');
+    if (campo) campo.value = display;
+    enderecoValidado = { display, lat: String(lat), lng: String(lng) };
+    const cEl = document.getElementById('ec-cidade');
+    if (cEl && !cEl.value.trim() && cidade) cEl.value = cidade.toUpperCase();
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = `<span style="color:var(--verde);">✅ Localização capturada!</span> <span style="color:var(--texto3);">Toque em Salvar para confirmar.</span>`;
+    }
+    const pend = document.getElementById('end-pendente-aviso'); if (pend) pend.style.display = 'none';
+    if (btn) { btn.innerHTML = btn.dataset.txt || '📡 Estou na loja — usar GPS'; btn.style.opacity = '1'; }
+    toast('📍 Endereço capturado — confira e salve');
+  }, () => {
+    if (btn) { btn.innerHTML = btn.dataset.txt || '📡 Estou na loja — usar GPS'; btn.style.opacity = '1'; }
+    toast('Não consegui o GPS. Verifique as permissões de localização.');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
 function adicionarEnderecoCliente() {
   if (!clienteAtualId) { toast('Nenhum cliente aberto'); return; }
   toast('📡 Capturando localização...');
@@ -10565,6 +10608,27 @@ function abrirDetalhe(clienteId, telaOrigem) {
   }
   const btnForaRota = document.getElementById('btn-fora-rota-detalhe');
   if (btnForaRota) btnForaRota.style.display = (cliente.lat && cliente.lng) ? 'flex' : 'none';
+  // CTA: cliente com endereço mas sem localização no mapa → leva o rep a validar
+  let vldEl = document.getElementById('det-validar-end');
+  if (!vldEl) {
+    vldEl = document.createElement('div');
+    vldEl.id = 'det-validar-end';
+    endEl.after(vldEl);
+  }
+  const _semCoord = !(cliente.lat && cliente.lng) && (cliente.enderecoPendente || cliente.endereco);
+  if (_semCoord) {
+    vldEl.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.45);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer;';
+    vldEl.onclick = () => abrirModalEditarCliente(true);
+    vldEl.innerHTML = `<span style="font-size:18px;flex-shrink:0;">📍</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12.5px;font-weight:700;color:#F59E0B;">Endereço sem localização no mapa</div>
+        <div style="font-size:11px;color:var(--texto2);margin-top:1px;">Toque para validar — assim o cliente entra na rota</div>
+      </div>
+      <span style="color:#F59E0B;font-size:16px;flex-shrink:0;">›</span>`;
+  } else {
+    vldEl.style.display = 'none';
+    vldEl.onclick = null;
+  }
   // Segmento
   let segEl = document.getElementById('det-segmento-tag');
   if (!segEl) {
@@ -11531,7 +11595,7 @@ function cadastrarTelefoneCliente(clienteId) {
 }
 
 // ===== EDITAR / EXCLUIR CLIENTE =====
-function abrirModalEditarCliente() {
+function abrirModalEditarCliente(focoEndereco) {
   const clientes = getClientes();
   const cliente = clientes.find(c => c.id === clienteAtualId);
   if (!cliente) return;
@@ -11556,6 +11620,20 @@ function abrirModalEditarCliente() {
     document.getElementById('end-pendente-aviso').style.display = 'block';
   }
   document.getElementById('modal-editar-cliente').classList.add('aberto');
+  // Veio do card "Endereço para validar" (🔔): rola até o campo e faz o
+  // botão "🔍 Validar" pulsar (ambilight) pro rep saber onde tocar.
+  const btnV = document.getElementById('btn-validar-end');
+  if (btnV) btnV.classList.remove('btn-validar-pisca');
+  if (focoEndereco) {
+    setTimeout(() => {
+      const campo = document.getElementById('ec-endereco');
+      if (campo) campo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (btnV) {
+        btnV.classList.add('btn-validar-pisca');
+        setTimeout(() => btnV.classList.remove('btn-validar-pisca'), 6000);
+      }
+    }, 260);
+  }
 }
 
 function salvarEdicaoCliente() {
@@ -13561,10 +13639,19 @@ function _exibirAnaliseGerente(analise, doCache) {
   document.getElementById('gerente-negocio-texto').textContent = analise.negocio;
   document.getElementById('gerente-acoes-texto').textContent = analise.acoes;
   const _cfgBloco = document.getElementById('gerente-config-bloco');
-  const _cfgTxt = (analise.configuracao || '').trim();
+  let _cfgTxt = (analise.configuracao || '').trim();
+  // Só mostra o bloco de configurações se HÁ pendência real (metas do mês sem
+  // cadastro/valor, etc.). Se está tudo em dia, não repete a tela toda hora —
+  // ignora o texto genérico que a IA às vezes inventa mesmo sem nada a ajustar.
+  const _pendCfg = (typeof _planoMesPendencias === 'function') ? _planoMesPendencias() : [];
   if (_cfgBloco) {
-    _cfgBloco.style.display = _cfgTxt ? 'block' : 'none';
-    if (_cfgTxt) document.getElementById('gerente-config-texto').textContent = _cfgTxt;
+    if (!_pendCfg.length) {
+      _cfgBloco.style.display = 'none';
+    } else {
+      if (!_cfgTxt) _cfgTxt = _pendCfg.join('\n'); // fallback determinístico
+      _cfgBloco.style.display = 'block';
+      document.getElementById('gerente-config-texto').textContent = _cfgTxt;
+    }
   }
   const aviso = document.getElementById('gerente-cache-aviso');
   if (doCache && _gerenteCacheData) {
@@ -16010,13 +16097,13 @@ document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('cli
 
 // ===== MOTIVOS PERSONALIZADOS + DRAG AND DROP =====
 
-const MOTIVOS_DEFAULT_ORDER = ['fechou_pedido','estoque_alto','comprou_concorrente','mercado_parado','prazo_pagamento','aguardando_proposta','mostruario_avaliacao','aguardando_giro','aguarda_colecao','nao_vai_comprar','inadimplente','fechado'];
+const MOTIVOS_DEFAULT_ORDER = ['fechou_pedido','estoque_alto','comprou_concorrente','prazo_pagamento','aguardando_proposta','mostruario_avaliacao','aguardando_giro','aguarda_colecao','nao_vai_comprar','inadimplente','fechado'];
 
 function getMotivosOrdem() {
   const key = 'cv_motivos_ordem_' + (usuarioAtual?.email || '');
   // Aposentados (somem dos botões/config). A definição segue em MOTIVOS_BASE
   // para o histórico antigo continuar calculando normalmente.
-  const RETIRADOS = ['outra_marca', 'produto_nao_girou'];
+  const RETIRADOS = ['outra_marca', 'produto_nao_girou', 'mercado_parado'];
   const salva = getData(key) || MOTIVOS_DEFAULT_ORDER;
   const ordem = salva.filter(m => !RETIRADOS.includes(m));
   // Garante que motivos novos (ex.: aguardando_proposta) apareçam mesmo para quem já tinha ordem salva.

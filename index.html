@@ -3758,6 +3758,18 @@ function esc(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
 }
+// Nome próprio para mensagens ao cliente: tira a CAIXA ALTA robótica e deixa só
+// a 1ª letra de cada palavra em maiúscula (preposições em minúsculo). "PEDRO SILVA" → "Pedro Silva".
+function _nomeCap(nome) {
+  const mini = new Set(['de','da','do','das','dos','e']);
+  return (nome || '').trim().toLowerCase().split(/\s+/).filter(Boolean).map((w, i) =>
+    (i > 0 && mini.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1)
+  ).join(' ');
+}
+// Só o primeiro nome, já capitalizado (uso mais comum nas mensagens de WhatsApp).
+function _primeiroNomeCap(nome) {
+  return _nomeCap((nome || '').split(/\s+/)[0]);
+}
 function getUsuarios() { return getData('cv_usuarios') || {}; }
 
 // ===== CACHE DE LEITURA (performance) =====
@@ -5300,7 +5312,7 @@ function abrirNotificacoes() {
     html += `<div style="font-size:10px;font-weight:700;color:#7DD3FC;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🏃 Gatilho de antecipação</div>`;
     gatilhos.forEach(({ c, diff, marcasAlerta, semana, urgencia }) => {
       const subtxt = urgencia === 'ultima'
-        ? `Essa semana! Confirme presença com ${c.nome.split(' ')[0]}`
+        ? `Essa semana! Confirme presença com ${_primeiroNomeCap(c.nome)}`
         : `Visita em ${diff} dias · semana do dia ${semana}`;
       const marcasBadges = marcasAlerta.length
         ? ' · ' + marcasAlerta.map(a => `🏷️ ${a.marca} ${a.status==='vencida'?'vencida':'vencendo'}`).join(', ')
@@ -5346,7 +5358,7 @@ function abrirNotificacoes() {
       const parcela = num ? `${num}ª de ${total} entregas · ` : '';
       const dtFmt2 = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
       const tel = (c.telefone || c.wpp || '').replace(/\D/g, '');
-      const nome = (c.nome || '').split(' ')[0];
+      const nome = _primeiroNomeCap(c.nome);
       const msg = `Oi ${nome}, tudo bem por aí? 😊 A sua mercadoria deve chegar nos próximos dias. Qualquer coisa que precisar, estou à disposição!`;
       const url = tel ? `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
       html += `<div style="background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.25);border-radius:12px;padding:12px;margin-bottom:8px;">
@@ -5374,7 +5386,7 @@ function abrirNotificacoes() {
       const marcaTxt = p.marca ? ` · ${p.marca}` : '';
       const cfg = getConfig();
       const wppCliente = (c.wpp || c.telefone || '').replace(/\D/g,'');
-      const nomeCliente = (c.nome || '').split(' ')[0];
+      const nomeCliente = _primeiroNomeCap(c.nome);
       const marcaMsg = p.marca ? ` da ${p.marca}` : '';
       const msgWpp = encodeURIComponent(`Oi ${nomeCliente}! 👋 Passando para saber se o pedido${marcaMsg} chegou direitinho. Qualquer dúvida é só me chamar! 😊`);
       const urlWpp = wppCliente
@@ -5435,7 +5447,7 @@ function _abrirGatilhoCliente(clienteId) {
   const marcasTxt = marcasAlerta.length
     ? ` Aproveito para já te falar que tenho novidades da ${marcasAlerta.map(a=>a.marca).join(' e ')} que você vai adorar.`
     : '';
-  const nome = c.nome.split(' ')[0];
+  const nome = _primeiroNomeCap(c.nome);
   const msg = `Olá, ${nome}! Tudo bem? 😊 ${urgTxt}${marcasTxt} Fica à vontade para já ir pensando no que precisa. 🙌`;
   const tel = c.telefone ? c.telefone.replace(/\D/g,'') : '';
   if (!tel) { toast('Cliente sem WhatsApp cadastrado'); abrirDetalhe(clienteId,'clientes'); return; }
@@ -5550,7 +5562,7 @@ function enviarGatilhoWhatsApp(clienteId) {
   const urgTxt = diff <= 5
     ? 'Essa semana estarei na sua região e gostaria muito de passar para te ver!'
     : `Passando para avisar que estarei em ${c.cidade || 'sua região'} na semana do dia ${semana} e gostaria de passar aí para te ver!`;
-  const nome = c.nome.split(' ')[0];
+  const nome = _primeiroNomeCap(c.nome);
   const msg = `Olá, ${nome}! Tudo bem? 😊 ${urgTxt}${marcasTxt} Fica à vontade para já ir pensando no que precisa. 🙌`;
   if (wpp) {
     const tel = c.telefone ? c.telefone.replace(/\D/g,'') : '';
@@ -6762,7 +6774,7 @@ function abrirFinalizarDia() {
 
     const tel = c.telefone ? c.telefone.replace(/\D/g, '') : '';
     const temTel = tel.length >= 10;
-    const primeiroNome = c.nome.split(' ')[0];
+    const primeiroNome = _primeiroNomeCap(c.nome);
 
     // 1) VENDA fechada hoje — SEMPRE aparece, com ou sem telefone, mesmo que não seja a última ação
     const venda = hojeHist.find(h => h.motivo === 'fechou_pedido');
@@ -10856,7 +10868,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
     if (diasUltimo >= cfg.dias_esquecidos) {
       esquecidoBox.style.display = 'block';
       document.getElementById('det-esquecido-dias').textContent = `Sem contato há ${diasUltimo} dias`;
-      document.getElementById('det-esquecido-msg').textContent = `Oi ${cliente.nome.split(' ')[0]}, tudo bem? Faz um tempo que a gente não se fala. Estou passando para saber como estão as coisas por aí e se consigo te ajudar em algo.`;
+      document.getElementById('det-esquecido-msg').textContent = `Oi ${_primeiroNomeCap(cliente.nome)}, tudo bem? Faz um tempo que a gente não se fala. Estou passando para saber como estão as coisas por aí e se consigo te ajudar em algo.`;
     } else {
       statusBox.style.display = 'block';
       document.getElementById('det-proxima-box').style.display = 'block';
@@ -10891,7 +10903,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
         if (!temCustom) {
           document.getElementById('det-proxima-data').textContent = getUrgenciaLabel(proxima.diffDias) + (proxima.diffDias <= 0 ? ' · era ' + formatarData(proxima.data) : '');
         }
-        const primeiroNome = cliente.nome.split(' ')[0];
+        const primeiroNome = _primeiroNomeCap(cliente.nome);
         const msgs = proxima.getMsgs(primeiroNome);
         const gatilhos = proxima.gatilhos;
         const nums = ['','','','',''];
@@ -10927,7 +10939,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
     if (diasSemContato >= cfg.dias_esquecidos) {
       esquecidoBox.style.display = 'block';
       document.getElementById('det-esquecido-dias').textContent = `Cadastrado há ${diasSemContato} dias sem nenhum contato registrado`;
-      document.getElementById('det-esquecido-msg').textContent = `Oi ${cliente.nome.split(' ')[0]}, tudo bem? Estou passando para saber como estão as coisas por aí.`;
+      document.getElementById('det-esquecido-msg').textContent = `Oi ${_primeiroNomeCap(cliente.nome)}, tudo bem? Estou passando para saber como estão as coisas por aí.`;
     } else {
       // Mostra box de primeiro contato
       statusBox.style.display = 'block';

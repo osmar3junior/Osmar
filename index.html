@@ -3350,6 +3350,7 @@ if ('serviceWorker' in navigator) {
     <span id="onb-dot-2" style="width:36px;height:5px;border-radius:3px;background:var(--borda);transition:background .2s;"></span>
     <span id="onb-dot-3" style="width:36px;height:5px;border-radius:3px;background:var(--borda);transition:background .2s;"></span>
     <span id="onb-dot-4" style="width:36px;height:5px;border-radius:3px;background:var(--borda);transition:background .2s;"></span>
+    <span id="onb-dot-5" style="width:36px;height:5px;border-radius:3px;background:var(--borda);transition:background .2s;"></span>
   </div>
 
   <div id="onb-scroll" style="flex:1;overflow-y:auto;padding:8px 22px 16px;">
@@ -3429,6 +3430,32 @@ if ('serviceWorker' in navigator) {
         <div style="font-size:13.5px;color:var(--texto);line-height:1.5;">💡 <strong>Quase pronto!</strong> Para o app trabalhar 100% a seu favor, depois entre em <strong>⚙️ Configurações</strong> e personalize os prazos de retorno, unidades e metas para a sua realidade. <span style="color:var(--verde);font-weight:700;">(recomendado)</span></div>
       </div>
       <div id="onb-video-4" style="display:none;text-align:center;margin-top:14px;"><a class="onb-video-link" target="_blank" style="font-size:13px;color:var(--verde);cursor:pointer;font-weight:600;">▶️ Ver como funciona (30s)</a></div>
+    </div>
+
+    <!-- PASSO 5: importar a carteira (opcional, mas é o que faz o app "ligar") -->
+    <div id="onb-passo-5" style="display:none;">
+      <div style="text-align:center;margin:14px 0 18px;">
+        <div style="font-size:40px;margin-bottom:6px;">🚀</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:21px;font-weight:800;color:var(--texto);letter-spacing:-.3px;">Quer adiantar? Traga seus clientes</div>
+        <div style="font-size:13px;color:var(--texto2);margin-top:4px;max-width:340px;margin-left:auto;margin-right:auto;line-height:1.5;">Com a sua carteira dentro, o app já monta sua rota, avisa quem está no ponto de compra e acompanha suas metas <b style="color:var(--verde);">desde o primeiro dia</b>.</div>
+      </div>
+      <div style="max-width:360px;margin:0 auto;display:flex;flex-direction:column;gap:10px;">
+        <button onclick="_onbImportar('cnpj')" style="display:flex;gap:12px;align-items:center;background:rgba(56,189,248,.07);border:1.5px solid rgba(56,189,248,.35);border-radius:14px;padding:15px 14px;cursor:pointer;text-align:left;width:100%;">
+          <span style="font-size:26px;flex-shrink:0;">📋</span>
+          <div style="min-width:0;">
+            <div style="font-weight:700;color:#38BDF8;font-size:14px;font-family:'DM Sans',sans-serif;">Colar meus CNPJs</div>
+            <div style="font-size:12px;color:var(--texto2);line-height:1.45;">Cole a lista e o app busca sozinho o nome, o endereço e o mapa de cada cliente. O jeito mais rápido.</div>
+          </div>
+        </button>
+        <button onclick="_onbImportar('planilha')" style="display:flex;gap:12px;align-items:center;background:rgba(0,214,143,.06);border:1.5px solid rgba(0,214,143,.3);border-radius:14px;padding:15px 14px;cursor:pointer;text-align:left;width:100%;">
+          <span style="font-size:26px;flex-shrink:0;">📂</span>
+          <div style="min-width:0;">
+            <div style="font-weight:700;color:var(--verde);font-size:14px;font-family:'DM Sans',sans-serif;">Importar minha planilha</div>
+            <div style="font-size:12px;color:var(--texto2);line-height:1.45;">Excel ou CSV — tem modelo pronto para baixar. Dá para trazer até o histórico de pedidos.</div>
+          </div>
+        </button>
+        <div style="font-size:12px;color:var(--texto3);text-align:center;line-height:1.55;margin-top:4px;">✋ Sem a lista em mãos agora? Tranquilo — toque em <b style="color:var(--texto2);">Concluir</b> e importe depois em ⚙️ Configurações, ou cadastre cliente a cliente.</div>
+      </div>
     </div>
   </div>
 
@@ -12429,7 +12456,7 @@ function iniciarOnboarding() {
 
 function _onbIrPasso(n) {
   _onbPasso = n;
-  [1, 2, 3, 4].forEach(i => {
+  [1, 2, 3, 4, 5].forEach(i => {
     const el = document.getElementById('onb-passo-' + i);
     if (el) el.style.display = (i === n) ? 'block' : 'none';
     const dot = document.getElementById('onb-dot-' + i);
@@ -12438,8 +12465,17 @@ function _onbIrPasso(n) {
   if (n === 3) _onbRenderMetas();
   document.getElementById('onb-btn-voltar').style.display = (n > 1) ? 'block' : 'none';
   const prox = document.getElementById('onb-btn-proximo');
-  prox.textContent = n === 1 ? 'Começar →' : n === 4 ? '🎉 Concluir' : 'Próximo →';
+  prox.textContent = n === 1 ? 'Começar →' : n === 5 ? '🎉 Concluir' : 'Próximo →';
   const sc = document.getElementById('onb-scroll'); if (sc) sc.scrollTop = 0;
+}
+
+// Passo 5: salva tudo do onboarding e cai direto na porta de importação escolhida.
+function _onbImportar(tipo) {
+  _onbFinalizar(false); // grava marcas/metas/contato + onboardingFeito e fecha o overlay
+  setTimeout(() => {
+    if (tipo === 'cnpj') abrirImportCnpj();
+    else abrirGuiaImportacao();
+  }, 250);
 }
 
 function _onbMarcaInput(v) {
@@ -12513,7 +12549,7 @@ function onbCriarUnidade() {
 function onbVoltar() { if (_onbPasso > 1) _onbIrPasso(_onbPasso - 1); }
 function onbProximo() {
   if (_onbPasso === 2 && !_onbColetarMarcas().length) { toast('Adicione ao menos uma marca (ou toque em Pular)'); return; }
-  if (_onbPasso < 4) { _onbIrPasso(_onbPasso + 1); return; }
+  if (_onbPasso < 5) { _onbIrPasso(_onbPasso + 1); return; }
   _onbFinalizar(false);
 }
 function onbPular() {

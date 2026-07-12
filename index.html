@@ -757,7 +757,9 @@ if ('serviceWorker' in navigator) {
   .resumo-card.vermelho { box-shadow:0 7px 0 #4A0910, 0 12px 20px rgba(0,0,0,.4); }
   .resumo-card.amarelo  { box-shadow:0 7px 0 #3A2800, 0 12px 20px rgba(0,0,0,.4); }
   .resumo-card.roxo    { box-shadow:0 7px 0 #180A40, 0 12px 20px rgba(0,0,0,.4); }
-  .resumo-card.verde:active, .resumo-card.vermelho:active, .resumo-card.amarelo:active, .resumo-card.roxo:active { transform:translateY(5px); box-shadow:0 2px 0 rgba(0,0,0,.4) !important; }
+  .resumo-card.azul    { box-shadow:0 7px 0 #081D45, 0 12px 20px rgba(0,0,0,.4); }
+  .resumo-card.laranja { box-shadow:0 7px 0 #3A1A05, 0 12px 20px rgba(0,0,0,.4); }
+  .resumo-card.verde:active, .resumo-card.vermelho:active, .resumo-card.amarelo:active, .resumo-card.roxo:active, .resumo-card.azul:active, .resumo-card.laranja:active { transform:translateY(5px); box-shadow:0 2px 0 rgba(0,0,0,.4) !important; }
 
   /* MAPA */
   #tela-mapa { background:var(--bg); }
@@ -1060,7 +1062,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="nav-bottom">
     <button class="nav-item ativo" onclick="irPara('dashboard')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Início</span></button>
-    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon">👥</span><span class="nav-item-label">Clientes</span></button>
+    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="#8B9EF5" style="display:block;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></span><span class="nav-item-label">Clientes</span></button>
     <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:10px;">Add Cliente</span></button>
     <button class="nav-item" onclick="irPara('mapa')"><span class="nav-item-icon">🗺️</span><span class="nav-item-label">Mapa</span></button>
     <button class="nav-item" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
@@ -1100,7 +1102,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="nav-bottom">
     <button class="nav-item" onclick="irPara('dashboard')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Início</span></button>
-    <button class="nav-item ativo" onclick="irPara('clientes')"><span class="nav-item-icon">👥</span><span class="nav-item-label">Clientes</span></button>
+    <button class="nav-item ativo" onclick="irPara('clientes')"><span class="nav-item-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="#8B9EF5" style="display:block;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></span><span class="nav-item-label">Clientes</span></button>
     <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:10px;">Add Cliente</span></button>
     <button class="nav-item" onclick="irPara('mapa')"><span class="nav-item-icon">🗺️</span><span class="nav-item-label">Mapa</span></button>
     <button class="nav-item" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
@@ -1121,7 +1123,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="nav-bottom">
     <button class="nav-item" onclick="irPara('dashboard')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Início</span></button>
-    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon">👥</span><span class="nav-item-label">Clientes</span></button>
+    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="#8B9EF5" style="display:block;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></span><span class="nav-item-label">Clientes</span></button>
     <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:10px;">Add Cliente</span></button>
     <button class="nav-item ativo" onclick="irPara('esquecidos')"><span class="nav-item-icon">👻</span><span class="nav-item-label">Esquecidos</span></button>
     <button class="nav-item" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
@@ -1135,13 +1137,13 @@ if ('serviceWorker' in navigator) {
     <button class="header-btn" onclick="irPara('dashboard')">← Voltar</button>
   </div>
   <div style="padding:16px 20px 8px;">
-    <div style="font-size:18px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:4px;" id="filtrada-titulo">-</div>
+    <div style="font-size:18px;font-weight:800;font-family:'DM Sans',sans-serif;letter-spacing:-.2px;margin-bottom:4px;" id="filtrada-titulo">-</div>
     <div style="font-size:13px;color:var(--texto2);" id="filtrada-sub">-</div>
   </div>
   <div class="cliente-lista" id="lista-filtrada" style="padding-bottom:80px;"></div>
   <div class="nav-bottom">
     <button class="nav-item ativo" onclick="irPara('dashboard')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Início</span></button>
-    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon">👥</span><span class="nav-item-label">Clientes</span></button>
+    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="#8B9EF5" style="display:block;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></span><span class="nav-item-label">Clientes</span></button>
     <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:10px;">Add Cliente</span></button>
     <button class="nav-item" onclick="irPara('mapa')"><span class="nav-item-icon">🗺️</span><span class="nav-item-label">Mapa</span></button>
     <button class="nav-item" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
@@ -1248,7 +1250,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="nav-bottom">
     <button class="nav-item" onclick="irPara('dashboard')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Início</span></button>
-    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon">👥</span><span class="nav-item-label">Clientes</span></button>
+    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="#8B9EF5" style="display:block;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></span><span class="nav-item-label">Clientes</span></button>
     <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()" style="font-size:10px;"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:9px;">Add Cliente</span></button>
     <button class="nav-item" onclick="irPara('mapa')"><span class="nav-item-icon">🗺️</span><span class="nav-item-label">Mapa</span></button>
     <button class="nav-item" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
@@ -1368,7 +1370,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="nav-bottom">
     <button class="nav-item" onclick="irPara('dashboard')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Início</span></button>
-    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon">👥</span><span class="nav-item-label">Clientes</span></button>
+    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="#8B9EF5" style="display:block;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></span><span class="nav-item-label">Clientes</span></button>
     <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:9px;">Add Cliente</span></button>
     <button class="nav-item ativo" onclick="irPara('mapa')"><span class="nav-item-icon">🗺️</span><span class="nav-item-label">Mapa</span></button>
     <button class="nav-item" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
@@ -1799,7 +1801,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="nav-bottom">
     <button class="nav-item" onclick="irPara('dashboard')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Início</span></button>
-    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon">👥</span><span class="nav-item-label">Clientes</span></button>
+    <button class="nav-item" onclick="irPara('clientes')"><span class="nav-item-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="#8B9EF5" style="display:block;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></span><span class="nav-item-label">Clientes</span></button>
     <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:10px;">Add Cliente</span></button>
     <button class="nav-item" onclick="irPara('mapa')"><span class="nav-item-icon">🗺️</span><span class="nav-item-label">Mapa</span></button>
     <button class="nav-item ativo" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
@@ -2885,11 +2887,17 @@ if ('serviceWorker' in navigator) {
     <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:13px 14px;margin-bottom:16px;">
       <div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:10px;font-family:'DM Sans',sans-serif;">Colunas reconhecidas</div>
 
+      <div style="margin-bottom:10px;background:rgba(0,214,143,.07);border:1px solid rgba(0,214,143,.25);border-radius:10px;padding:10px 12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--verde);margin-bottom:4px;font-family:'DM Sans',sans-serif;">🔑 A informação principal é o CNPJ</div>
+        <div style="font-size:12px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.7;">
+          Com o CNPJ, o app <b>busca sozinho</b> o nome da empresa, o endereço e já coloca o cliente no mapa. As demais colunas (telefone, data e valor do último pedido) são opcionais — o que estiver em branco não é importado.
+        </div>
+      </div>
       <div style="margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:var(--vermelho);margin-bottom:4px;font-family:'DM Sans',sans-serif;">⚠️ Obrigatório — pelo menos uma:</div>
+        <div style="font-size:11px;font-weight:700;color:var(--vermelho);margin-bottom:4px;font-family:'DM Sans',sans-serif;">⚠️ Cada linha precisa de CNPJ ou Nome:</div>
         <div style="font-size:12px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;">
-          <b>Nome do cliente</b> → <span style="color:var(--texto3);">Nome, Cliente, Contato, Responsável, Comprador</span><br>
-          <b>Razão social / loja</b> → <span style="color:var(--texto3);">Loja, Empresa, Razão Social, Estabelecimento</span>
+          <b>CNPJ</b> → <span style="color:var(--texto3);">o app completa o resto sozinho</span><br>
+          <b>Nome do cliente</b> → <span style="color:var(--texto3);">Nome, Cliente, Contato, Responsável, Comprador</span>
         </div>
       </div>
 
@@ -2918,7 +2926,7 @@ if ('serviceWorker' in navigator) {
       <div>
         <div style="font-size:11px;font-weight:700;color:#FFC043;margin-bottom:4px;font-family:'DM Sans',sans-serif;">📦 Histórico de compras (opcional):</div>
         <div style="font-size:12px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;">
-          <b>Data do pedido</b> → <span style="color:var(--texto3);">Pedido_data, Última compra, Data_pedido <em>(formato: 2026-06-25)</em></span><br>
+          <b>Data do pedido</b> → <span style="color:var(--texto3);">Pedido_data, Última compra, Data_pedido <em>(formato: 25/06/2026)</em></span><br>
           <b>Valor do pedido</b> → <span style="color:var(--texto3);">Pedido_valor, Valor_pedido <em>(ex: 8500)</em></span><br>
           <b>Marca do pedido</b> → <span style="color:var(--texto3);">Pedido_marca, Marca_pedido</span>
         </div>
@@ -3022,7 +3030,8 @@ if ('serviceWorker' in navigator) {
       </div>
       <textarea id="import-cnpj-textarea" oninput="_contarCnpjsTextarea()" placeholder="00.000.000/0000-00&#10;11.111.111/1111-11&#10;..." style="width:100%;min-height:150px;background:var(--bg2);border:1px solid var(--borda);border-radius:10px;padding:11px;color:var(--texto);font-family:monospace;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
       <div id="import-cnpj-contagem" style="font-size:11px;color:var(--texto3);margin-top:6px;font-family:'DM Sans',sans-serif;"></div>
-      <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:10px;padding:9px 11px;margin:12px 0;font-size:11px;color:#38BDF8;line-height:1.5;font-family:'DM Sans',sans-serif;">⏱️ A busca respeita o limite dos serviços públicos (cerca de 1 por segundo). Uma lista grande leva alguns minutos — pode deixar rodando.</div>
+      <div style="background:rgba(255,192,67,.06);border:1px solid rgba(255,192,67,.2);border-radius:10px;padding:9px 11px;margin:12px 0 0;font-size:11px;color:#FFC043;line-height:1.5;font-family:'DM Sans',sans-serif;">💡 O nome de cada cliente virá como a <b>razão social</b> da empresa. Importe a base toda de uma vez e depois é só abrir cada cliente e editar o nome do comprador.</div>
+      <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:10px;padding:9px 11px;margin:8px 0 12px;font-size:11px;color:#38BDF8;line-height:1.5;font-family:'DM Sans',sans-serif;">⏱️ A busca respeita o limite dos serviços públicos (cerca de 1 por segundo). Uma lista grande leva alguns minutos — pode deixar rodando.</div>
       <button class="btn-primario" onclick="importarPorCnpjLista()" id="import-cnpj-btn" style="margin-top:4px;">🔍 Buscar e importar</button>
     </div>
 
@@ -3051,9 +3060,7 @@ if ('serviceWorker' in navigator) {
       <button onclick="navMesDespesas(1)" style="background:none;border:none;color:var(--texto2);font-size:22px;cursor:pointer;padding:2px 12px;line-height:1;">›</button>
     </div>
 
-    <div id="desp-resumo-financeiro" style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:16px;margin-bottom:16px;"></div>
-
-    <div style="font-size:11px;color:var(--texto3);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:10px;">Lançar despesa</div>
+    <div style="font-size:11px;color:var(--texto3);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:10px;">Toque para lançar uma despesa</div>
     <div class="desp-cat-grid">
       <button class="desp-cat-btn" onclick="abrirNovaDespesa('combustivel')" style="border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.06);">
         <div class="desp-cat-icon">⛽</div>
@@ -3072,6 +3079,8 @@ if ('serviceWorker' in navigator) {
         <div class="desp-cat-label" style="color:#A78BFA;">Outra</div>
       </button>
     </div>
+
+    <div id="desp-resumo-financeiro" style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:16px;margin:16px 0;"></div>
 
     <div style="font-size:11px;color:var(--texto3);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:10px;">Lançamentos</div>
     <div id="desp-lista"></div>
@@ -16377,33 +16386,26 @@ async function baixarModeloExcel() {
     toast('⏳ Gerando modelo...');
     await _carregarSheetJS();
 
+    // Modelo SIMPLES (decisão Osmar 2026-07-11): só o essencial. CNPJ é a chave —
+    // o app busca nome, endereço e mapa sozinho. Campo vazio não é importado.
     const cabecalho = [
-      'Nome do Cliente','Razão Social / Loja','CNPJ','Telefone','Segmento',
-      'Marcas','Endereço','Bairro','CEP','Cidade','UF',
-      'Observação','Pedido_data','Pedido_marca','Pedido_valor'
+      'Nome do Cliente','Razão Social','Nome Fantasia','CNPJ',
+      'Telefone','Pedido_data','Pedido_marca','Pedido_valor'
     ];
 
     const exemplos = [
-      ['JOANA FERREIRA','BY SEA MODAS','12.345.678/0001-90','(31) 99999-0000','moda',
-       'Lupo, Meet','Rua das Flores, 123','Centro','30130-110','BELO HORIZONTE','MG',
-       'Prefere visita de manhã','2026-03-15','Lupo',8000],
-      ['JOANA FERREIRA','','','','','','','','','','','','2026-04-18','Lupo',9500],
-      ['JOANA FERREIRA','','','','','','','','','','','','2026-05-10','Meet',5000],
-      ['LEO SOUZA','CUECAS BH','','(31) 98888-1111','moda',
-       'Meet','Av. Brasil, 456','Savassi','30140-002','BELO HORIZONTE','MG',
-       '','2026-05-21','Meet',5000],
-      ['MARIA GARCIA','BOUTIQUE GARCIA','98.765.432/0001-10','(11) 97777-2222','moda',
-       'Duloren','Rua Oscar Freire, 789','Jardins','01426-001','SÃO PAULO','SP',
-       'Cliente vip - ligar antes','2026-06-01','Duloren',12000],
+      ['JOANA FERREIRA','BY SEA MODAS','','12.345.678/0001-90','(31) 99999-0000','15/03/2026','Lupo',8000],
+      ['JOANA FERREIRA','BY SEA MODAS','','','','18/04/2026','Lupo',9500],
+      ['JOANA FERREIRA','BY SEA MODAS','','','','10/05/2026','Meet',5000],
+      ['LEO SOUZA','CASA PARANÁ','','','(31) 98888-1111','21/05/2026','Meet',5000],
+      ['MARIA GARCIA','BOUTIQUE GARCIA','','98.765.432/0001-10','(11) 97777-2222','01/06/2026','Mash',12000],
+      ['','','','04.252.011/0001-10','','','',''],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([cabecalho, ...exemplos]);
-
-    // Larguras das colunas
     ws['!cols'] = [
-      {wch:22},{wch:22},{wch:20},{wch:16},{wch:12},
-      {wch:16},{wch:26},{wch:14},{wch:12},{wch:18},{wch:6},
-      {wch:24},{wch:13},{wch:14},{wch:14}
+      {wch:22},{wch:22},{wch:20},{wch:20},
+      {wch:16},{wch:13},{wch:14},{wch:13}
     ];
 
     const wb = XLSX.utils.book_new();
@@ -16411,52 +16413,46 @@ async function baixarModeloExcel() {
 
     // Aba de instruções
     const instrucoes = [
-      ['INSTRUÇÕES DE PREENCHIMENTO'],
+      ['COMO PREENCHER — PASSO A PASSO'],
       [''],
-      ['COLUNA','O QUE COLOCAR','OBRIGATÓRIO?','EXEMPLOS'],
-      ['Nome do Cliente','Nome do dono ou comprador','SIM','JOANA FERREIRA'],
-      ['Razão Social / Loja','Nome da loja ou empresa','Recomendado','BY SEA MODAS'],
-      ['CNPJ','CNPJ ou CPF (com ou sem pontuação)','Não','12.345.678/0001-90'],
+      ['1. A informação PRINCIPAL é o CNPJ. Com ele, o app busca sozinho o nome'],
+      ['   da empresa, o endereço e já coloca o cliente no mapa.'],
+      ['2. As outras colunas são opcionais: telefone, data do último pedido e valor.'],
+      ['   O que você deixar em branco simplesmente não é importado.'],
+      ['3. Se preencher o Nome do Cliente, ele vale. Se deixar em branco e tiver'],
+      ['   CNPJ, o app usa o nome da empresa (depois é só editar o nome do comprador).'],
+      ['4. Apague as linhas de exemplo antes de importar.'],
+      [''],
+      ['COLUNA','O QUE COLOCAR','OBRIGATÓRIO?','EXEMPLO'],
+      ['Nome do Cliente','Nome do dono ou comprador','Não (se tiver CNPJ)','JOANA FERREIRA'],
+      ['Razão Social','Nome oficial da empresa','Não','BY SEA MODAS'],
+      ['Nome Fantasia','Nome da loja (fachada)','Não','BY SEA'],
+      ['CNPJ','Com ou sem pontuação','SIM (ou o Nome)','12.345.678/0001-90'],
       ['Telefone','Celular ou WhatsApp','Não','(31) 99999-0000'],
-      ['Segmento','Ramo de atividade','Não','moda, calcados, alimentos, farmacia'],
-      ['Marcas','Marcas que o cliente compra','Não','Lupo, Meet (separe por vírgula)'],
-      ['Endereço','Rua e número','Recomendado','Rua das Flores, 123'],
-      ['Bairro','Bairro','Não','Centro'],
-      ['CEP','CEP (ajuda a localizar no mapa)','Não','30130-110'],
-      ['Cidade','Cidade','Recomendado','BELO HORIZONTE'],
-      ['UF','Sigla do estado','Recomendado','MG'],
-      ['Observação','Anotação livre','Não','Prefere visita de manhã'],
+      ['Pedido_data','Data do pedido — DD/MM/AAAA','Não','15/03/2026'],
+      ['Pedido_marca','Marca vendida','Não','Lupo'],
+      ['Pedido_valor','Valor em reais (só número)','Não','8000'],
       [''],
-      ['HISTÓRICO DE COMPRAS (opcional)','','',''],
-      ['Pedido_data','Data do pedido','—','2026-06-25  (formato: AAAA-MM-DD)'],
-      ['Pedido_marca','Marca do pedido','—','Lupo'],
-      ['Pedido_valor','Valor em reais (só o número)','—','8500'],
+      ['DICA: para lançar mais de um pedido por cliente, repita o cliente em'],
+      ['várias linhas mudando data/marca/valor. O app agrupa pelo CNPJ ou nome.'],
       [''],
-      ['DICA IMPORTANTE: Para lançar mais de um pedido por cliente,'],
-      ['repita o cliente em várias linhas com datas diferentes.'],
-      ['O app agrupa automaticamente pelo CNPJ ou nome+cidade.'],
-      [''],
-      ['DICA: Os nomes das colunas podem variar. O app também reconhece:'],
-      ['Nome, Cliente, Contato, Responsável → para Nome do Cliente'],
-      ['Empresa, Razão Social, Estabelecimento → para Loja'],
-      ['Telefone, Celular, WhatsApp, Fone → para Telefone'],
-      ['Endereço, Logradouro, Rua → para Endereço'],
-      ['Município, Localidade → para Cidade'],
-      ['Estado, Sigla → para UF'],
+      ['DICA: quer importar mais dados (endereço, cidade, marcas, observação)?'],
+      ['O app também reconhece essas colunas se você adicioná-las à planilha.'],
     ];
     const wsInst = XLSX.utils.aoa_to_sheet(instrucoes);
-    wsInst['!cols'] = [{wch:30},{wch:35},{wch:14},{wch:36}];
+    wsInst['!cols'] = [{wch:24},{wch:34},{wch:18},{wch:24}];
     XLSX.utils.book_append_sheet(wb, wsInst, 'Instruções');
 
     XLSX.writeFile(wb, 'modelo_carteira_viva.xlsx');
-    toast('✅ Modelo baixado! Abra no Excel, apague os exemplos e preencha.');
+    toast('✅ Modelo baixado! Só o CNPJ é obrigatório — o app busca o resto.');
   } catch(err) {
     // fallback para CSV se SheetJS não carregar
     const linhas = [
-      'Nome do Cliente,Razão Social / Loja,CNPJ,Telefone,Segmento,Marcas,Endereço,Bairro,CEP,Cidade,UF,Observação,Pedido_data,Pedido_marca,Pedido_valor',
-      '"JOANA FERREIRA","BY SEA MODAS","12.345.678/0001-90","(31) 99999-0000","moda","Lupo, Meet","Rua das Flores 123","Centro","30130-110","BELO HORIZONTE","MG","Prefere manhã","2026-03-15","Lupo","8000"',
-      '"JOANA FERREIRA","","","","","","","","","","","","2026-04-18","Lupo","9500"',
-      '"LEO SOUZA","CUECAS BH","","(31) 98888-1111","moda","Meet","Av Brasil 456","Savassi","30140-002","BELO HORIZONTE","MG","","2026-05-21","Meet","5000"'
+      'Nome do Cliente,Razão Social,Nome Fantasia,CNPJ,Telefone,Pedido_data,Pedido_marca,Pedido_valor',
+      '"JOANA FERREIRA","BY SEA MODAS","","12.345.678/0001-90","(31) 99999-0000","15/03/2026","Lupo","8000"',
+      '"JOANA FERREIRA","BY SEA MODAS","","","","18/04/2026","Lupo","9500"',
+      '"LEO SOUZA","CASA PARANÁ","","","(31) 98888-1111","21/05/2026","Meet","5000"',
+      '"","","","04.252.011/0001-10","","","",""'
     ].join('\n');
     const blob = new Blob(['﻿' + linhas], { type:'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -16496,7 +16492,8 @@ function _parsearCSV(text) {
 }
 
 const _IMPORT_ALIAS = {
-  nome:        ['nome','name','cliente','contato','responsavel','comprador','proprietario','nome_do_cliente','nome_cliente','nome_contato','nome_do_contato','nome_fantasia','fantasia','apelido'],
+  nome:        ['nome','name','cliente','contato','responsavel','comprador','proprietario','nome_do_cliente','nome_cliente','nome_contato','nome_do_contato','apelido'],
+  fantasia:    ['nome_fantasia','fantasia','nome_da_fantasia'],
   loja:        ['loja','empresa','store','razao_social','razao_social_','razao','nome_empresa','nome_da_empresa','estabelecimento','denominacao','corporate_name','firma','nome_loja','nome_da_loja'],
   cnpj:        ['cnpj','document','documento','cpf_cnpj','cnpj_cpf','inscricao','doc','numero_documento','num_doc','registro'],
   telefone:    ['telefone','phone','celular','tel','whatsapp','fone','contato_telefone','telefone_celular','celular_whatsapp','numero_telefone','num_tel','phone_number'],
@@ -16520,6 +16517,29 @@ function _normalizarHeader(h) {
     .replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
 }
 
+// Data da planilha → 'AAAA-MM-DD'. Aceita DD/MM/AAAA (padrão Brasil), AAAA-MM-DD
+// e número serial do Excel (célula formatada como data). Inválida → null (pedido é pulado).
+function _dataImportISO(v) {
+  if (v === null || v === undefined || v === '') return null;
+  // Serial do Excel (número ou string numérica de 5 dígitos): dias desde 1900
+  const n = typeof v === 'number' ? v : (/^\d{5}$/.test(String(v).trim()) ? parseInt(v, 10) : NaN);
+  if (!isNaN(n) && n > 20000 && n < 60000) {
+    const d = new Date(Math.round((n - 25569) * 86400000));
+    return isNaN(d) ? null : d.toISOString().slice(0, 10);
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);              // AAAA-MM-DD
+  if (m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);   // DD/MM/AAAA (Brasil)
+  if (m) {
+    const d = +m[1], mo = +m[2], y = m[3].length === 2 ? 2000 + +m[3] : +m[3];
+    const dt = new Date(y, mo - 1, d, 12);
+    if (isNaN(dt) || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+  return null;
+}
+
 function _resolverColunas(header) {
   const idx = {};
   const normas = header.map(h => _normalizarHeader(h));
@@ -16533,7 +16553,8 @@ function _resolverColunas(header) {
 
   // 2ª passagem: fuzzy — se o header *contiver* a palavra-chave principal
   const fuzzyMap = {
-    nome:     ['nome','cliente','contato','responsavel','fantasia'],
+    nome:     ['nome','cliente','contato','responsavel'],
+    fantasia: ['fantasia'],
     loja:     ['loja','empresa','razao','razao_social','estabelecimento'],
     cnpj:     ['cnpj','cpf'],
     telefone: ['telefone','celular','fone','whatsapp'],
@@ -16556,9 +16577,9 @@ function _resolverColunas(header) {
 function _linhasParaClientes(rows) {
   const header = rows[0].map(h => (h||'').toString().toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_'));
   const col = _resolverColunas(header);
-  if (col.nome === undefined) {
+  if (col.nome === undefined && col.cnpj === undefined) {
     const detectadas = Object.keys(col).join(', ') || 'nenhuma';
-    toast(`❌ Coluna de nome não encontrada. Colunas detectadas: ${detectadas}. Use cabeçalhos como: Nome, Cliente, Contato, Razão Social.`);
+    toast(`❌ Preciso de uma coluna de Nome ou de CNPJ. Colunas detectadas: ${detectadas}.`);
     return [];
   }
 
@@ -16566,11 +16587,13 @@ function _linhasParaClientes(rows) {
   const rawRows = rows.slice(1).map(r => {
     const g = f => (col[f] !== undefined ? (r[col[f]]||'') : '').toString().trim();
     const nome = g('nome').toUpperCase();
-    if (!nome) return null;
+    const cnpj = g('cnpj').replace(/\D/g,'');
+    if (!nome && cnpj.length !== 14) return null; // sem nome, só entra com CNPJ (o app busca o resto)
     return {
       nome,
+      fantasia:    g('fantasia').toUpperCase(),
       loja:        g('loja').toUpperCase(),
-      cnpj:        g('cnpj').replace(/\D/g,''),
+      cnpj,
       telefone:    g('telefone'),
       segmento:    g('segmento') || 'geral',
       marcasStr:   g('marcas'),
@@ -16580,16 +16603,30 @@ function _linhasParaClientes(rows) {
       uf:          g('uf').toUpperCase(),
       ciclo_dias:  parseInt(g('ciclo_dias')) || 30,
       lembrete:    g('lembrete'),
-      pedido_data:  g('pedido_data'),
+      pedido_data:  (col.pedido_data !== undefined ? r[col.pedido_data] : ''), // cru: preserva data serial do Excel
       pedido_marca: g('pedido_marca'),
       pedido_valor: parseFloat((g('pedido_valor')||'').replace(/[^\d,.]/g,'').replace(',','.')) || 0
     };
   }).filter(Boolean);
 
-  // 2. Agrupa por CNPJ (se tiver) ou nome+cidade
+  // 2. Agrupa por CNPJ (se tiver) ou nome+cidade. Linha repetida do mesmo cliente
+  // SEM o CNPJ (padrão do modelo: só a 1ª linha traz o CNPJ, as demais só os
+  // pedidos) cai no MESMO grupo do CNPJ — senão o cliente duplicava.
   const grupos = new Map();
+  const _nomeKeyMap = {};
   rawRows.forEach(r => {
-    const chave = r.cnpj.length >= 11 ? 'cnpj:' + r.cnpj : 'nc:' + r.nome + '|' + r.cidade;
+    let chave;
+    if (r.cnpj.length >= 11) {
+      chave = 'cnpj:' + r.cnpj;
+      if (r.nome) {
+        _nomeKeyMap[r.nome + '|' + r.cidade] = chave;
+        if (!(r.nome in _nomeKeyMap)) _nomeKeyMap[r.nome] = chave;
+      }
+    } else {
+      chave = _nomeKeyMap[r.nome + '|' + r.cidade]
+        || (!r.cidade ? _nomeKeyMap[r.nome] : null)
+        || 'nc:' + r.nome + '|' + r.cidade;
+    }
     if (!grupos.has(chave)) grupos.set(chave, []);
     grupos.get(chave).push(r);
   });
@@ -16609,7 +16646,7 @@ function _linhasParaClientes(rows) {
     const c = {
       id:         'c_imp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
       nome,
-      loja:       pick('loja') || nome,
+      loja:       pick('fantasia') || pick('loja') || nome,
       cnpj:       pick('cnpj'),
       telefone:   pick('telefone'),
       segmento:   pick('segmento') || 'geral',
@@ -16629,15 +16666,20 @@ function _linhasParaClientes(rows) {
       c.enderecoPendente = partes.join(', ');
     }
 
+    // Sem nome mas com CNPJ: o app busca nome/endereço nas bases públicas depois
+    if (!c.nome && c.cnpj && c.cnpj.length === 14) c._enriquecerCnpj = true;
+
     // 4. Coleta TODOS os pedidos de todas as linhas do grupo
     linhas.forEach(l => {
       if (!l.pedido_data || l.pedido_valor <= 0) return;
+      const iso = _dataImportISO(l.pedido_data); // aceita DD/MM/AAAA, AAAA-MM-DD e data do Excel
+      if (!iso) return;
       const pedidos = l.pedido_marca
         ? [{ marca: l.pedido_marca, valor: l.pedido_valor, qtd: 0, unidade: 'reais' }]
         : [];
       c.historico.push({
         tipo: 'visita', motivo: 'fechou_pedido',
-        data: new Date(l.pedido_data + 'T12:00:00').toISOString(),
+        data: new Date(iso + 'T12:00:00').toISOString(),
         pedidos, pedidoValor: l.pedido_valor, obs: 'Importado'
       });
     });
@@ -16832,12 +16874,78 @@ async function processarArquivoImportacao(input) {
     const clientes = _linhasParaClientes(rows);
     if (!clientes.length) return;
 
+    // Planilha "só CNPJ obrigatório": linhas sem nome são buscadas nas bases públicas
+    const stubs = clientes.filter(c => c._enriquecerCnpj);
+    if (stubs.length) {
+      if (!navigator.onLine) { toast('⚠️ Linhas sem nome precisam de internet para buscar o CNPJ'); return; }
+      fecharModal('modal-guia-importacao');
+      document.getElementById('import-cnpj-input-view').style.display = 'none';
+      document.getElementById('import-cnpj-progress-view').style.display = 'block';
+      document.getElementById('modal-import-cnpj').classList.add('aberto');
+      const bar = document.getElementById('import-cnpj-prog-bar');
+      const txt = document.getElementById('import-cnpj-prog-txt');
+      const sub = document.getElementById('import-cnpj-prog-sub');
+      const falhas = await _enriquecerStubsPlanilha(stubs, (i, tot, ok) => {
+        bar.style.width = Math.round((i / tot) * 100) + '%';
+        txt.textContent = `Buscando CNPJ ${i + 1} de ${tot}...`;
+        sub.textContent = `${ok} encontrado${ok !== 1 ? 's' : ''} até agora`;
+      });
+      bar.style.width = '100%';
+      fecharModal('modal-import-cnpj');
+      const finais = clientes.filter(c => !c._enriquecerCnpj); // não achado = sem nome, pula
+      if (falhas.length) setTimeout(() => toast(`⚠️ ${falhas.length} CNPJ${falhas.length>1?'s':''} não encontrado${falhas.length>1?'s':''} nas bases — linha${falhas.length>1?'s':''} pulada${falhas.length>1?'s':''}`), 400);
+      if (!finais.length) { toast('❌ Nenhum cliente pôde ser montado a partir da planilha'); return; }
+      _importDados = finais;
+      _renderPreviewImportacao(finais);
+      document.getElementById('modal-importacao').classList.add('aberto');
+      return;
+    }
+
     _importDados = clientes;
     _renderPreviewImportacao(clientes);
     document.getElementById('modal-importacao').classList.add('aberto');
   } catch(err) {
     toast('Erro ao ler arquivo: ' + (err.message || err));
   }
+}
+
+// Enriquecimento das linhas de planilha que vieram só com CNPJ: busca nome, endereço
+// e mapa nas bases públicas, PRESERVANDO o que veio da planilha (telefone, pedidos, marcas).
+async function _enriquecerStubsPlanilha(stubs, onProgress) {
+  const falhas = [];
+  let achados = 0;
+  for (let i = 0; i < stubs.length; i++) {
+    const c = stubs[i];
+    if (onProgress) onProgress(i, stubs.length, achados);
+    let d = null;
+    try {
+      d = await Promise.any([
+        _fetchCnpjApi(c.cnpj, `https://publica.cnpj.ws/cnpj/${c.cnpj}`, 'cnpjws'),
+        _fetchCnpjApi(c.cnpj, `https://receitaws.com.br/v1/cnpj/${c.cnpj}`, 'receitaws'),
+        _fetchCnpjApi(c.cnpj, `https://brasilapi.com.br/api/cnpj/v1/${c.cnpj}`, 'brasilapi')
+      ]);
+    } catch (e) { falhas.push(c.cnpj); }
+    if (d) {
+      const nomeApi = d.nomeFantasia || d.razaoSocial || 'Cliente';
+      c.nome = nomeApi.toUpperCase();
+      if (!c.loja) c.loja = (d.razaoSocial || nomeApi).toUpperCase();
+      if (!c.segmento || c.segmento === 'geral') c.segmento = sugerirSegmentoPorCnae(d.cnaeDesc) || 'geral';
+      const endParts = [d.logradouro, d.numero].filter(Boolean).join(', ');
+      const endereco = (endParts + (d.bairro ? ' — ' + d.bairro : '')).trim();
+      if (!c.endereco) c.endereco = endereco;
+      if (!c.cidade) c.cidade = (d.municipio || '').toUpperCase();
+      if (!c.uf) c.uf = (d.uf || '').toUpperCase();
+      const geo = await _geocodCnpjBatch(d);
+      if (geo) { c.lat = geo.lat; c.lng = geo.lng; delete c.enderecoPendente; }
+      else if (c.endereco || c.cidade) {
+        c.enderecoPendente = [c.endereco, c.cidade, c.uf, (d.cep || '').replace(/\D/g, ''), 'Brasil'].filter(Boolean).join(', ');
+      }
+      delete c._enriquecerCnpj;
+      achados++;
+    }
+    if (i < stubs.length - 1) await new Promise(r => setTimeout(r, 1200));
+  }
+  return falhas;
 }
 
 function _renderPreviewImportacao(clientes) {

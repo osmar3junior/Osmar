@@ -354,7 +354,7 @@ if ('serviceWorker' in navigator) {
   #tela-detalhe { background:var(--bg); }
   .detalhe-header { background:var(--bg2); border-bottom:1px solid var(--borda); padding:20px; }
   .btn-voltar { background:none; border:none; color:var(--verde); font-size:14px; cursor:pointer; padding:0; margin-bottom:16px; font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:6px; }
-  .detalhe-nome { font-size:22px; font-weight:800; letter-spacing:-.3px; margin-bottom:4px; }
+  .detalhe-nome { font-size:22px; font-weight:700; letter-spacing:.3px; line-height:1.25; margin-bottom:4px; }
   .detalhe-loja { font-size:14px; color:var(--texto2); margin-bottom:14px; }
   .detalhe-acoes { display:flex; flex-direction:column; }
   .btn-acao { flex:1; border-radius:12px; padding:14px 8px; font-size:13px; font-weight:700; cursor:pointer; border:none; font-family:'Syne',sans-serif; display:flex; align-items:center; justify-content:center; gap:6px; transition:transform .1s, box-shadow .1s; }
@@ -5368,7 +5368,7 @@ function abrirNotificacoes() {
   const postVenda = _calcularPostVendaEntregas();
   if (postVenda.length) {
     html += `<div style="font-size:10px;font-weight:700;color:#38BDF8;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🚚 Pós-venda de entrega</div>`;
-    postVenda.forEach(({ c, p, diasApos, dataEntrega }) => {
+    postVenda.forEach(({ c, p, diasApos, dataEntrega, dt }) => {
       const dtFmt = dataEntrega.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
       const diasTxt = diasApos === 2 ? 'chegou há 2 dias' : `chegou há ${diasApos} dias`;
       const marcaTxt = p.marca ? ` · ${p.marca}` : '';
@@ -5388,6 +5388,7 @@ function abrirNotificacoes() {
             <div style="font-size:11px;color:var(--texto2);margin-top:2px;">Pedido de ${dtFmt}${marcaTxt} · ${diasTxt}</div>
             <div style="font-size:11px;color:#38BDF8;margin-top:2px;font-style:italic;">Pergunte se chegou tudo certo — é o momento ideal para o próximo pedido</div>
           </div>
+          <button onclick="_marcarPosVendaAvisada('${c.id}','${dt}')" title="Já falei com o cliente — pode tirar" style="flex-shrink:0;align-self:flex-start;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:5px 9px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Já avisei</button>
         </div>
         <button onclick="window.open('${urlWpp}','_blank')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Enviar mensagem de pós-venda</button>
       </div>`;
@@ -9378,6 +9379,25 @@ function getPedidosCliente(c) {
   return (c.historico || []).filter(h => h.motivo === 'fechou_pedido' && h.pedidoValor);
 }
 
+// Cadência de compra do cliente (mesmo cálculo do "Pronto para comprar"):
+// % propício, intervalo médio e dias desde a última. null se < 2 compras.
+function _cadenciaCliente(c) {
+  const datas = _datasClienteFiltrado(c);
+  if (datas.length < 2) return null;
+  let soma = 0;
+  for (let i = 1; i < datas.length; i++) soma += (datas[i] - datas[i-1]) / 86400000;
+  const media = soma / (datas.length - 1);
+  if (media <= 0) return null;
+  const diasDesde = (new Date() - datas[datas.length - 1]) / 86400000;
+  return { pct: Math.min(100, Math.round((diasDesde / media) * 100)), mediaDias: Math.round(media), diasDesde: Math.round(diasDesde) };
+}
+function _cadenciaBadge(c) {
+  const cad = _cadenciaCliente(c);
+  if (!cad) return '';
+  const cor = cad.pct >= 90 ? 'var(--verde)' : cad.pct >= 60 ? '#FFB020' : 'var(--texto2)';
+  return `<span style="font-size:10px;color:${cor};background:rgba(255,255,255,.06);border-radius:6px;padding:2px 7px;font-weight:700;">🎯 ${cad.pct}% · compra a cada ~${cad.mediaDias}d, última há ${cad.diasDesde}d</span>`;
+}
+
 function renderizarTop20() {
   const lista = document.getElementById('lista-clientes');
   const ranking = _filtrarPorMarca(getClientes())
@@ -9471,6 +9491,7 @@ function renderizarPorProximidade() {
             <div class="cliente-loja" style="opacity:.75;">${esc(c.loja)}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px;">
               <span style="font-size:10px;color:var(--verde);background:rgba(0,214,143,.12);border-radius:6px;padding:2px 7px;font-weight:700;">📍 ${distStr}</span>
+              ${_cadenciaBadge(c)}
             </div>
           </div>
         </div>
@@ -13096,6 +13117,20 @@ function _marcarEntregaAvisada(clienteId, dt) {
   abrirNotificacoes(); // re-renderiza o painel sem o card
 }
 
+// Pós-venda: rep já falou com o cliente → some a notificação (cumpriu o papel).
+// Flag por data da entrega em c.posVendaAvisada; sincroniza entre aparelhos via merge.
+function _marcarPosVendaAvisada(clienteId, dt) {
+  const clientes = getClientes();
+  const idx = clientes.findIndex(c => c.id === clienteId);
+  if (idx === -1) return;
+  if (!clientes[idx].posVendaAvisada) clientes[idx].posVendaAvisada = {};
+  clientes[idx].posVendaAvisada[dt] = true;
+  salvarClientes(clientes);
+  toast('✅ Feito! Pós-venda concluído');
+  _atualizarBadgeNotif();
+  abrirNotificacoes();
+}
+
 // Retorna marcas que passaram da metade do período e estão abaixo do ritmo necessário
 function _calcularPostVendaEntregas() {
   const hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -13113,12 +13148,13 @@ function _calcularPostVendaEntregas() {
           ? p.entregas.map(e => e.data).filter(Boolean)
           : (p.dataEntregaPrevista ? [p.dataEntregaPrevista] : []);
         datas.forEach((dt, ei) => {
+          if (c.posVendaAvisada && c.posVendaAvisada[dt]) return; // rep tocou em "Já avisei"
           const dataEntrega = new Date(dt + 'T00:00:00');
           const diasApos = Math.floor((hoje - dataEntrega) / 86400000);
           const diasMinNotif = (p.prazoEntregaDias || 0) > 30 ? 5 : 3;
           if (diasApos < diasMinNotif) return;
           if (diasApos > 30) return; // janela de 30 dias para mostrar o pós-venda
-          resultado.push({ c, h, p, diasApos, dataEntrega, entregaNum: datas.length > 1 ? ei + 1 : null, entregaTotal: datas.length > 1 ? datas.length : null });
+          resultado.push({ c, h, p, diasApos, dataEntrega, dt, entregaNum: datas.length > 1 ? ei + 1 : null, entregaTotal: datas.length > 1 ? datas.length : null });
         });
       });
     });

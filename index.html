@@ -415,6 +415,12 @@ if ('serviceWorker' in navigator) {
   /* Marca da oportunidade: respira devagar p/ lembrar o rep qual marca vender (sutil, sem poluir) */
   @keyframes marcaRespira { 0%,100% { border-color:rgba(255,192,67,.25); color:rgba(255,192,67,.8); } 50% { border-color:rgba(255,192,67,.65); color:#FFC043; } }
   .marca-opp-pulsa { display:inline-flex; align-items:center; font-size:12px; font-weight:700; padding:2px 9px; border-radius:999px; border:1px solid rgba(255,192,67,.25); background:rgba(255,192,67,.07); color:rgba(255,192,67,.8); animation:marcaRespira 2.4s ease-in-out infinite; font-family:'DM Sans',sans-serif; }
+  /* Alfinetes do mapa de postos/estacionamentos (Na Estrada) */
+  .est-pin { display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:#131922; border:2px solid #FFC043; font-size:16px; box-shadow:0 2px 8px rgba(0,0,0,.55); }
+  .est-pin.park { border-color:#38BDF8; }
+  .est-pin.rep { border-color:var(--verde); background:#0D1F18; font-size:17px; }
+  @keyframes estPulsa { 0%,100% { box-shadow:0 0 0 0 rgba(0,214,143,0), 0 2px 8px rgba(0,0,0,.55); } 50% { box-shadow:0 0 0 11px rgba(0,214,143,.28), 0 2px 8px rgba(0,0,0,.55); } }
+  .est-pin.perto { border-color:var(--verde); animation:estPulsa 1.7s ease-in-out infinite; }
   .config-secao-titulo { font-size:15px; font-weight:700; margin-bottom:4px; letter-spacing:-.2px; }
   .config-secao-sub { font-size:13px; color:var(--texto2); margin-bottom:16px; line-height:1.4; }
   .config-item { background:var(--bg2); border:1px solid var(--borda); border-radius:12px; padding:14px 16px; margin-bottom:8px; }
@@ -1805,6 +1811,25 @@ if ('serviceWorker' in navigator) {
     <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:10px;">Add Cliente</span></button>
     <button class="nav-item" onclick="irPara('mapa')"><span class="nav-item-icon">🗺️</span><span class="nav-item-label">Mapa</span></button>
     <button class="nav-item ativo" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
+  </div>
+</div>
+
+<!-- MODAL MENSAGENS PRONTAS (biblioteca com variações — nada de texto robótico repetido) -->
+<div class="modal-overlay" id="modal-mensagens" style="z-index:340;">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">💬 Mensagens prontas</div>
+      <button onclick="fecharModal('modal-mensagens')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div class="modal-sub" id="msg-sub" style="margin-bottom:12px;">Escolha o assunto — cada envio sai com um texto diferente, nada de mensagem robótica.</div>
+    <div id="msg-cats" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;-webkit-overflow-scrolling:touch;"></div>
+    <div id="msg-preview" style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px;font-size:13.5px;color:var(--texto);line-height:1.6;white-space:pre-wrap;font-family:'DM Sans',sans-serif;min-height:110px;margin-bottom:10px;"></div>
+    <button onclick="_msgSortear()" style="width:100%;background:var(--bg3);border:1px dashed var(--borda);border-radius:11px;padding:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;">🎲 Quero outra versão</button>
+    <div style="display:flex;gap:8px;">
+      <button onclick="_msgCopiar()" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:11px;padding:13px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📋 Copiar</button>
+      <button onclick="_msgAbrirWpp()" style="flex:2;background:linear-gradient(135deg,#25D366,#1DA851);border:none;border-radius:11px;padding:13px;color:#04110B;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;">💬 Abrir no WhatsApp</button>
+    </div>
+    <div id="msg-sem-tel" style="display:none;font-size:11.5px;color:var(--amarelo);margin-top:8px;text-align:center;">Este cliente não tem WhatsApp cadastrado — a mensagem abre para você escolher o contato.</div>
   </div>
 </div>
 
@@ -3892,10 +3917,70 @@ function salvarLogistica(obj) {
   if (usuarioAtual) setData('cv_logistica_' + usuarioAtual.email, obj);
 }
 
+// Telefone BR vindo do OpenStreetMap costuma ter +55 na frente — tira o código
+// do país p/ não virar "DDD 55" (bug reportado pelo Osmar) e p/ o wa.me/55 não duplicar.
+function _normTelBR(d) {
+  d = (d || '').replace(/\D/g, '');
+  if ((d.length === 12 || d.length === 13) && d.startsWith('55')) d = d.slice(2);
+  return d;
+}
+
 function _distKm(lat1, lng1, lat2, lng2) {
   const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
   const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ===== MINI-MAPA "NA ESTRADA" (postos ⛽ / estacionamentos 🅿️) =====
+// Alfinetes no mapa + carrinho 🚗 = posição do rep; o mais perto pulsa e mostra
+// um resumo de chegada (~min e km, tocando em outro alfinete o resumo troca).
+let _estradaMap = null;
+function _renderMapaEstrada(tipo, lat, lng, resultados, naEstrada) {
+  const listaDiv = document.getElementById('estrada-proximos-lista');
+  if (!listaDiv || !window.L || !resultados.length) return;
+  let wrap = document.getElementById('estrada-mapa-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'estrada-mapa-wrap';
+    wrap.innerHTML = `<div id="estrada-mapa" style="height:250px;border-radius:14px;overflow:hidden;border:1px solid var(--borda);"></div><div id="estrada-mapa-resumo" style="margin:8px 0 12px;"></div>`;
+    listaDiv.parentElement.insertBefore(wrap, listaDiv);
+  }
+  wrap.style.display = 'block';
+  if (_estradaMap) { try { _estradaMap.remove(); } catch(e){} _estradaMap = null; }
+  const map = L.map('estrada-mapa', { zoomControl: false, attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  _estradaMap = map;
+
+  const emoji = tipo === 'fuel' ? '⛽' : '🅿️';
+  const veloc = naEstrada ? 70 : 35; // km/h estimado: estrada vs cidade
+  const resumoDe = (r, ehMaisPerto) => {
+    const min = Math.max(1, Math.round(r.dist / veloc * 60));
+    const distTxt = r.dist < 1 ? Math.round(r.dist*1000)+' m' : r.dist.toFixed(1)+' km';
+    document.getElementById('estrada-mapa-resumo').innerHTML =
+      `<div style="background:rgba(0,214,143,.07);border:1px solid rgba(0,214,143,.3);border-radius:12px;padding:10px 12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${emoji} ${esc(r.nome)}${ehMaisPerto ? ' <span style="font-size:9.5px;color:var(--verde);font-weight:800;">· MAIS PERTO</span>' : ''}</div>
+            <div style="font-size:12px;color:var(--verde);font-weight:700;margin-top:2px;">🚗 chega em ~${min} min · ${distTxt}</div>
+          </div>
+          <div style="display:flex;gap:5px;flex-shrink:0;">
+            <a href="https://waze.com/ul?ll=${r.elLat},${r.elLng}&navigate=yes" target="_blank" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:8px;padding:7px 10px;color:#38BDF8;font-size:11px;font-weight:700;text-decoration:none;font-family:'DM Sans',sans-serif;">Waze</a>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${r.elLat},${r.elLng}" target="_blank" style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:7px 10px;color:#FBBF24;font-size:11px;font-weight:700;text-decoration:none;font-family:'DM Sans',sans-serif;">Maps</a>
+          </div>
+        </div>
+      </div>`;
+  };
+
+  L.marker([lat, lng], { icon: L.divIcon({ className:'', html:'<div class="est-pin rep">🚗</div>', iconSize:[34,34], iconAnchor:[17,17] }), zIndexOffset: 500 }).addTo(map);
+  resultados.forEach((r, i) => {
+    const ic = L.divIcon({ className:'', html:`<div class="est-pin ${tipo==='parking'?'park':''} ${i===0?'perto':''}">${emoji}</div>`, iconSize:[34,34], iconAnchor:[17,17] });
+    const m = L.marker([r.elLat, r.elLng], { icon: ic }).addTo(map);
+    m.on('click', () => resumoDe(r, i === 0));
+  });
+  const bounds = L.latLngBounds([[lat, lng], ...resultados.slice(0, 8).map(r => [r.elLat, r.elLng])]);
+  map.fitBounds(bounds, { padding: [34, 34] });
+  setTimeout(() => { try { map.invalidateSize(); map.fitBounds(bounds, { padding: [34, 34] }); } catch(e){} }, 300);
+  resumoDe(resultados[0], true);
 }
 
 async function buscarProximosAoVivo(tipo, raioParam) {
@@ -3938,6 +4023,7 @@ async function buscarProximosAoVivo(tipo, raioParam) {
       loadDiv.style.display = 'none';
 
       if (!elementos.length) {
+        const _mw = document.getElementById('estrada-mapa-wrap'); if (_mw) _mw.style.display = 'none';
         listaDiv.innerHTML = `<div style="text-align:center;padding:20px;font-family:'DM Sans',sans-serif;"><div style="font-size:28px;margin-bottom:8px;">${tipo==='fuel'?'⛽':'🅿️'}</div><div style="font-size:13px;color:var(--texto2);">Nenhum ${tipo==='fuel'?'posto':'estacionamento'} encontrado num raio de ${raio/1000}km.</div></div>`;
         return;
       }
@@ -3952,6 +4038,9 @@ async function buscarProximosAoVivo(tipo, raioParam) {
         const gratis = el.tags?.fee === 'no' ? true : false;
         return { nome, marca, end, dist, elLat, elLng, gratis };
       }).filter(r => r.dist !== null).sort((a,b) => a.dist - b.dist).slice(0, limite);
+
+      // Mapa com alfinetes + carrinho do rep; o mais perto pulsa com resumo de chegada
+      _renderMapaEstrada(tipo, lat, lng, resultados, naEstrada);
 
       const icon = tipo === 'fuel' ? '⛽' : '🅿️';
       listaDiv.innerHTML = resultados.map(r => {
@@ -4297,6 +4386,7 @@ function _cardHotel(h) {
           <span style="font-size:10px;color:var(--texto3);white-space:nowrap;">📅</span>
           ${ultimaHosp}
         </div>
+        ${tel && !wpp ? `<div style="font-size:10px;color:var(--verde);margin-top:4px;line-height:1.4;">💬 WhatsApp não cadastrado — ligue direto no 📞 ou toque em ✏️ e cadastre o número para gerar a mensagem pronta.</div>` : ''}
         ${notifBanner}
       </div>
       <div style="display:grid;grid-template-columns:repeat(2,36px);gap:4px;flex-shrink:0;">
@@ -4458,32 +4548,39 @@ async function buscarHoteisProximos(raio) {
         const tipoBadge = `<span style="font-size:10px;font-weight:700;color:#7DD3FC;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:5px;padding:1px 6px;">${tipoLabel[r.tipo]||'Hotel'}</span>`;
         const navWaze   = `https://waze.com/ul?ll=${r.elLat},${r.elLng}&navigate=yes`;
         const navMaps   = `https://www.google.com/maps/dir/?api=1&destination=${r.elLat},${r.elLng}`;
-        // Suporta múltiplos telefones separados por ; ou /
-        const tels = r.tel.split(/[;\/]/).map(t => t.replace(/\D/g,'')).filter(t => t.length >= 8);
+        // Suporta múltiplos telefones separados por ; ou / — e tira o +55 do OSM
+        const tels = r.tel.split(/[;\/]/).map(_normTelBR).filter(t => t.length >= 8);
         const temTel = tels.length > 0;
         const telPrimario = tels[0] || '';
         const btnStyle = `border-radius:8px;padding:8px 6px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-align:center;`;
 
-        // Botões de data
+        // Botões de data — orientação passo-a-passo (o app monta a mensagem pro hotel)
         const dataBtns = `
           <div style="margin-bottom:8px;">
-            <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Escolha a data para estadia</div>
+            <div style="font-size:11px;color:var(--amarelo);font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:6px;">1️⃣ Escolha o dia (ou período) da hospedagem — o app monta a mensagem pronta para o hotel</div>
             <div style="display:flex;gap:5px;">
               <button id="hdata-${idx}-hoje"   onclick="setHotelDataGps(${idx},'hoje')"   style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">Hoje</button>
               <button id="hdata-${idx}-amanha"  onclick="setHotelDataGps(${idx},'amanha')" style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">Amanhã</button>
               <button id="hdata-${idx}-custom"  onclick="setHotelDataGps(${idx},'custom')" style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📅 Data</button>
             </div>
             <input type="date" id="hdata-${idx}-inp" style="display:none;width:100%;margin-top:6px;" class="campo-input" onchange="setHotelDataCustomGps(${idx},this.value)">
+            <div id="hdata-${idx}-fim-wrap" style="display:none;margin-top:6px;">
+              <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:4px;">Vai ficar mais de uma noite? Marque a saída (opcional):</div>
+              <input type="date" id="hdata-${idx}-fim" style="width:100%;" class="campo-input" onchange="setHotelDataFimGps(${idx},this.value)">
+            </div>
           </div>`;
 
         // Botões de contato — aparecem após escolher data
         const buscaGoogle = `https://www.google.com/search?q=${encodeURIComponent(r.nome+' '+(r.cidade||'')+' telefone')}`;
+        const fixo = telPrimario.length === 10; // fixo (sem o 9) raramente tem WhatsApp
         const contatoBtns = temTel ? `
+          <div style="font-size:11px;color:var(--verde);font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:6px;">2️⃣ Mensagem pronta! Agora é só enviar:</div>
           <div style="display:flex;gap:5px;margin-bottom:6px;">
             <a href="tel:${telPrimario}" style="${btnStyle}flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:#38BDF8;text-decoration:none;display:block;">📞 Ligar</a>
-            <button onclick="abrirWppHotel(${idx},'${telPrimario}','${nomeEsc(r)}')" style="${btnStyle}flex:1;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;">💬 WhatsApp</button>
-            <button onclick="copiarMsgHotel(${idx},'${nomeEsc(r)}')" style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📋 Copiar</button>
-          </div>` : `
+            <button id="hwpp-${idx}" onclick="abrirWppHotel(${idx},'${telPrimario}','${nomeEsc(r)}')" style="${btnStyle}flex:1.6;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;">💬 Enviar mensagem</button>
+            <button onclick="copiarMsgHotel(${idx},'${nomeEsc(r)}')" title="Copiar mensagem" style="${btnStyle}flex:0 0 44px;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📋</button>
+          </div>
+          ${fixo ? `<div style="font-size:10.5px;color:var(--amarelo);font-family:'DM Sans',sans-serif;margin-bottom:6px;">☎️ Este número parece ser fixo e pode não ter WhatsApp. Se a conversa não abrir, ligue direto — ou copie a mensagem 📋 e mande por onde preferir.</div>` : ''}` : `
           <div style="display:flex;gap:5px;margin-bottom:6px;">
             <a href="${buscaGoogle}" target="_blank" style="${btnStyle}flex:1;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);color:#FBBF24;text-decoration:none;display:block;">🔍 Buscar contato</a>
             <button onclick="copiarMsgHotel(${idx},'${nomeEsc(r)}')" style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📋 Copiar msg</button>
@@ -4566,9 +4663,14 @@ function _fmtDataHotel(iso) {
   return new Date(iso+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'});
 }
 
-function _getMsgHotel(nome, dataIso) {
+const _hotelDatasGpsFim = {};
+
+function _getMsgHotel(nome, dataIso, dataFimIso) {
   const dt = dataIso ? _fmtDataHotel(dataIso) : '[data]';
-  return `Boa tarde! Sou representante comercial e estou em viagem de trabalho. O hotel ${nome} tem disponibilidade para ${dt}? Qual o valor do quarto? Tem algum desconto especial para representantes? Obrigado!`;
+  const periodo = dataFimIso && dataFimIso > dataIso
+    ? `de ${dt} até ${_fmtDataHotel(dataFimIso)}`
+    : `para ${dt}`;
+  return `Olá! Sou representante comercial e estou de passagem pela cidade a trabalho. O ${nome} tem disponibilidade ${periodo}? Quais são os valores e os tipos de quarto que vocês têm (com ar, sem ar, café da manhã incluso)? Obrigado! 🙏`;
 }
 
 function _atualizarContatoHotel(idx) {
@@ -4576,19 +4678,27 @@ function _atualizarContatoHotel(idx) {
   const wrap = document.getElementById('hcontato-'+idx);
   if (!wrap) return;
   wrap.style.display = dataIso ? 'block' : 'none';
+  // Escolheu a entrada → mostra a saída opcional e faz o WhatsApp pulsar de leve
+  const fimWrap = document.getElementById('hdata-'+idx+'-fim-wrap');
+  if (fimWrap) fimWrap.style.display = dataIso ? 'block' : 'none';
+  const btnW = document.getElementById('hwpp-'+idx);
+  if (btnW && dataIso) { btnW.style.animation = 'none'; void btnW.offsetWidth; btnW.style.animation = 'piscaValidar 1.5s ease-in-out 4'; }
+}
+
+function setHotelDataFimGps(idx, val) {
+  _hotelDatasGpsFim[idx] = val || '';
 }
 
 function abrirWppHotel(idx, tel, nome) {
-  const dataIso = _hotelDatasGps[idx];
-  const msg = _getMsgHotel(nome, dataIso);
-  const num = tel.replace(/\D/g,'');
+  const msg = _getMsgHotel(nome, _hotelDatasGps[idx], _hotelDatasGpsFim[idx]);
+  const num = _normTelBR(tel);
   const url = `https://wa.me/55${num}?text=${encodeURIComponent(msg)}`;
   window.open(url,'_blank');
 }
 
 function copiarMsgHotel(idx, nome) {
   const dataIso = _hotelDatasGps[idx];
-  const msg = _getMsgHotel(nome, dataIso);
+  const msg = _getMsgHotel(nome, dataIso, _hotelDatasGpsFim[idx]);
   navigator.clipboard.writeText(msg).then(()=>toast('Mensagem copiada!')).catch(()=>{
     const ta = document.createElement('textarea');
     ta.value = msg; document.body.appendChild(ta); ta.select();
@@ -5371,7 +5481,7 @@ function abrirNotificacoes() {
           </div>
           <button onclick="_marcarEntregaAvisada('${c.id}','${dt}')" title="Parar de lembrar desta entrega" style="flex-shrink:0;align-self:flex-start;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:5px 9px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Já avisei</button>
         </div>
-        <button onclick="window.open('${url}','_blank')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Avisar o cliente no WhatsApp</button>
+        <button onclick="abrirMensagens('${c.id}','chegada')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Avisar o cliente no WhatsApp</button>
       </div>`;
     });
   }
@@ -5402,7 +5512,7 @@ function abrirNotificacoes() {
           </div>
           <button onclick="_marcarPosVendaAvisada('${c.id}','${dt}')" title="Já falei com o cliente — pode tirar" style="flex-shrink:0;align-self:flex-start;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:5px 9px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Já avisei</button>
         </div>
-        <button onclick="window.open('${urlWpp}','_blank')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Enviar mensagem de pós-venda</button>
+        <button onclick="abrirMensagens('${c.id}','posvenda')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Enviar mensagem de pós-venda</button>
       </div>`;
     });
   }
@@ -5449,10 +5559,100 @@ function _abrirGatilhoCliente(clienteId) {
     : '';
   const nome = _primeiroNomeCap(c.nome);
   const msg = `Olá, ${nome}! Tudo bem? 😊 ${urgTxt}${marcasTxt} Fica à vontade para já ir pensando no que precisa. 🙌`;
-  const tel = c.telefone ? c.telefone.replace(/\D/g,'') : '';
-  if (!tel) { toast('Cliente sem WhatsApp cadastrado'); abrirDetalhe(clienteId,'clientes'); return; }
-  // Abre direto o WhatsApp do cliente com a mensagem pronta (rep edita se quiser)
-  window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+  // Abre a biblioteca com a mensagem contextual como 1ª sugestão (🎲 sorteia outras)
+  abrirMensagens(clienteId, 'agendar', msg);
+}
+
+// ===== BIBLIOTECA DE MENSAGENS (variações por categoria — nunca a mesma msg duas vezes seguidas) =====
+const MSG_LIB = {
+  agendar: { emoji:'📅', titulo:'Agendar visita', vars: [
+    n => `Olá, ${n}! Tudo bem? 😊\n\nNa próxima semana estarei passando pela sua região.\n\nSe tiver algum pedido, necessidade ou assunto que queira tratar, fique à vontade para me avisar. 🙌`,
+    n => `Oi ${n}, tudo bem? Na próxima semana pretendo passar por aí. Se precisar de alguma coisa, já vai me adiantando que eu levo tudo certinho. 😊`,
+    n => `Olá, ${n}! Estou organizando minha agenda da próxima semana e quero reservar um horário para te visitar. Tem algum dia que fica melhor para você?`,
+    n => `Oi ${n}! Estarei atendendo sua região nos próximos dias. Posso dar uma passada aí? Se já tiver algo em mente, me adianta que eu preparo. 🙌`,
+    n => `Olá, ${n}, tudo certo? Na próxima semana quero aproveitar para fazer uma visita. Qualquer coisa que queira deixar encaminhado antes, é só me chamar. 😊`
+  ]},
+  chegada: { emoji:'📦', titulo:'Mercadoria chegando', vars: [
+    n => `Oi ${n}, tudo bem por aí? 😊 A sua mercadoria deve chegar nos próximos dias. Qualquer coisa que precisar, estou à disposição!`,
+    n => `Olá, ${n}! Passando para avisar que seu pedido já está a caminho e deve chegar em breve. Depois me conta se chegou tudo certinho! 🙌`,
+    n => `Oi ${n}! Boa notícia: sua mercadoria está chegando. Se precisar de ajuda com a conferência ou qualquer detalhe, me chama. 😊`,
+    n => `Olá, ${n}, tudo bem? Seu pedido deve ser entregue nos próximos dias. Fico no aguardo do seu ok quando chegar! 📦`
+  ]},
+  cobranca: { emoji:'💰', titulo:'Cobrança', vars: [
+    n => `Oi ${n}, tudo bem? 😊 Passando só para lembrar do título que está em aberto. Se já tiver acertado, desconsidere e me desculpe! Qualquer dificuldade, me chama que a gente resolve junto. 🙏`,
+    n => `Olá, ${n}! Tudo certo? Notei aqui um boleto em aberto no seu nome. Se precisar da segunda via ou de um prazo, é só me falar que eu vejo com o financeiro. 😊`,
+    n => `Oi ${n}, tudo bem? Só um toque amigo: consta um pagamento pendente por aqui. Se já pagou, ignora essa mensagem! Se precisar de qualquer coisa, estou por aqui. 🙌`,
+    n => `Olá, ${n}! Passando de forma bem tranquila para alinhar aquele título em aberto. Me diz como posso te ajudar a resolver — parcelamento, prazo, o que precisar. 😊`
+  ]},
+  lancamento: { emoji:'🎁', titulo:'Lançamento', vars: [
+    n => `Oi ${n}! Chegou novidade! 🎁 Acabou de sair lançamento novo e lembrei na hora de você. Quer que eu te mande as fotos ou já agendo uma visita para mostrar pessoalmente?`,
+    n => `Olá, ${n}, tudo bem? 😊 Temos lançamentos novos que têm tudo a ver com o seu público. Posso te mostrar em primeira mão antes de todo mundo?`,
+    n => `Oi ${n}! Os lançamentos da nova coleção chegaram e separei algumas peças com a sua cara. Me avisa quando posso te apresentar! 🙌`,
+    n => `Olá, ${n}! Novidade fresquinha no catálogo 🎁 — e os primeiros pedidos costumam voar. Quer garantir o seu antes?`
+  ]},
+  posvenda: { emoji:'📈', titulo:'Pós-venda', vars: [
+    n => `Oi ${n}! 👋 Passando para saber se o pedido chegou direitinho. Qualquer dúvida é só me chamar! 😊`,
+    n => `Olá, ${n}, tudo bem? Seu pedido chegou certinho? Me conta como foi — e se faltou alguma coisa, resolvo rapidinho. 🙌`,
+    n => `Oi ${n}! Tudo certo com a mercadoria que chegou? Se o giro estiver bom, já posso ir preparando a reposição. 😊`,
+    n => `Olá, ${n}! Como está sendo a saída dos produtos? Qualquer ajuste que precisar — troca, reposição, novidade — estou à disposição. 📈`
+  ]},
+  inativo: { emoji:'🤝', titulo:'Cliente sumido', vars: [
+    n => `Oi ${n}, tudo bem? Faz um tempo que a gente não se fala. Estou passando para saber como estão as coisas por aí e se consigo te ajudar em algo. 😊`,
+    n => `Olá, ${n}! Sumido(a), hein? 😄 Sentimos sua falta por aqui. Como anda o movimento? Se precisar de qualquer coisa, me chama!`,
+    n => `Oi ${n}, tudo certo? Estava revendo minha carteira e lembrei de você. Que tal marcarmos uma visita sem compromisso para colocar o papo em dia?`,
+    n => `Olá, ${n}! Tudo bem por aí? Tenho novidades boas desde a última vez que nos falamos — acho que vale a pena você dar uma olhada. 🙌`
+  ]},
+  aniversario: { emoji:'🎂', titulo:'Aniversário', vars: [
+    n => `${n}, parabéns! 🎂🎉 Que seu dia seja incrível e que venha um ano cheio de saúde e boas vendas. Um abraço!`,
+    n => `Feliz aniversário, ${n}! 🎉 Desejo muita saúde, alegria e prosperidade — para você e para o seu negócio. Grande abraço!`,
+    n => `Oi ${n}! Hoje o dia é seu! 🎂 Parabéns! Que não falte saúde, família por perto e cliente entrando na loja. 🙌`,
+    n => `Parabéns, ${n}! 🎉 Obrigado pela parceria de sempre — que seu novo ano venha com muitas conquistas. Um abraço!`
+  ]},
+  recompra: { emoji:'🔄', titulo:'Hora da recompra', vars: [
+    n => `Oi ${n}, tudo bem? 😊 Pelas minhas contas, seu estoque já deve estar pedindo reforço. Quer que eu monte uma sugestão de pedido para você?`,
+    n => `Olá, ${n}! Já faz um tempinho desde o último pedido — bora repor antes que falte? Me diz o que está girando mais que eu preparo tudo. 🙌`,
+    n => `Oi ${n}! Na média das suas compras, essa semana costuma ser a hora certa de repor. Posso passar aí ou te mando a sugestão por aqui mesmo? 😊`,
+    n => `Olá, ${n}, tudo certo? Estou fechando os pedidos da sua região e não queria te deixar de fora. Aproveita que a entrega sai rápida! 🔄`
+  ]}
+};
+let _msgCliId = null, _msgCat = 'agendar', _msgUltimaIdx = {};
+
+function abrirMensagens(clienteId, categoria, msgInicial) {
+  _msgCliId = clienteId;
+  _msgCat = MSG_LIB[categoria] ? categoria : 'agendar';
+  const c = getClientes().find(x => x.id === clienteId);
+  document.getElementById('msg-sem-tel').style.display = (c && (c.telefone || c.wpp)) ? 'none' : 'block';
+  _msgRenderCats();
+  // Mensagem contextual (ex.: gatilho com cidade/semana/marcas) entra como 1ª sugestão;
+  // o 🎲 sorteia as variações da biblioteca a partir daí.
+  if (msgInicial) document.getElementById('msg-preview').textContent = msgInicial;
+  else _msgSortear();
+  document.getElementById('modal-mensagens').classList.add('aberto');
+}
+function _msgRenderCats() {
+  document.getElementById('msg-cats').innerHTML = Object.entries(MSG_LIB).map(([k, v]) =>
+    `<button onclick="_msgTrocarCat('${k}')" style="flex-shrink:0;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;${k === _msgCat ? 'background:rgba(0,214,143,.14);border:1px solid rgba(0,214,143,.5);color:var(--verde);' : 'background:var(--bg3);border:1px solid var(--borda);color:var(--texto2);'}">${v.emoji} ${v.titulo}</button>`
+  ).join('');
+}
+function _msgTrocarCat(cat) { _msgCat = cat; _msgRenderCats(); _msgSortear(); }
+function _msgSortear() {
+  const c = getClientes().find(x => x.id === _msgCliId);
+  const nome = _primeiroNomeCap(c ? c.nome : '') || 'cliente';
+  const vars = MSG_LIB[_msgCat].vars;
+  let i = Math.floor(Math.random() * vars.length);
+  if (vars.length > 1 && i === _msgUltimaIdx[_msgCat]) i = (i + 1) % vars.length; // não repete a última
+  _msgUltimaIdx[_msgCat] = i;
+  document.getElementById('msg-preview').textContent = vars[i](nome);
+}
+function _msgAbrirWpp() {
+  const c = getClientes().find(x => x.id === _msgCliId);
+  const tel = ((c && (c.telefone || c.wpp)) || '').replace(/\D/g, '');
+  const msg = encodeURIComponent(document.getElementById('msg-preview').textContent);
+  window.open(tel ? `https://wa.me/55${tel}?text=${msg}` : `https://wa.me/?text=${msg}`, '_blank');
+}
+function _msgCopiar() {
+  const msg = document.getElementById('msg-preview').textContent;
+  navigator.clipboard.writeText(msg).then(() => toast('Mensagem copiada!')).catch(() => toast('Não consegui copiar'));
 }
 
 function _atualizarBadgeNotif() {
@@ -5564,16 +5764,8 @@ function enviarGatilhoWhatsApp(clienteId) {
     : `Passando para avisar que estarei em ${c.cidade || 'sua região'} na semana do dia ${semana} e gostaria de passar aí para te ver!`;
   const nome = _primeiroNomeCap(c.nome);
   const msg = `Olá, ${nome}! Tudo bem? 😊 ${urgTxt}${marcasTxt} Fica à vontade para já ir pensando no que precisa. 🙌`;
-  if (wpp) {
-    const tel = c.telefone ? c.telefone.replace(/\D/g,'') : '';
-    if (tel) {
-      window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
-    } else {
-      toast('Cliente sem WhatsApp cadastrado');
-    }
-  } else {
-    toast('Cadastre seu WhatsApp em Configurações');
-  }
+  // Abre a biblioteca com a mensagem contextual como 1ª sugestão (🎲 sorteia outras)
+  abrirMensagens(clienteId, 'agendar', msg);
 }
 
 function limparCacheApp() {

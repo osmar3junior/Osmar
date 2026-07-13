@@ -421,6 +421,9 @@ if ('serviceWorker' in navigator) {
   .est-pin.rep { border-color:var(--verde); background:#0D1F18; font-size:17px; }
   @keyframes estPulsa { 0%,100% { box-shadow:0 0 0 0 rgba(0,214,143,0), 0 2px 8px rgba(0,0,0,.55); } 50% { box-shadow:0 0 0 11px rgba(0,214,143,.28), 0 2px 8px rgba(0,0,0,.55); } }
   .est-pin.perto { border-color:var(--verde); animation:estPulsa 1.7s ease-in-out infinite; }
+  /* Campo de data piscando (check-in → check-out do hotel): guia o olho do rep */
+  @keyframes campoPiscaVerde { 0%,100% { border-color:var(--borda); box-shadow:none; } 50% { border-color:var(--verde); box-shadow:0 0 0 3px rgba(0,214,143,.22); } }
+  .campo-pisca-verde { animation:campoPiscaVerde 1.1s ease-in-out 5; }
   .config-secao-titulo { font-size:15px; font-weight:700; margin-bottom:4px; letter-spacing:-.2px; }
   .config-secao-sub { font-size:13px; color:var(--texto2); margin-bottom:16px; line-height:1.4; }
   .config-item { background:var(--bg2); border:1px solid var(--borda); border-radius:12px; padding:14px 16px; margin-bottom:8px; }
@@ -2090,6 +2093,22 @@ if ('serviceWorker' in navigator) {
     <div class="campo-grupo"><label class="campo-label">Cidade</label><input type="text" class="campo-input" id="ec-cidade" placeholder="CIDADE" style="text-transform:uppercase;"></div>
     <div class="campo-grupo"><label class="campo-label">WhatsApp</label><input type="tel" class="campo-input" id="ec-telefone" placeholder="(00) 00000-0000"></div>
     <div class="campo-grupo"><label class="campo-label">Marcas representadas <span style="color:var(--texto3);font-weight:400;">(até 5)</span></label><div class="sku-grid" id="ec-marcas-grid"></div></div>
+
+    <!-- ANIVERSÁRIOS (até 2: dono e comprador) — o app avisa 3d antes, 2d antes e no dia -->
+    <div class="campo-grupo" id="ec-aniversarios">
+      <label class="campo-label">🎂 Aniversários <span style="color:var(--texto3);font-weight:400;">(o app te lembra e já prepara a mensagem)</span></label>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <input type="text" class="campo-input" id="an-0-nome" placeholder="Nome" style="flex:1.2;margin:0;min-width:0;">
+        <input type="text" class="campo-input" id="an-0-cargo" placeholder="Cargo" style="flex:.9;margin:0;min-width:0;">
+        <input type="date" class="campo-input" id="an-0-data" style="flex:1.1;margin:0;min-width:0;">
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" class="campo-input" id="an-1-nome" placeholder="Nome" style="flex:1.2;margin:0;min-width:0;">
+        <input type="text" class="campo-input" id="an-1-cargo" placeholder="Cargo" style="flex:.9;margin:0;min-width:0;">
+        <input type="date" class="campo-input" id="an-1-data" style="flex:1.1;margin:0;min-width:0;">
+      </div>
+      <div style="font-size:10.5px;color:var(--texto3);margin-top:5px;">Ex.: dono e comprador. O ano pode ser qualquer um — o app usa só o dia e o mês.</div>
+    </div>
 
     <!-- ENDEREÇO COM VALIDAÇÃO -->
     <div class="campo-grupo">
@@ -4563,10 +4582,17 @@ async function buscarHoteisProximos(raio) {
               <button id="hdata-${idx}-amanha"  onclick="setHotelDataGps(${idx},'amanha')" style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">Amanhã</button>
               <button id="hdata-${idx}-custom"  onclick="setHotelDataGps(${idx},'custom')" style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📅 Data</button>
             </div>
-            <input type="date" id="hdata-${idx}-inp" style="display:none;width:100%;margin-top:6px;" class="campo-input" onchange="setHotelDataCustomGps(${idx},this.value)">
-            <div id="hdata-${idx}-fim-wrap" style="display:none;margin-top:6px;">
-              <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:4px;">Vai ficar mais de uma noite? Marque a saída (opcional):</div>
-              <input type="date" id="hdata-${idx}-fim" style="width:100%;" class="campo-input" onchange="setHotelDataFimGps(${idx},this.value)">
+            <div id="hdata-${idx}-periodo" style="display:none;margin-top:6px;">
+              <div style="display:flex;gap:6px;">
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:3px;">📅 CHECK-IN</div>
+                  <input type="date" id="hdata-${idx}-inp" style="width:100%;margin:0;" class="campo-input" onchange="setHotelDataCustomGps(${idx},this.value)">
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:3px;">📅 CHECK-OUT <span style="font-weight:400;">(opcional)</span></div>
+                  <input type="date" id="hdata-${idx}-fim" style="width:100%;margin:0;" class="campo-input" onchange="setHotelDataFimGps(${idx},this.value)">
+                </div>
+              </div>
             </div>
           </div>`;
 
@@ -4631,6 +4657,20 @@ function salvarHotelDaGps(dados) {
 // ===== CONTATO COM HOTEL (GPS) =====
 const _hotelDatasGps = {};
 
+// Pisca um campo por alguns ciclos (reinicia a animação se já estava piscando)
+function _piscaCampo(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('campo-pisca-verde');
+  void el.offsetWidth;
+  el.classList.add('campo-pisca-verde');
+}
+
+function _mostrarPeriodoHotel(idx) {
+  const p = document.getElementById('hdata-'+idx+'-periodo');
+  if (p) p.style.display = 'block';
+}
+
 function setHotelDataGps(idx, tipo) {
   const hoje = new Date();
   if (tipo === 'hoje') {
@@ -4639,13 +4679,22 @@ function setHotelDataGps(idx, tipo) {
     const a = new Date(hoje); a.setDate(a.getDate()+1);
     _hotelDatasGps[idx] = a.toISOString().slice(0,10);
   } else if (tipo === 'custom') {
-    const inp = document.getElementById('hdata-'+idx+'-inp');
-    if (inp) { inp.style.display = 'block'; inp.focus(); return; }
+    // Abre os campos lado a lado e pisca o CHECK-IN pro rep saber onde começar
+    _mostrarPeriodoHotel(idx);
+    _piscaCampo('hdata-'+idx+'-inp');
+    const b = document.getElementById('hdata-'+idx+'-custom');
+    if (b) { ['hoje','amanha','custom'].forEach(t => document.getElementById('hdata-'+idx+'-'+t)?.classList.toggle('estrada-btn-ativo', t === 'custom')); }
+    return;
   }
   ['hoje','amanha','custom'].forEach(t => {
     const b = document.getElementById('hdata-'+idx+'-'+t);
     if (b) b.classList.toggle('estrada-btn-ativo', t === tipo);
   });
+  // Espelha a data no campo de check-in e pisca o CHECK-OUT (talvez fique mais noites)
+  const inp = document.getElementById('hdata-'+idx+'-inp');
+  if (inp) inp.value = _hotelDatasGps[idx];
+  _mostrarPeriodoHotel(idx);
+  _piscaCampo('hdata-'+idx+'-fim');
   _atualizarContatoHotel(idx);
 }
 
@@ -4656,6 +4705,10 @@ function setHotelDataCustomGps(idx, val) {
     const b = document.getElementById('hdata-'+idx+'-'+t);
     if (b) b.classList.toggle('estrada-btn-ativo', t === 'custom');
   });
+  // Check-in preenchido → agora pisca o CHECK-OUT
+  const inp = document.getElementById('hdata-'+idx+'-inp');
+  if (inp) inp.classList.remove('campo-pisca-verde');
+  _piscaCampo('hdata-'+idx+'-fim');
   _atualizarContatoHotel(idx);
 }
 
@@ -4678,9 +4731,8 @@ function _atualizarContatoHotel(idx) {
   const wrap = document.getElementById('hcontato-'+idx);
   if (!wrap) return;
   wrap.style.display = dataIso ? 'block' : 'none';
-  // Escolheu a entrada → mostra a saída opcional e faz o WhatsApp pulsar de leve
-  const fimWrap = document.getElementById('hdata-'+idx+'-fim-wrap');
-  if (fimWrap) fimWrap.style.display = dataIso ? 'block' : 'none';
+  // Escolheu a entrada → garante os campos de período visíveis e faz o WhatsApp pulsar
+  if (dataIso) _mostrarPeriodoHotel(idx);
   const btnW = document.getElementById('hwpp-'+idx);
   if (btnW && dataIso) { btnW.style.animation = 'none'; void btnW.offsetWidth; btnW.style.animation = 'piscaValidar 1.5s ease-in-out 4'; }
 }
@@ -5435,7 +5487,7 @@ function abrirNotificacoes() {
           <div style="font-size:13px;font-weight:700;color:var(--texto);">${esc(c.nome)}${c.loja?' — '+esc(c.loja):''}</div>
           <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${subtxt}${marcasBadges}</div>
         </div>
-        <span style="color:var(--texto3);font-size:16px;align-self:center;">›</span>
+        <button onclick="event.stopPropagation();_marcarGatilhoAvisado('${c.id}')" title="Já falei com o cliente — pode tirar" style="flex-shrink:0;align-self:flex-start;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:5px 9px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Já avisei</button>
       </div>`;
     });
   }
@@ -5447,13 +5499,17 @@ function abrirNotificacoes() {
       const diasFimCol = Math.ceil((colAtual.fim - new Date()) / 86400000);
       if (diasFimCol <= 21 && diasFimCol >= 0) {
         const pendCol = clientes.filter(c => _ehConfeccao(c) && !_temPedidoDaColecao(c, colAtual));
-        if (pendCol.length) {
+        const _fimColIso = new Date(colAtual.fim).toISOString().slice(0,10);
+        if (pendCol.length && cfg.colecaoCiente !== _fimColIso) {
           html += `<div style="font-size:10px;font-weight:700;color:#FFC043;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🧥 Coleção fechando</div>`;
-          html += linhaAlerta(colAtual.emoji,'rgba(255,192,67,.4)','rgba(255,192,67,.07)',
-            `${colAtual.nome} fecha em ${diasFimCol} dia${diasFimCol !== 1 ? 's' : ''}`,
-            `${pendCol.length} cliente${pendCol.length > 1 ? 's' : ''} de moda ainda sem pedido da coleção — toque para montar a rota`,
-            `fecharModal('modal-notificacoes');setTimeout(()=>abrirRotaManual(),200)`
-          );
+          html += `<div onclick="fecharModal('modal-notificacoes');setTimeout(()=>abrirRotaManual(),200)" style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,192,67,.07);border:1px solid rgba(255,192,67,.4);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;">
+            <span style="font-size:20px;flex-shrink:0;">${colAtual.emoji}</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:700;color:var(--texto);">${colAtual.nome} fecha em ${diasFimCol} dia${diasFimCol !== 1 ? 's' : ''}</div>
+              <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${pendCol.length} cliente${pendCol.length > 1 ? 's' : ''} de moda ainda sem pedido da coleção — toque para montar a rota</div>
+            </div>
+            <button onclick="event.stopPropagation();_marcarColecaoCiente('${_fimColIso}')" title="Estou ciente — não precisa mais lembrar desta coleção" style="flex-shrink:0;align-self:flex-start;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:5px 9px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Ciente</button>
+          </div>`;
         }
       }
     }
@@ -5513,6 +5569,28 @@ function abrirNotificacoes() {
           <button onclick="_marcarPosVendaAvisada('${c.id}','${dt}')" title="Já falei com o cliente — pode tirar" style="flex-shrink:0;align-self:flex-start;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:5px 9px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Já avisei</button>
         </div>
         <button onclick="abrirMensagens('${c.id}','posvenda')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Enviar mensagem de pós-venda</button>
+      </div>`;
+    });
+  }
+
+  // Aniversários dos contatos (3d antes, 2d antes e no dia)
+  const nivers = _calcularAniversarios();
+  if (nivers.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#F472B6;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🎂 Aniversários</div>`;
+    nivers.forEach(({ c, a, diff, data }) => {
+      const qd = diff === 0
+        ? '<b style="color:#F472B6;">é HOJE 🎉</b>'
+        : `em ${diff} dias (${data.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})})`;
+      html += `<div style="background:rgba(244,114,182,.06);border:1px solid rgba(244,114,182,.3);border-radius:12px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+          <span style="font-size:20px;flex-shrink:0;">🎂</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--texto);">${esc(_nomeCap(a.nome))}${a.cargo ? ' <span style="font-weight:500;color:var(--texto2);">(' + esc(a.cargo) + ')</span>' : ''}</div>
+            <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${esc(c.nome)}${c.loja ? ' — ' + esc(c.loja) : ''} · aniversário ${qd}</div>
+            <div style="font-size:11px;color:#F472B6;margin-top:2px;font-style:italic;">Um parabéns na hora certa vale mais que desconto</div>
+          </div>
+        </div>
+        <button onclick="_abrirParabens('${c.id}','${esc(a.nome)}')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Enviar os parabéns no WhatsApp</button>
       </div>`;
     });
   }
@@ -5663,7 +5741,8 @@ function _atualizarBadgeNotif() {
   const postVendaCount = _calcularPostVendaEntregas().length;
   const entregasHoje = _calcularEntregasChegando().filter(e => e.diff === 0).length;
   const pendEndCount = getClientesAtivos().filter(c => c.enderecoPendente && !c.lat).length;
-  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length + postVendaCount + entregasHoje + pendEndCount;
+  const niverHoje = _calcularAniversarios().filter(a => a.diff === 0).length;
+  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length + postVendaCount + entregasHoje + pendEndCount + niverHoje;
   const badge = document.getElementById('notif-badge');
   const btn = badge?.parentElement;
   if (!badge) return;
@@ -5739,6 +5818,7 @@ function calcularGatilhosAntecipacao() {
     const marcasAlerta = alertasMarca.filter(a => a.clienteId === c.id);
     const dataVisita = new Date();
     dataVisita.setDate(dataVisita.getDate() + diff);
+    if (c.gatilhoAvisado === dataVisita.toISOString().slice(0,10)) return; // rep tocou "Já avisei"
     const semana = dataVisita.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
     let urgencia = diff <= 5 ? 'ultima' : diff <= 10 ? 'alta' : 'media';
     gatilhos.push({ c, diff, gatilhoDia, marcasAlerta, semana, urgencia });
@@ -11971,6 +12051,14 @@ function abrirModalEditarCliente(focoEndereco) {
   document.getElementById('ec-cidade').value = cliente.cidade || '';
   document.getElementById('ec-telefone').value = cliente.telefone || '';
   renderizarMarcasGrid('ec-marcas-grid', cliente.marcas || []);
+  // Aniversários (até 2 contatos)
+  const _ans = cliente.aniversarios || [];
+  [0,1].forEach(i => {
+    const a = _ans[i] || {};
+    document.getElementById('an-'+i+'-nome').value = a.nome || '';
+    document.getElementById('an-'+i+'-cargo').value = a.cargo || '';
+    document.getElementById('an-'+i+'-data').value = a.data || '';
+  });
   document.getElementById('ec-endereco').value = cliente.enderecoPendente || cliente.endereco || '';
   // Reseta validação
   enderecoValidado = null;
@@ -11989,7 +12077,14 @@ function abrirModalEditarCliente(focoEndereco) {
   // botão "🔍 Validar" pulsar (ambilight) pro rep saber onde tocar.
   const btnV = document.getElementById('btn-validar-end');
   if (btnV) btnV.classList.remove('btn-validar-pisca');
-  if (focoEndereco) {
+  if (focoEndereco === 'aniversario') {
+    // Veio do "quer cadastrar o aniversário?" do cadastro novo
+    setTimeout(() => {
+      const sec = document.getElementById('ec-aniversarios');
+      if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      _piscaCampo('an-0-nome');
+    }, 260);
+  } else if (focoEndereco) {
     setTimeout(() => {
       const campo = document.getElementById('ec-endereco');
       if (campo) campo.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -12014,6 +12109,12 @@ function salvarEdicaoCliente() {
   clientes[idx].cidade = document.getElementById('ec-cidade').value.trim().toUpperCase();
   clientes[idx].telefone = document.getElementById('ec-telefone').value.trim();
   clientes[idx].marcas = getMarcasSelecionadas('ec-marcas-grid');
+  // Aniversários: só entra quem tem nome E data (linha vazia não grava)
+  clientes[idx].aniversarios = [0,1].map(i => ({
+    nome:  document.getElementById('an-'+i+'-nome').value.trim().toUpperCase(),
+    cargo: document.getElementById('an-'+i+'-cargo').value.trim(),
+    data:  document.getElementById('an-'+i+'-data').value
+  })).filter(a => a.nome && a.data);
 
   const endDigitado = document.getElementById('ec-endereco').value.trim();
 
@@ -12191,6 +12292,14 @@ function salvarNovoCliente() {
     msg = `🔭 Prospecto cadastrado! Retorno: ${dtFmt}`;
   }
   toast(msg);
+
+  // Convite: cadastrar aniversário do dono/comprador (o app lembra 3d antes, 2d antes e no dia)
+  setTimeout(() => {
+    if (confirm(`🎂 Quer cadastrar o aniversário do dono ou do comprador de ${novoCliente.nome}?\n\nO app te lembra 3 dias antes, 2 dias antes e no dia — com a mensagem de parabéns pronta.`)) {
+      clienteAtualId = novoCliente.id;
+      abrirModalEditarCliente('aniversario');
+    }
+  }, 600);
 }
 
 // ===== CONFIG =====
@@ -13332,6 +13441,56 @@ function _marcarPosVendaAvisada(clienteId, dt) {
   salvarClientes(clientes);
   toast('✅ Feito! Pós-venda concluído');
   _atualizarBadgeNotif();
+  abrirNotificacoes();
+}
+
+// Gatilho: rep já falou com o cliente → some até a PRÓXIMA visita prevista
+// (flag pela data da visita; se a data mudar, o gatilho volta naturalmente).
+function _marcarGatilhoAvisado(clienteId) {
+  const clientes = getClientes();
+  const idx = clientes.findIndex(c => c.id === clienteId);
+  if (idx === -1) return;
+  const diff = getDiffDiasCliente(clientes[idx]);
+  const dv = new Date(); dv.setDate(dv.getDate() + (diff || 0));
+  clientes[idx].gatilhoAvisado = dv.toISOString().slice(0,10);
+  salvarClientes(clientes);
+  toast('✅ Feito! Gatilho concluído');
+  _atualizarBadgeNotif();
+  abrirNotificacoes();
+}
+
+// Aniversários dos contatos (dono/comprador): avisa 3 dias antes, 2 dias antes e NO dia.
+// Usa só dia/mês da data cadastrada (o ano é ignorado).
+function _calcularAniversarios() {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const out = [];
+  getClientesAtivos().forEach(c => {
+    (c.aniversarios || []).forEach(a => {
+      if (!a.data || !a.nome) return;
+      const p = a.data.split('-');
+      if (p.length < 3) return;
+      let prox = new Date(hoje.getFullYear(), Number(p[1]) - 1, Number(p[2]));
+      if (prox < hoje) prox = new Date(hoje.getFullYear() + 1, Number(p[1]) - 1, Number(p[2]));
+      const diff = Math.round((prox - hoje) / 86400000);
+      if (diff === 3 || diff === 2 || diff === 0) out.push({ c, a, diff, data: prox });
+    });
+  });
+  return out.sort((x, y) => x.diff - y.diff);
+}
+
+// Abre a biblioteca de mensagens já com os parabéns prontos NO NOME do aniversariante
+function _abrirParabens(clienteId, nomeAniv) {
+  const vars = MSG_LIB.aniversario.vars;
+  const msg = vars[Math.floor(Math.random() * vars.length)](_primeiroNomeCap(nomeAniv));
+  abrirMensagens(clienteId, 'aniversario', msg);
+}
+
+// Coleção fechando: rep está ciente → silencia o aviso desta coleção (volta na próxima)
+function _marcarColecaoCiente(fimIso) {
+  const cfg = getConfig();
+  cfg.colecaoCiente = fimIso;
+  salvarConfigData(cfg);
+  toast('✅ Ok! Aviso da coleção silenciado');
   abrirNotificacoes();
 }
 

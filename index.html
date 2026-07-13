@@ -5403,6 +5403,25 @@ function abrirNotificacoes() {
 
   let html = '';
 
+  // Comece por aqui — convite a importar a base (só enquanto o rep não tiver nenhum cliente)
+  if (_importLembreteVisivel()) {
+    html += `<div style="font-size:10px;font-weight:700;color:#00D68F;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">🚀 Comece por aqui</div>`;
+    html += `<div style="background:rgba(0,214,143,.07);border:1px solid rgba(0,214,143,.4);border-radius:12px;padding:12px;margin-bottom:8px;">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <span style="font-size:20px;flex-shrink:0;">📥</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);">Traga sua base de clientes</div>
+          <div style="font-size:11px;color:var(--texto2);margin-top:2px;">Quer importar seus CNPJs agora? O app busca <b style="color:var(--verde);">nome, endereço e mapa</b> de cada cliente sozinho.</div>
+        </div>
+      </div>
+      <button onclick="_importAgora()" style="width:100%;margin-top:11px;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:10px;padding:11px;color:#04231A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✅ Importar agora</button>
+      <div style="display:flex;gap:7px;margin-top:7px;">
+        <button onclick="_importLembrarDepois()" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:9px;padding:9px 6px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;">⏰ Lembrar depois</button>
+        <button onclick="_importNaoLembrar()" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:9px;padding:9px 6px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;">🚫 Não lembrar</button>
+      </div>
+    </div>`;
+  }
+
   // Marcas vencidas
   const vencidas = alertasMarca.filter(a => a.status === 'vencida');
   const vencendo = alertasMarca.filter(a => a.status === 'vencendo');
@@ -5799,7 +5818,7 @@ function _atualizarBadgeNotif() {
   const entregasHoje = _calcularEntregasChegando().filter(e => e.diff === 0).length;
   const pendEndCount = getClientesAtivos().filter(c => c.enderecoPendente && !c.lat).length;
   const niverHoje = _calcularAniversarios().filter(a => a.diff === 0).length;
-  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length + postVendaCount + entregasHoje + pendEndCount + niverHoje;
+  const total = alertas.filter(a => a.status === 'vencida').length + urgentes.length + gatilhos.length + atrasadas.length + postVendaCount + entregasHoje + pendEndCount + niverHoje + (_importLembreteVisivel() ? 1 : 0);
   const badge = document.getElementById('notif-badge');
   const btn = badge?.parentElement;
   if (!badge) return;
@@ -13557,6 +13576,39 @@ function _marcarColecaoCiente(fimIso) {
   salvarConfigData(cfg);
   toast('✅ Ok! Aviso da coleção silenciado');
   abrirNotificacoes();
+}
+
+// ===== LEMBRETE: importar a base de clientes =====
+// Aparece no 🔔 só enquanto o rep não tiver NENHUM cliente. Some sozinho ao importar.
+// "Lembrar depois": some por 3 dias e volta só após as 19h (quando o rep já saiu da rua).
+// Truque: proximo = 19h do 3º dia, então (agora >= proximo) já embute os dois critérios.
+function _importLembreteVisivel() {
+  const r = getConfig().importReminder || { estado: 'pendente' };
+  if (r.estado === 'dispensado') return false;
+  if (getClientesAtivos().length > 0) return false; // já tem base — nada a lembrar
+  if (r.estado === 'adiado') return Date.now() >= (r.proximo || 0);
+  return true; // pendente (primeira aparição, sem trava de horário)
+}
+function _importAgora() {
+  fecharModal('modal-notificacoes');
+  setTimeout(() => abrirGuiaImportacao(), 200);
+}
+function _importLembrarDepois() {
+  const cfg = getConfig();
+  const d = new Date(); d.setDate(d.getDate() + 3); d.setHours(19, 0, 0, 0);
+  cfg.importReminder = { estado: 'adiado', proximo: d.getTime() };
+  salvarConfigData(cfg);
+  toast('⏰ Ok! Lembro de novo em 3 dias, à noite');
+  abrirNotificacoes();
+  _atualizarBadgeNotif();
+}
+function _importNaoLembrar() {
+  const cfg = getConfig();
+  cfg.importReminder = { estado: 'dispensado', proximo: 0 };
+  salvarConfigData(cfg);
+  toast('🚫 Não lembro mais. Você pode importar em Configurações');
+  abrirNotificacoes();
+  _atualizarBadgeNotif();
 }
 
 // Retorna marcas que passaram da metade do período e estão abaixo do ritmo necessário

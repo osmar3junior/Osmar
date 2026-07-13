@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0A0E14">
-<meta name="description" content="O copiloto do representante na estrada.">
+<meta name="description" content="O assistente de vendas do representante — na rua ou no escritório.">
 
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -147,7 +147,7 @@
     const manifest = JSON.stringify({
       name: 'Carteira Viva',
       short_name: 'Carteira Viva',
-      description: 'O copiloto do representante na estrada.',
+      description: 'O assistente de vendas do representante — na rua ou no escritório.',
       start_url: './',
       scope: './',
       display: 'standalone',
@@ -827,8 +827,15 @@ if ('serviceWorker' in navigator) {
       </div>
       <div class="logo-text">Carteira<span>Viva</span></div>
     </div>
-    <div class="login-titulo">Sua carteira<br>nunca para de<br><span style="color:var(--verde)">vender.</span></div>
-    <div class="login-sub">O copiloto do representante na estrada. Saiba a hora certa de retomar cada cliente e nunca mais perca uma venda por esquecimento.</div>
+    <div class="login-titulo">Ele lembra de tudo.<br>Você só <span style="color:var(--verde)">vende.</span></div>
+    <div class="login-sub" style="margin-bottom:14px;">O assistente de vendas do representante — na rua ou no escritório.</div>
+    <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:20px;text-align:left;">
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;">⏰</span><div style="font-size:12.5px;color:var(--texto2);line-height:1.45;font-family:'DM Sans',sans-serif;"><b style="color:var(--texto);">A hora certa de retomar cada cliente</b> — ninguém fica esquecido.</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;">💬</span><div style="font-size:12.5px;color:var(--texto2);line-height:1.45;font-family:'DM Sans',sans-serif;"><b style="color:var(--texto);">A mensagem certa, mastigadinha</b> — antes da visita, no pós-venda, pra gerar venda.</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;">🎯</span><div style="font-size:12.5px;color:var(--texto2);line-height:1.45;font-family:'DM Sans',sans-serif;"><b style="color:var(--texto);">Sua meta em tempo real</b> — e quanto vender por cliente pra bater.</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;">🏷️</span><div style="font-size:12.5px;color:var(--texto2);line-height:1.45;font-family:'DM Sans',sans-serif;"><b style="color:var(--texto);">Cada marca cuidada</b> — e cada entrega acompanhada até o pós-venda.</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;">📡</span><div style="font-size:12.5px;color:var(--texto2);line-height:1.45;font-family:'DM Sans',sans-serif;"><b style="color:var(--texto);">Prospecção no radar</b> — avisa quando você está perto de quem pode comprar.</div></div>
+    </div>
     <div id="form-login">
       <div onclick="mostrarCadastro()" style="display:flex;align-items:center;gap:11px;background:rgba(0,214,143,.08);border:1.5px solid rgba(0,214,143,.35);border-radius:12px;padding:12px 14px;margin-bottom:18px;cursor:pointer;">
         <span style="font-size:22px;flex-shrink:0;">👋</span>
@@ -5403,18 +5410,28 @@ function abrirNotificacoes() {
 
   let html = '';
 
-  // Comece por aqui — convite a importar a base (só enquanto o rep não tiver nenhum cliente)
+  // Comece por aqui — convite a importar a base (enquanto a carteira estiver pequena).
+  // Copy com gatilho: quem já cadastrou alguns na mão ouve "quem ficou de fora o app
+  // não lembra por você" (medo de perda + conveniência), não um tutorial.
   if (_importLembreteVisivel()) {
+    const _nCli = getClientesAtivos().length;
+    const _impTitulo = _nCli === 0
+      ? 'Traga sua base de clientes'
+      : `Quem ficou de fora, o app não lembra por você`;
+    const _impSub = _nCli === 0
+      ? `Quer importar seus CNPJs agora? O app busca <b style="color:var(--verde);">nome, endereço e mapa</b> de cada cliente sozinho.`
+      : `Você já tem <b style="color:var(--verde);">${_nCli} cliente${_nCli > 1 ? 's' : ''}</b> no app 👏 Cole os CNPJs do resto da carteira e ele passa a lembrar <b style="color:var(--verde);">a hora certa de vender para todos</b> — rota, radar, marcas e metas com força total.`;
+    const _impBtn = _nCli === 0 ? '✅ Importar agora' : '🚀 Completar minha carteira';
     html += `<div style="font-size:10px;font-weight:700;color:#00D68F;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">🚀 Comece por aqui</div>`;
     html += `<div style="background:rgba(0,214,143,.07);border:1px solid rgba(0,214,143,.4);border-radius:12px;padding:12px;margin-bottom:8px;">
       <div style="display:flex;align-items:flex-start;gap:10px;">
         <span style="font-size:20px;flex-shrink:0;">📥</span>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:700;color:var(--texto);">Traga sua base de clientes</div>
-          <div style="font-size:11px;color:var(--texto2);margin-top:2px;">Quer importar seus CNPJs agora? O app busca <b style="color:var(--verde);">nome, endereço e mapa</b> de cada cliente sozinho.</div>
+          <div style="font-size:13px;font-weight:700;color:var(--texto);">${_impTitulo}</div>
+          <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${_impSub}</div>
         </div>
       </div>
-      <button onclick="_importAgora()" style="width:100%;margin-top:11px;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:10px;padding:11px;color:#04231A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✅ Importar agora</button>
+      <button onclick="_importAgora()" style="width:100%;margin-top:11px;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));border:none;border-radius:10px;padding:11px;color:#04231A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">${_impBtn}</button>
       <div style="display:flex;gap:7px;margin-top:7px;">
         <button onclick="_importLembrarDepois()" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:9px;padding:9px 6px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;">⏰ Lembrar depois</button>
         <button onclick="_importNaoLembrar()" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:9px;padding:9px 6px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;">🚫 Não lembrar</button>
@@ -13579,15 +13596,24 @@ function _marcarColecaoCiente(fimIso) {
 }
 
 // ===== LEMBRETE: importar a base de clientes =====
-// Aparece no 🔔 só enquanto o rep não tiver NENHUM cliente. Some sozinho ao importar.
-// "Lembrar depois": some por 3 dias e volta só após as 19h (quando o rep já saiu da rua).
-// Truque: proximo = 19h do 3º dia, então (agora >= proximo) já embute os dois critérios.
+// Aparece no 🔔 enquanto o rep tiver POUCOS clientes (cadastro manual um a um) —
+// sabemos que a carteira real é maior. Some de vez quando a base cresce ou ele dispensa.
+// Ciclo automático: aparece, fica visível o dia todo, e volta de 3 em 3 dias após as
+// 19h (rep já saiu da rua). Truque: proximo = 19h do 3º dia embute prazo + horário.
+const _IMPORT_LEMBRETE_MIN = 20; // a partir daqui consideramos a carteira importada
 function _importLembreteVisivel() {
-  const r = getConfig().importReminder || { estado: 'pendente' };
+  const cfg = getConfig();
+  const r = cfg.importReminder || {};
   if (r.estado === 'dispensado') return false;
-  if (getClientesAtivos().length > 0) return false; // já tem base — nada a lembrar
-  if (r.estado === 'adiado') return Date.now() >= (r.proximo || 0);
-  return true; // pendente (primeira aparição, sem trava de horário)
+  if (getClientesAtivos().length >= _IMPORT_LEMBRETE_MIN) return false;
+  const hoje = new Date().toISOString().slice(0, 10);
+  if (r.visto === hoje) return true;                    // já reapareceu hoje — segue o dia todo
+  if (r.proximo && Date.now() < r.proximo) return false; // dentro da janela de silêncio
+  // Hora de (re)aparecer: marca o dia e agenda o próximo ciclo automaticamente
+  const d = new Date(); d.setDate(d.getDate() + 3); d.setHours(19, 0, 0, 0);
+  cfg.importReminder = { estado: 'ativo', visto: hoje, proximo: d.getTime() };
+  salvarConfigData(cfg);
+  return true;
 }
 function _importAgora() {
   fecharModal('modal-notificacoes');

@@ -424,6 +424,15 @@ if ('serviceWorker' in navigator) {
   /* Campo de data piscando (check-in → check-out do hotel): guia o olho do rep */
   @keyframes campoPiscaVerde { 0%,100% { border-color:var(--borda); box-shadow:none; } 50% { border-color:var(--verde); box-shadow:0 0 0 3px rgba(0,214,143,.22); } }
   .campo-pisca-verde { animation:campoPiscaVerde 1.1s ease-in-out 5; }
+  /* Botão largo "Cutucar o cliente" — respira de leve (ambilight) chamando o rep */
+  @keyframes zapRespira { 0%,100% { box-shadow:0 6px 20px rgba(37,211,102,.22); border-color:rgba(37,211,102,.5); } 50% { box-shadow:0 6px 28px rgba(37,211,102,.5); border-color:#25D366; } }
+  .btn-cutucar { width:100%; margin-top:8px; background:linear-gradient(135deg,#0D2318,#123324); border:1.5px solid rgba(37,211,102,.5); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:12px; text-align:left; cursor:pointer; animation:zapRespira 2.4s ease-in-out infinite; }
+  .btn-cutucar:active { transform:scale(.98); }
+  .btn-cutucar .cut-ic { width:38px; height:38px; border-radius:11px; background:#25D366; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .btn-cutucar .cut-t1 { font-size:13.5px; font-weight:800; color:#4ADE80; font-family:'DM Sans',sans-serif; }
+  .btn-cutucar .cut-t2 { font-size:11px; color:var(--texto2); margin-top:1px; font-family:'DM Sans',sans-serif; line-height:1.3; }
+  .btn-cutucar .cut-ar { margin-left:auto; color:#4ADE80; font-size:18px; align-self:center; }
+  @media (prefers-reduced-motion:reduce) { .btn-cutucar { animation:none; } }
   .config-secao-titulo { font-size:15px; font-weight:700; margin-bottom:4px; letter-spacing:-.2px; }
   .config-secao-sub { font-size:13px; color:var(--texto2); margin-bottom:16px; line-height:1.4; }
   .config-item { background:var(--bg2); border:1px solid var(--borda); border-radius:12px; padding:14px 16px; margin-bottom:8px; }
@@ -1026,7 +1035,6 @@ if ('serviceWorker' in navigator) {
         <div style="text-align:left;">
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Gestor IA</span>
-            <span style="background:rgba(124,58,237,.3);border:1px solid rgba(167,139,250,.5);border-radius:20px;padding:2px 8px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;color:#A78BFA;letter-spacing:.4px;">TESTANDO RESPOSTAS DA IA</span>
           </div>
           <div style="font-size:11px;color:#A78BFA;">Seu consultor inteligente · Marcas · Ações</div>
         </div>
@@ -1173,12 +1181,17 @@ if ('serviceWorker' in navigator) {
     <div class="detalhe-acoes">
       <button class="btn-acao btn-visita" style="width:100%;" onclick="abrirModalContato('visita')">📍 Resultado da visita ou contato</button>
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <button onclick="abrirModalEditarCliente()" style="flex:1.6;background:rgba(124,142,240,.1);border:1.5px solid rgba(124,142,240,.4);border-radius:11px;padding:11px 8px;display:flex;align-items:center;justify-content:center;gap:6px;color:#9DACF5;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;">✏️ Editar cliente</button>
+        <button onclick="abrirModalEditarCliente()" style="flex:1;background:rgba(124,142,240,.1);border:1.5px solid rgba(124,142,240,.4);border-radius:11px;padding:11px 8px;display:flex;align-items:center;justify-content:center;gap:6px;color:#9DACF5;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;">✏️ Editar cliente</button>
         <button id="btn-rota-detalhe" onclick="irRotaClienteAtual()" style="display:none;flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.35);border-radius:11px;padding:11px 8px;align-items:center;justify-content:center;gap:5px;color:#38BDF8;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;">➤ Rota</button>
-        <button class="btn-zap" onclick="abrirWhatsAppOuMenu()" aria-label="WhatsApp" style="flex:0 0 auto;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);border-radius:11px;padding:11px 14px;display:flex;align-items:center;justify-content:center;color:#4ade80;cursor:pointer;box-shadow:none;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        </button>
       </div>
+      <button class="btn-cutucar" onclick="abrirMensagens(clienteAtualId)">
+        <span class="cut-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="#04110B"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg></span>
+        <span style="min-width:0;">
+          <span class="cut-t1" id="cutucar-nome">Interagir com o cliente</span>
+          <span class="cut-t2" id="cutucar-sub">Mensagens prontas para gerar a próxima venda</span>
+        </span>
+        <span class="cut-ar">›</span>
+      </button>
       <button id="btn-fora-rota-detalhe" onclick="abrirForaDaRota()" style="display:none;width:100%;margin-top:8px;background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.4);border-radius:11px;padding:11px 8px;align-items:center;justify-content:center;gap:6px;color:#A78BFA;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;">👀 Quem por perto pode comprar?</button>
     </div>
   </div>
@@ -1825,6 +1838,12 @@ if ('serviceWorker' in navigator) {
       <button onclick="fecharModal('modal-mensagens')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
     </div>
     <div class="modal-sub" id="msg-sub" style="margin-bottom:12px;">Escolha o assunto — cada envio sai com um texto diferente, nada de mensagem robótica.</div>
+    <!-- ANDAR 1: pelo momento do cliente (lê o último status do histórico) -->
+    <div id="msg-momento-wrap" style="display:none;margin-bottom:6px;">
+      <div style="font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--verde);margin-bottom:7px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">🎯 Pelo momento do cliente <span id="msg-momento-tag" style="font-size:10px;font-weight:800;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.35);color:var(--verde);border-radius:999px;padding:2px 8px;text-transform:none;letter-spacing:0;"></span></div>
+      <div id="msg-momento-chips" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch;"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin:6px 0 4px;font-size:9.5px;font-weight:800;color:var(--texto3);text-transform:uppercase;letter-spacing:.7px;"><span style="flex:1;height:1px;background:var(--borda);"></span>ou escolha outro assunto<span style="flex:1;height:1px;background:var(--borda);"></span></div>
+    </div>
     <div id="msg-cats" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;-webkit-overflow-scrolling:touch;"></div>
     <div id="msg-preview" style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px;font-size:13.5px;color:var(--texto);line-height:1.6;white-space:pre-wrap;font-family:'DM Sans',sans-serif;min-height:110px;margin-bottom:10px;"></div>
     <button onclick="_msgSortear()" style="width:100%;background:var(--bg3);border:1px dashed var(--borda);border-radius:11px;padding:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;">🎲 Quero outra versão</button>
@@ -5695,11 +5714,49 @@ const MSG_LIB = {
 };
 let _msgCliId = null, _msgCat = 'agendar', _msgUltimaIdx = {};
 
+// Andar 1 do hub: último status do cliente → atalhos de mensagem certos pra ESSE momento.
+// Cada atalho aponta para uma categoria da biblioteca (reuso total do MSG_LIB).
+const _MOMENTO_MAP = {
+  fechou_pedido:       [['📈 Como foi a entrega?','posvenda'], ['🔄 Preparar reposição','recompra']],
+  estoque_alto:        [['⏳ Como está o giro?','recompra'], ['📅 Passar aí','agendar']],
+  aguardando_giro:     [['🔄 Já pode repor?','recompra'], ['📅 Agendar visita','agendar']],
+  prazo_pagamento:     [['💰 Falar do pagamento','cobranca'], ['📅 Agendar visita','agendar']],
+  inadimplente:        [['💰 Combinar o pagamento','cobranca']],
+  comprou_concorrente: [['🤝 Retomar contato','inativo'], ['🎁 Mostrar novidade','lancamento']],
+  outra_marca:         [['🤝 Retomar contato','inativo'], ['🔄 Hora de repor?','recompra']],
+  mercado_parado:      [['🤝 Manter contato','inativo'], ['📅 Agendar visita','agendar']],
+  produto_nao_girou:   [['📅 Passar pra ajustar','agendar'], ['🤝 Manter contato','inativo']],
+  aguardando_proposta: [['📅 Retomar a proposta','agendar'], ['🎁 Reforçar novidade','lancamento']],
+  mostruario_avaliacao:[['📅 Buscar o retorno','agendar'], ['🔄 Fechar o pedido','recompra']],
+  aguarda_colecao:     [['🎁 Novidade da coleção','lancamento'], ['📅 Agendar visita','agendar']],
+  fechado:             [['🤝 Reaproximar','inativo']],
+  nao_vai_comprar:     [['🤝 Reaproximar','inativo']]
+};
+
+function _msgRenderMomento(c) {
+  const wrap = document.getElementById('msg-momento-wrap');
+  const ult = c && c.historico && c.historico[0];
+  const motivo = ult && ult.motivo;
+  const atalhos = motivo && _MOMENTO_MAP[motivo];
+  if (!wrap || !atalhos) { if (wrap) wrap.style.display = 'none'; return; }
+  const base = (typeof MOTIVOS_BASE !== 'undefined' && MOTIVOS_BASE[motivo]) ? MOTIVOS_BASE[motivo].label : '';
+  const dias = Math.floor((Date.now() - new Date(ult.data)) / 86400000);
+  const diasTxt = dias <= 0 ? 'hoje' : dias === 1 ? 'ontem' : `há ${dias}d`;
+  document.getElementById('msg-momento-tag').textContent = `${base} · ${diasTxt}`;
+  document.getElementById('msg-momento-chips').innerHTML = atalhos.map(([label, cat]) =>
+    `<button onclick="_msgTrocarCat('${cat}')" style="flex-shrink:0;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.4);color:var(--verde);">${label}</button>`
+  ).join('');
+  wrap.style.display = 'block';
+}
+
 function abrirMensagens(clienteId, categoria, msgInicial) {
   _msgCliId = clienteId;
   _msgCat = MSG_LIB[categoria] ? categoria : 'agendar';
   const c = getClientes().find(x => x.id === clienteId);
   document.getElementById('msg-sem-tel').style.display = (c && (c.telefone || c.wpp)) ? 'none' : 'block';
+  // Andar 1 (momento) só no modo hub — aberto pelo botão "Cutucar", sem categoria/msg forçada.
+  if (!categoria && !msgInicial) _msgRenderMomento(c);
+  else document.getElementById('msg-momento-wrap').style.display = 'none';
   _msgRenderCats();
   // Mensagem contextual (ex.: gatilho com cidade/semana/marcas) entra como 1ª sugestão;
   // o 🎲 sorteia as variações da biblioteca a partir daí.
@@ -11008,6 +11065,14 @@ function abrirDetalhe(clienteId, telaOrigem) {
   if (!cliente) return;
 
   document.getElementById('det-nome').textContent = cliente.nome;
+  // Botão "Cutucar" personalizado + subtítulo que gira a cada abertura
+  const _cutN = document.getElementById('cutucar-nome');
+  if (_cutN) _cutN.textContent = 'Interagir com ' + (_primeiroNomeCap(cliente.nome) || 'o cliente');
+  const _cutS = document.getElementById('cutucar-sub');
+  if (_cutS) {
+    const _subs = ['Mensagens prontas pelo momento dele — gere venda sem sair de casa','Acione o cliente e seja sempre lembrado','Um toque e você manda a mensagem certa da hora'];
+    _cutS.textContent = _subs[Math.floor(Math.random() * _subs.length)];
+  }
   const marcasTxt = (cliente.marcas && cliente.marcas.length) ? cliente.marcas.join(', ') : '';
   document.getElementById('det-loja').textContent = `${cliente.loja}${cliente.cidade ? ' · '+cliente.cidade : ''}${marcasTxt ? ' · '+marcasTxt : ''}`;
   // Badge de prospecto
@@ -14875,6 +14940,13 @@ function enviarRelComparativoEmail() {
 function setExpPeriodo(p) {
   _relExpPeriodo = p;
   document.querySelectorAll('.comp-exp-chip').forEach(b => b.classList.toggle('ativo', b.dataset.p === p));
+  // Retorno visível: diz qual período o Excel vai cobrir (o toque parecia não fazer nada)
+  const hint = document.getElementById('comp-exp-hint');
+  if (hint) {
+    const Y = new Date().getFullYear(), q = Math.floor(new Date().getMonth() / 3) + 1;
+    const txt = p === 'tri' ? `o ${q}º trimestre de ${Y}` : p === 'ano' ? `o ano de ${Y}` : 'este mês';
+    hint.innerHTML = `📄 O Excel vai cobrir: <b style="color:var(--verde);">${txt}</b>`;
+  }
 }
 
 async function exportarRelatorioExcel() {
@@ -15276,11 +15348,12 @@ function renderRelComparativo() {
       </div>
 
       <div style="font-size:10px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">2. Escolha o período</div>
-      <div style="display:flex;gap:6px;margin-bottom:14px;" id="comp-exp-periodo">
+      <div style="display:flex;gap:6px;margin-bottom:6px;" id="comp-exp-periodo">
         <button onclick="setExpPeriodo('mes')"  class="comp-exp-chip ativo" data-p="mes">Mês atual</button>
         <button onclick="setExpPeriodo('tri')"  class="comp-exp-chip" data-p="tri">Trimestre</button>
         <button onclick="setExpPeriodo('ano')"  class="comp-exp-chip" data-p="ano">Ano</button>
       </div>
+      <div id="comp-exp-hint" style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:12px;">📄 O Excel vai cobrir: <b style="color:var(--verde);">este mês</b></div>
 
       <button onclick="exportarRelatorioExcel()" style="width:100%;background:rgba(0,214,143,.12);border:1.5px solid rgba(0,214,143,.5);border-radius:11px;padding:13px;color:var(--verde);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">⬇️ Gerar e baixar Excel</button>
     </div>`;

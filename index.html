@@ -14,7 +14,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0A0E14">
-<meta name="description" content="O assistente de vendas do representante — na rua ou no escritório.">
+<meta name="description" content="Sua carteira de clientes organizada, a rota do dia no mapa e a hora certa de vender cada marca. O app do representante comercial na estrada.">
+
+<!-- Preview ao compartilhar o link (WhatsApp, Telegram, redes) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Carteira Viva">
+<meta property="og:title" content="Carteira Viva — o app do representante comercial">
+<meta property="og:description" content="Sua carteira organizada, a rota do dia no mapa e a hora certa de vender cada marca. Feito para quem vive na estrada.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Carteira Viva — o app do representante comercial">
+<meta name="twitter:description" content="Sua carteira organizada, a rota do dia e a hora certa de vender. Feito para o representante na estrada.">
 
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -27,18 +36,8 @@
      hospedagem não autorizada, no todo ou em parte. contato@carteiraviva.com.br
      ════════════════════════════════════════════════════════════════════════ -->
 <script>
-/* TRAVA DE DOMÍNIO (anti-cópia) — deixa o app rodar só nos SEUS endereços.
-
-   >> COMO ATIVAR (leva 30 segundos, faça quando tiver calma):
-      1) Abra o app pelo endereço REAL onde os reps usam.
-      2) Aperte F12 → aba "Console" → digite:  location.hostname
-      3) Confira se o que apareceu está na lista DOMINIOS_AUTORIZADOS abaixo
-         (se não estiver, adicione).
-      4) Troque  GUARD_ENFORCAR  de  false  para  true  e suba o arquivo.
-
-   Enquanto GUARD_ENFORCAR = false, a trava NÃO bloqueia ninguém (só registra
-   um aviso no console). Por isso é 100% seguro subir hoje: nenhum rep trava.
-   Seus ambientes de teste (localhost, 127.0.0.1, arquivo local) nunca travam. */
+/* Trava de domínio (anti-cópia): roda só nos domínios autorizados. Com
+   GUARD_ENFORCAR=false fica em modo monitor e NÃO bloqueia ninguém. */
 (function(){
   var DOMINIOS_AUTORIZADOS = [
     'carteiraviva.com.br',

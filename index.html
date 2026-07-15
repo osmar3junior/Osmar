@@ -2122,6 +2122,19 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- MODAL PROMPT GENÉRICO (substitui prompt() nativo — evita mostrar o domínio do app) -->
+<div class="modal-overlay" id="modal-prompt-custom" style="z-index:400;align-items:center;">
+  <div class="modal-box" style="max-width:340px;">
+    <div class="modal-titulo" id="prompt-custom-titulo" style="margin-bottom:8px;font-family:'DM Sans',sans-serif;"></div>
+    <div class="modal-sub" id="prompt-custom-msg" style="white-space:pre-line;margin-bottom:8px;font-family:'DM Sans',sans-serif;"></div>
+    <input type="text" class="campo-input" id="prompt-custom-input" style="margin-bottom:4px;">
+    <div class="modal-btns" style="margin-top:16px;">
+      <button class="btn-secundario" id="prompt-custom-cancelar" style="font-family:'DM Sans',sans-serif;">Cancelar</button>
+      <button class="btn-primario" style="flex:2;font-family:'DM Sans',sans-serif;" id="prompt-custom-ok">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EDITAR CLIENTE -->
 <div class="modal-overlay" id="modal-editar-cliente">
   <div class="modal-box">
@@ -2618,6 +2631,7 @@ if ('serviceWorker' in navigator) {
       <button id="qv-ord-pot" onclick="qvSetOrdem('potencial')" style="flex:1;text-align:center;border-radius:10px;padding:8px 4px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">🏆 Potencial</button>
       <button id="qv-ord-prox" onclick="qvSetOrdem('proximidade')" style="flex:1;text-align:center;border-radius:10px;padding:8px 4px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">📍 Proximidade</button>
     </div>
+    <button id="qv-toggle-prospect" onclick="qvToggleProspeccao()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:7px;border-radius:10px;padding:8px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:10px;">🔭 Incluir prospecção nesta busca</button>
     <div style="font-size:10px;color:var(--texto3);text-align:center;margin-bottom:11px;">Toque no ✓ para marcar · toque no card abre o cliente</div>
 
     <div id="qv-lista"></div>
@@ -5873,6 +5887,52 @@ function abrirNotificacoes() {
 
   document.getElementById('notif-lista').innerHTML = html;
   document.getElementById('modal-notificacoes').classList.add('aberto');
+  _verificarProspeccaoPerto(); // GPS é assíncrono — o card entra depois, sem travar a abertura do painel
+}
+
+// Ao abrir o sino de notificações, confere (1x, na hora) se há prospecção com
+// retorno pendente perto de onde o rep está agora. Não é rastreio em segundo
+// plano (bateria/permissão custam caro em PWA) — só olha quando ele já abriu
+// o painel, que é o hábito que ele já tem.
+function _verificarProspeccaoPerto() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    const RAIO_KM = 15;
+    const candidatos = getClientes()
+      .filter(c => !c.statusArquivo && c.tipo === 'prospect' && c.lat && c.lng)
+      .map(c => ({ c, dist: calcularDistancia(lat, lng, parseFloat(c.lat), parseFloat(c.lng)), diff: getDiffDiasCliente(c) }))
+      .filter(x => x.dist <= RAIO_KM && (x.diff === null || x.diff <= 5))
+      .sort((a, b) => a.dist - b.dist);
+    if (!candidatos.length) return;
+    const cont = document.getElementById('notif-lista');
+    if (!cont || !document.getElementById('modal-notificacoes').classList.contains('aberto')) return; // painel já fechado
+
+    const itens = candidatos.slice(0, 3).map(x => {
+      const distTxt = x.dist < 1 ? Math.round(x.dist * 1000) + 'm' : x.dist.toFixed(1) + 'km';
+      const qd = x.diff === null ? 'sem data de retorno' : x.diff <= 0 ? 'retorno é hoje' : `retorno em ${x.diff}d`;
+      return `<div onclick="event.stopPropagation();fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${x.c.id}','clientes'),200)" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid rgba(167,139,250,.2);cursor:pointer;">
+        <div style="min-width:0;">
+          <div style="font-size:12px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(x.c.nome)}</div>
+          <div style="font-size:10.5px;color:#A78BFA;">${qd}</div>
+        </div>
+        <div style="font-size:11px;color:var(--texto2);flex-shrink:0;">📍 ${distTxt}</div>
+      </div>`;
+    }).join('');
+    const resto = candidatos.length > 3 ? `<div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-top:6px;">+${candidatos.length - 3} outra${candidatos.length - 3 > 1 ? 's' : ''} por perto</div>` : '';
+
+    cont.insertAdjacentHTML('afterbegin', `<div style="background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.35);border-radius:12px;padding:12px;margin-bottom:8px;">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <span style="font-size:20px;flex-shrink:0;">🔭</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);">Prospecção por perto</div>
+          <div style="font-size:11px;color:var(--texto2);margin-top:2px;">Você está a poucos km de ${candidatos.length > 1 ? 'prospecções com retorno pendente' : 'uma prospecção com retorno pendente'}</div>
+        </div>
+      </div>
+      ${itens}
+      ${resto}
+    </div>`);
+  }, () => { /* sem permissão/GPS indisponível — o painel segue igual, sem esse card */ }, { enableHighAccuracy: false, timeout: 8000 });
 }
 
 function _abrirGatilhoCliente(clienteId) {
@@ -8149,6 +8209,7 @@ let _qvOrdem = 'potencial';   // 'potencial' | 'proximidade'
 let _qvBusca = '';
 let _qvSel = new Set();
 let _qvCidadesLista = [];
+let _qvIncluirProspect = false; // liga a prospecção nesta busca por proximidade (fora por padrão)
 
 function abrirQuemVisitar() {
   _qvModo = 'cidade';
@@ -8156,6 +8217,7 @@ function abrirQuemVisitar() {
   _qvRaio = 15;
   _qvOrdem = 'potencial';
   _qvBusca = '';
+  _qvIncluirProspect = false;
   _qvSel.clear();
   const inp = document.getElementById('qv-busca'); if (inp) inp.value = '';
   document.getElementById('qv-autocomplete').style.display = 'none';
@@ -8193,7 +8255,7 @@ function _qvListaAtual() {
     centro = _qvCidade ? _qvCentroCidade(_qvCidade) : null;
   }
 
-  let base = getClientesAtivos();
+  let base = _qvIncluirProspect ? getClientes().filter(c => !c.statusArquivo) : getClientesAtivos();
   if (_qvModo === 'cidade') {
     // clientes da cidade + vizinhos dentro do raio (se houver centro)
     base = base.filter(c => {
@@ -8208,8 +8270,24 @@ function _qvListaAtual() {
   }
 
   const arr = base.map(c => {
-    const ni = _notaForaRota(c);
     const dist = (centro && c.lat && c.lng) ? calcularDistancia(centro.lat, centro.lng, parseFloat(c.lat), parseFloat(c.lng)) : null;
+    if (c.tipo === 'prospect') {
+      // Prospecção não tem histórico de compra pra alimentar _notaForaRota — nota própria:
+      // 60% "tá na hora de voltar" (a data de retorno que o rep prometeu) + 40% "tô
+      // por perto" (quanto mais perto do raio buscado, mais quente).
+      const diff = getDiffDiasCliente(c);
+      let matur;
+      if (diff === null) matur = .3;
+      else if (diff <= 0) matur = 1;
+      else if (diff <= 2) matur = .85;
+      else if (diff <= 5) matur = .65;
+      else if (diff <= 10) matur = .45;
+      else matur = .25;
+      const proxScore = (dist != null && _qvRaio > 0) ? Math.max(0, 1 - dist / _qvRaio) : .3;
+      const nota = Math.max(0, Math.min(10, 10 * (0.6 * matur + 0.4 * proxScore)));
+      return { cliente: c, nota, notaInfo: null, marca: null, dist };
+    }
+    const ni = _notaForaRota(c);
     return { cliente: c, nota: ni.nota, notaInfo: ni, marca: ni.marca, dist };
   });
 
@@ -8266,10 +8344,18 @@ function renderizarQuemVisitar() {
       const sel = _qvSel.has(x.cliente.id);
       const cor = x.nota >= 7 ? 'var(--verde)' : x.nota >= 4.5 ? 'var(--amarelo)' : 'var(--texto2)';
       const bgN = x.nota >= 7 ? 'rgba(0,214,143,.15)' : x.nota >= 4.5 ? 'rgba(255,192,67,.15)' : 'rgba(255,255,255,.06)';
-      const rat = _rationaleForaRota(x.cliente, x.notaInfo);
       const distTxt = x.dist != null ? (x.dist < 1 ? `${Math.round(x.dist * 1000)} m` : `${x.dist.toFixed(1)} km`) : '';
-      const linha2 = rat ? `${rat.texto}${distTxt ? ' · a ' + distTxt : ''}` : (distTxt ? 'a ' + distTxt : (x.cliente.loja || ''));
-      const linha2cor = rat ? rat.cor : 'var(--texto2)';
+      let linha2, linha2cor;
+      if (x.cliente.tipo === 'prospect') {
+        const diff = getDiffDiasCliente(x.cliente);
+        const qd = diff === null ? 'sem data de retorno' : diff <= 0 ? 'retorno é HOJE' : `retorno em ${diff}d`;
+        linha2 = `🔭 Prospecção · ${qd}${distTxt ? ' · a ' + distTxt : ''}`;
+        linha2cor = '#A78BFA';
+      } else {
+        const rat = _rationaleForaRota(x.cliente, x.notaInfo);
+        linha2 = rat ? `${rat.texto}${distTxt ? ' · a ' + distTxt : ''}` : (distTxt ? 'a ' + distTxt : (x.cliente.loja || ''));
+        linha2cor = rat ? rat.cor : 'var(--texto2)';
+      }
       return `<div onclick="fecharModal('modal-quem-visitar');setTimeout(()=>abrirDetalhe('${x.cliente.id}','clientes'),200)" style="display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid ${sel ? 'rgba(0,214,143,.4)' : 'var(--borda)'};border-radius:12px;padding:9px 10px;margin-bottom:7px;cursor:pointer;">
         <span style="width:34px;height:34px;border-radius:50%;background:${bgN};color:${cor};display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;flex-shrink:0;font-family:'DM Sans',sans-serif;">${x.nota.toFixed(1).replace('.', ',')}</span>
         <div style="flex:1;min-width:0;">
@@ -8305,6 +8391,11 @@ function _qvPintarOrdem() {
   const off = el => { el.style.background = 'var(--bg3)'; el.style.border = '1px solid var(--borda)'; el.style.color = 'var(--texto2)'; };
   if (_qvOrdem === 'potencial') { on(pot, 'var(--verde)', 'rgba(0,214,143,.14)'); off(prox); }
   else { on(prox, '#38BDF8', 'rgba(56,189,248,.14)'); off(pot); }
+  const tp = document.getElementById('qv-toggle-prospect');
+  if (tp) {
+    if (_qvIncluirProspect) { tp.style.background = 'rgba(167,139,250,.14)'; tp.style.border = '1.5px solid #A78BFA'; tp.style.color = '#A78BFA'; tp.textContent = '🔭 Prospecção incluída nesta busca'; }
+    else { tp.style.background = 'var(--bg3)'; tp.style.border = '1px solid var(--borda)'; tp.style.color = 'var(--texto2)'; tp.textContent = '🔭 Incluir prospecção nesta busca'; }
+  }
 }
 
 function _qvAtualizarBotao() {
@@ -8319,6 +8410,7 @@ function qvSelecionarCidade(i) {
 }
 function qvSetRaio(v) { _qvRaio = Number(v); renderizarQuemVisitar(); }
 function qvSetOrdem(m) { _qvOrdem = m; renderizarQuemVisitar(); }
+function qvToggleProspeccao() { _qvIncluirProspect = !_qvIncluirProspect; renderizarQuemVisitar(); }
 function qvToggleSel(id) {
   if (_qvSel.has(id)) _qvSel.delete(id); else _qvSel.add(id);
   renderizarQuemVisitar();
@@ -13228,8 +13320,8 @@ function _onbRenderMetas() {
   }).join('');
 }
 
-function onbCriarUnidade() {
-  const nome = (prompt('Nome da nova unidade (ex: fardo, metro², resma):') || '').trim();
+async function onbCriarUnidade() {
+  const nome = (await promptModal('', {titulo:'📦 Nova unidade', placeholder:'Ex: fardo, metro², resma', textoOk:'Criar'}) || '').trim();
   if (!nome) return;
   const jaExiste = [..._ONB_SKUS_BASE, ..._onbSkusExtra, 'reais'].some(s => s.toLowerCase() === nome.toLowerCase());
   if (jaExiste) { toast('Essa unidade já está na lista'); return; }
@@ -17003,6 +17095,35 @@ function confirmarModal(mensagem, opts = {}) {
     btnOk.onclick = () => limpar(true);
     btnCancelar.onclick = () => limpar(false);
     overlay.classList.add('aberto');
+  });
+}
+
+// Substitui o prompt() nativo (mesmo motivo do confirmarModal). Retorna o texto
+// digitado (trim) ou null se cancelar/deixar vazio — igual ao (prompt(...)||'').trim().
+function promptModal(mensagem, opts = {}) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('modal-prompt-custom');
+    document.getElementById('prompt-custom-titulo').textContent = opts.titulo || '';
+    document.getElementById('prompt-custom-titulo').style.display = opts.titulo ? '' : 'none';
+    document.getElementById('prompt-custom-msg').textContent = mensagem;
+    document.getElementById('prompt-custom-msg').style.display = mensagem ? '' : 'none';
+    const input = document.getElementById('prompt-custom-input');
+    input.value = opts.valorInicial || '';
+    input.placeholder = opts.placeholder || '';
+    const btnOk = document.getElementById('prompt-custom-ok');
+    const btnCancelar = document.getElementById('prompt-custom-cancelar');
+    btnOk.textContent = opts.textoOk || 'OK';
+    btnCancelar.textContent = opts.textoCancelar || 'Cancelar';
+    const limpar = (resultado) => {
+      overlay.classList.remove('aberto');
+      btnOk.onclick = null; btnCancelar.onclick = null; input.onkeydown = null;
+      resolve(resultado);
+    };
+    btnOk.onclick = () => limpar(input.value.trim() || null);
+    btnCancelar.onclick = () => limpar(null);
+    input.onkeydown = (e) => { if (e.key === 'Enter') btnOk.onclick(); };
+    overlay.classList.add('aberto');
+    setTimeout(() => input.focus(), 50);
   });
 }
 function copiarMensagem() {

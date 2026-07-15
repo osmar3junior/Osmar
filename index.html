@@ -4656,13 +4656,12 @@ async function buscarHoteisProximos(raio) {
 
   navigator.geolocation.getCurrentPosition(async pos => {
     const lat = pos.coords.latitude, lng = pos.coords.longitude;
-    const timeout = raio >= 80000 ? 25 : 15;
-    const tipos = ['hotel','pousada','hostel','motel','guest_house'];
-    const filtro = tipos.map(t => `node["tourism"="${t}"](around:${raio},${lat},${lng});way["tourism"="${t}"](around:${raio},${lat},${lng});`).join('');
-    const query = `[out:json][timeout:${timeout}];(${filtro});out center;`;
+    const timeout = raio >= 80000 ? 30 : 20;
+    const tiposRegex = 'hotel|pousada|hostel|motel|guest_house';
+    const query = `[out:json][timeout:${timeout}];(node["tourism"~"^(${tiposRegex})$"](around:${raio},${lat},${lng});way["tourism"~"^(${tiposRegex})$"](around:${raio},${lat},${lng}););out center;`;
 
     try {
-      const data = await _overpassFetch(query, (timeout + 10) * 1000);
+      const data = await _overpassFetch(query, (timeout + 15) * 1000);
       const elementos = data.elements || [];
       loadDiv.style.display = 'none';
 

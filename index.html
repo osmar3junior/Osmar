@@ -4115,19 +4115,35 @@ function _renderMapaEstrada(tipo, lat, lng, resultados, naEstrada) {
 const OVERPASS_MIRRORS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
-  'https://overpass.openstreetmap.ru/api/interpreter'
+  'https://overpass.private.coffee/api/interpreter'
 ];
 async function _overpassFetch(query, timeoutMs) {
   let ultimoErro;
-  for (const base of OVERPASS_MIRRORS) {
-    try {
-      const ctrl = new AbortController();
-      const to = setTimeout(() => ctrl.abort(), timeoutMs || 15000);
-      const resp = await fetch(base + '?data=' + encodeURIComponent(query), { signal: ctrl.signal });
-      clearTimeout(to);
-      if (!resp.ok) throw new Error('Overpass ' + resp.status);
-      return await resp.json();
-    } catch (e) { ultimoErro = e; }
+  for (let rodada = 0; rodada < 2; rodada++) {
+    // Rate-limit do Overpass é ~2 slots por IP: respira antes da 2ª rodada
+    // pra não tomar 429 das próprias retentativas.
+    if (rodada > 0) await new Promise(r => setTimeout(r, 3000));
+    for (const base of OVERPASS_MIRRORS) {
+      try {
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), timeoutMs || 15000);
+        const resp = await fetch(base, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'data=' + encodeURIComponent(query),
+          signal: ctrl.signal
+        });
+        clearTimeout(to);
+        if (!resp.ok) throw new Error('Overpass ' + resp.status);
+        const data = await resp.json();
+        // Overpass sobrecarregado devolve 200 com remark de timeout e elements
+        // vazio/parcial — sem esse check, viraria um falso "nada encontrado".
+        if (data.remark && /timed?[ _]?out|error/i.test(data.remark) && !(data.elements || []).length) {
+          throw new Error('Overpass remark: ' + data.remark);
+        }
+        return data;
+      } catch (e) { ultimoErro = e; }
+    }
   }
   throw ultimoErro;
 }
@@ -4165,7 +4181,8 @@ async function buscarProximosAoVivo(tipo, raioParam) {
     const limite = naEstrada ? 25 : 15;
     const timeout = naEstrada ? 20 : 10;
     const amenity = tipo === 'fuel' ? 'fuel' : 'parking';
-    const query = `[out:json][timeout:${timeout}];(node["amenity"="${amenity}"](around:${raio},${lat},${lng});way["amenity"="${amenity}"](around:${raio},${lat},${lng}););out center;`;
+    // maxsize baixo evita rejeição 504 do despachante (ver query de hotéis).
+    const query = `[out:json][timeout:${timeout}][maxsize:16777216];nwr["amenity"="${amenity}"](around:${raio},${lat},${lng});out center;`;
 
     try {
       const data = await _overpassFetch(query, (timeout + 10) * 1000);
@@ -4222,7 +4239,10 @@ async function buscarProximosAoVivo(tipo, raioParam) {
 
     } catch(e) {
       loadDiv.style.display = 'none';
-      listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Sem conexão ou serviço indisponível. Tente novamente.</div>`;
+      listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-family:'DM Sans',sans-serif;">
+        <div style="font-size:13px;color:var(--texto3);">O serviço de mapas está ocupado agora — acontece nos horários de pico.</div>
+        <button onclick="buscarProximosAoVivo('${tipo}',${raio})" style="margin-top:12px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 16px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔄 Tentar de novo</button>
+      </div>`;
     }
   }, () => {
     loadDiv.style.display = 'none';
@@ -4658,7 +4678,10 @@ async function buscarHoteisProximos(raio) {
     const lat = pos.coords.latitude, lng = pos.coords.longitude;
     const timeout = raio >= 80000 ? 30 : 20;
     const tiposRegex = 'hotel|pousada|hostel|motel|guest_house';
-    const query = `[out:json][timeout:${timeout}];(node["tourism"~"^(${tiposRegex})$"](around:${raio},${lat},${lng});way["tourism"~"^(${tiposRegex})$"](around:${raio},${lat},${lng}););out center;`;
+    // maxsize baixo (16MB) é ESSENCIAL: sem ele o despachante do Overpass reserva
+    // 512MB por query e rejeita com 504 quando o servidor está cheio — era a causa
+    // do "às vezes acha, às vezes não". nwr = node+way+relation numa cláusula só.
+    const query = `[out:json][timeout:${timeout}][maxsize:16777216];nwr["tourism"~"^(${tiposRegex})$"](around:${raio},${lat},${lng});out center;`;
 
     try {
       const data = await _overpassFetch(query, (timeout + 15) * 1000);
@@ -4757,7 +4780,10 @@ async function buscarHoteisProximos(raio) {
 
     } catch(e) {
       loadDiv.style.display = 'none';
-      listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Sem conexão ou serviço indisponível. Tente novamente.</div>`;
+      listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-family:'DM Sans',sans-serif;">
+        <div style="font-size:13px;color:var(--texto3);">O serviço de mapas está ocupado agora — acontece nos horários de pico.</div>
+        <button onclick="buscarHoteisProximos(${raio})" style="margin-top:12px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 16px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔄 Tentar de novo</button>
+      </div>`;
     }
   }, () => {
     loadDiv.style.display = 'none';

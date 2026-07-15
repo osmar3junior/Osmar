@@ -2338,13 +2338,18 @@ if ('serviceWorker' in navigator) {
     </div>
     <div class="modal-sub" style="margin-bottom:12px;">Marque o dia, busque e toque nos clientes. A nota de 0 a 10 mostra se vale a visita nesta semana. Monte do seu jeito e, se quiser, peça uma força da IA pra encaixar todo mundo cruzando potencial de compra, cidade e sua agenda.</div>
 
-    <div id="rm-dias-chips" style="display:flex;gap:4px;margin-bottom:4px;"></div>
-    <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-bottom:10px;">Tocar no cliente adiciona no dia marcado</div>
+    <!-- Fixo ao rolar a lista (pode ter dezenas de clientes) — só os controles que
+         se usa o tempo todo: trocar dia, buscar, filtrar cidade. Título/instrução
+         acima rolam pra fora, pra sobrar mais tela pra lista. -->
+    <div style="position:sticky;top:0;background:var(--bg2);z-index:2;padding-top:2px;margin-top:-2px;border-bottom:1px solid var(--borda);">
+      <div id="rm-dias-chips" style="display:flex;gap:4px;margin-bottom:4px;"></div>
+      <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-bottom:10px;">Tocar no cliente adiciona no dia marcado</div>
 
-    <input type="text" class="campo-input" id="rm-busca" placeholder="🔎 Cliente, loja ou cidade..." oninput="_rmBusca=this.value;_rmExpandido=null;renderizarListaRM();" style="margin-bottom:8px;">
-    <div id="rm-cidades" style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px;padding-bottom:4px;scrollbar-width:none;"></div>
+      <input type="text" class="campo-input" id="rm-busca" placeholder="🔎 Cliente, loja ou cidade..." oninput="_rmBusca=this.value;_rmExpandido=null;renderizarListaRM();" style="margin-bottom:8px;">
+      <div id="rm-cidades" style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:8px;padding-bottom:4px;scrollbar-width:none;"></div>
+    </div>
 
-    <div id="rm-lista"></div>
+    <div id="rm-lista" style="margin-top:8px;"></div>
 
     <div style="position:sticky;bottom:-12px;background:var(--bg2);padding:10px 0 12px;border-top:1px solid var(--borda);margin-top:8px;">
       <div id="rm-footer-resumo" style="font-size:12px;color:var(--texto2);text-align:center;margin-bottom:8px;"></div>
@@ -5622,6 +5627,11 @@ function abrirNotificacoes() {
 
   let html = '';
 
+  // Preenchido logo abaixo por _renderizarCardProspeccaoPerto() — mostra na hora o que
+  // já está pendente de checagens de GPS anteriores (em qualquer tela do app), e
+  // atualiza de novo assim que o GPS desta abertura responder.
+  html += `<div id="notif-prospect-perto"></div>`;
+
   // Comece por aqui — convite a importar a base (enquanto a carteira estiver pequena).
   // Copy com gatilho: quem já cadastrou alguns na mão ouve "quem ficou de fora o app
   // não lembra por você" (medo de perda + conveniência), não um tutorial.
@@ -5887,52 +5897,124 @@ function abrirNotificacoes() {
 
   document.getElementById('notif-lista').innerHTML = html;
   document.getElementById('modal-notificacoes').classList.add('aberto');
-  _verificarProspeccaoPerto(); // GPS é assíncrono — o card entra depois, sem travar a abertura do painel
+  _renderizarCardProspeccaoPerto(); // mostra na hora o que já ficou pendente de telas anteriores
+  _verificarProspeccaoPerto();      // e atualiza de novo quando o GPS desta abertura responder
 }
 
-// Ao abrir o sino de notificações, confere (1x, na hora) se há prospecção com
-// retorno pendente perto de onde o rep está agora. Não é rastreio em segundo
-// plano (bateria/permissão custam caro em PWA) — só olha quando ele já abriu
-// o painel, que é o hábito que ele já tem.
+const _PROSPECT_PERTO_RAIO_KM = 15;
+const _PROSPECT_PERTO_VALIDADE_DIAS = 3; // some sozinho depois de alguns dias sem ação do rep
+
+// Roda toda vez que QUALQUER tela do app pega o GPS (via o patch global logo abaixo)
+// — não só o sino de notificações. Guarda a menor distância já vista de cada
+// prospecto com retorno pendente, pra sobreviver mesmo se o rep passar perto numa
+// cidade e só abrir o sino depois, em outra.
+function _registrarProspeccaoPerto(lat, lng) {
+  try {
+    const candidatos = getClientes()
+      .filter(c => !c.statusArquivo && c.tipo === 'prospect' && c.lat && c.lng)
+      .map(c => ({ id: c.id, dist: calcularDistancia(lat, lng, parseFloat(c.lat), parseFloat(c.lng)), diff: getDiffDiasCliente(c) }))
+      .filter(x => x.dist <= _PROSPECT_PERTO_RAIO_KM && (x.diff === null || x.diff <= 5));
+    if (!candidatos.length) return;
+    const pendentes = getData('cv_prospect_perto_pendente') || {};
+    candidatos.forEach(x => {
+      const atual = pendentes[x.id];
+      if (!atual || x.dist < atual.dist) pendentes[x.id] = { dist: x.dist, visto: new Date().toISOString() };
+    });
+    setData('cv_prospect_perto_pendente', pendentes);
+  } catch (e) { /* nunca deixa esse acessório atrapalhar a tela real que pediu o GPS */ }
+}
+
+// Envolve getCurrentPosition uma única vez pra qualquer tela do app alimentar o
+// aviso pendente de prospecção, sem precisar mexer em cada chamada de GPS existente.
+(function _instalarChecagemProspeccaoGlobal() {
+  if (!navigator.geolocation || navigator.geolocation._cvProspectPatch) return;
+  const original = navigator.geolocation.getCurrentPosition.bind(navigator.geolocation);
+  navigator.geolocation.getCurrentPosition = function (onSucesso, onErro, opts) {
+    original(pos => {
+      _registrarProspeccaoPerto(pos.coords.latitude, pos.coords.longitude);
+      if (onSucesso) onSucesso(pos);
+    }, onErro, opts);
+  };
+  navigator.geolocation._cvProspectPatch = true;
+})();
+
+// Lê os pendentes válidos (prospecto ainda existe, ainda é prospecção, e a checagem
+// não é velha demais) — poda os que não servem mais antes de devolver a lista.
+function _prospeccaoPertoPendentes() {
+  const pendentes = getData('cv_prospect_perto_pendente') || {};
+  const mapCli = {}; getClientes().forEach(c => mapCli[c.id] = c);
+  const agora = Date.now();
+  let mudou = false;
+  const validos = [];
+  Object.keys(pendentes).forEach(id => {
+    const c = mapCli[id];
+    const p = pendentes[id];
+    const idadeDias = (agora - new Date(p.visto).getTime()) / 86400000;
+    const aindaVale = c && !c.statusArquivo && c.tipo === 'prospect' && idadeDias <= _PROSPECT_PERTO_VALIDADE_DIAS;
+    if (!aindaVale) { delete pendentes[id]; mudou = true; return; }
+    validos.push({ c, dist: p.dist, visto: p.visto });
+  });
+  if (mudou) setData('cv_prospect_perto_pendente', pendentes);
+  return validos.sort((a, b) => a.dist - b.dist);
+}
+
+// Recebe lat/lng OPCIONAIS da posição atual (só disponíveis depois que o GPS desta
+// abertura do sino responder) — quando vem, mostra a distância AGORA em destaque,
+// pro rep decidir na hora se vale voltar no prospecto ou não. Sem GPS ainda (1ª
+// renderização, síncrona) mostra a menor distância já vista, como antes.
+function _renderizarCardProspeccaoPerto(lat, lng) {
+  const cont = document.getElementById('notif-prospect-perto');
+  if (!cont) return;
+  const lista = _prospeccaoPertoPendentes();
+  if (!lista.length) { cont.innerHTML = ''; return; }
+  const temAgora = lat != null && lng != null;
+  const fmtKm = d => d < 1 ? Math.round(d * 1000) + 'm' : d.toFixed(1) + 'km';
+  const itens = lista.slice(0, 4).map(x => {
+    const diff = getDiffDiasCliente(x.c);
+    const qd = diff === null ? 'sem data de retorno' : diff <= 0 ? 'retorno é hoje' : `retorno em ${diff}d`;
+    const horasAtras = Math.max(0, Math.round((Date.now() - new Date(x.visto).getTime()) / 3600000));
+    const quando = horasAtras < 1 ? 'agora' : horasAtras < 24 ? `há ${horasAtras}h` : `há ${Math.round(horasAtras / 24)}d`;
+    const distAgora = (temAgora && x.c.lat && x.c.lng) ? calcularDistancia(lat, lng, parseFloat(x.c.lat), parseFloat(x.c.lng)) : null;
+    const linhaDist = distAgora != null
+      ? `📍 <b style="color:var(--texto);">${fmtKm(distAgora)} agora</b>${Math.abs(distAgora - x.dist) >= 0.1 ? ` · visto a ${fmtKm(x.dist)} ${quando}` : ''}`
+      : `📍 ${fmtKm(x.dist)} · visto ${quando}`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid rgba(167,139,250,.2);">
+      <div onclick="fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${x.c.id}','clientes'),200)" style="flex:1;min-width:0;cursor:pointer;">
+        <div style="font-size:12px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(x.c.nome)}</div>
+        <div style="font-size:10.5px;color:#A78BFA;">${qd} · ${linhaDist}</div>
+      </div>
+      <button onclick="event.stopPropagation();_descartarProspeccaoPerto('${x.c.id}')" title="Já vi / não é agora" style="flex-shrink:0;background:var(--bg3);border:1px solid var(--borda);border-radius:7px;width:24px;height:24px;color:var(--texto2);font-size:12px;cursor:pointer;">✕</button>
+    </div>`;
+  }).join('');
+  const resto = lista.length > 4 ? `<div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-top:6px;">+${lista.length - 4} outra${lista.length - 4 > 1 ? 's' : ''} por perto</div>` : '';
+  cont.innerHTML = `<div style="background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.35);border-radius:12px;padding:12px;margin-bottom:8px;">
+    <div style="display:flex;align-items:flex-start;gap:10px;">
+      <span style="font-size:20px;flex-shrink:0;">🔭</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--texto);">Prospecção por perto</div>
+        <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${temAgora ? 'Distância calculada agora' : 'Calculando sua distância agora...'} · ${lista.length > 1 ? 'retorno pendente nessas' : 'retorno pendente nessa'} prospecção</div>
+      </div>
+    </div>
+    ${itens}${resto}
+  </div>`;
+}
+
+function _descartarProspeccaoPerto(id) {
+  const pendentes = getData('cv_prospect_perto_pendente') || {};
+  delete pendentes[id];
+  setData('cv_prospect_perto_pendente', pendentes);
+  _renderizarCardProspeccaoPerto();
+}
+
+// Ao abrir o sino, dá mais uma chance de achar prospecção perto AGORA (o GPS é
+// assíncrono — o card se atualiza sozinho quando a resposta chegar, via o patch
+// global acima), e passa a posição atual pro card mostrar a distância em tempo
+// real. Não é rastreio em segundo plano: só roda quando o app já está pegando GPS.
 function _verificarProspeccaoPerto() {
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude, lng = pos.coords.longitude;
-    const RAIO_KM = 15;
-    const candidatos = getClientes()
-      .filter(c => !c.statusArquivo && c.tipo === 'prospect' && c.lat && c.lng)
-      .map(c => ({ c, dist: calcularDistancia(lat, lng, parseFloat(c.lat), parseFloat(c.lng)), diff: getDiffDiasCliente(c) }))
-      .filter(x => x.dist <= RAIO_KM && (x.diff === null || x.diff <= 5))
-      .sort((a, b) => a.dist - b.dist);
-    if (!candidatos.length) return;
-    const cont = document.getElementById('notif-lista');
-    if (!cont || !document.getElementById('modal-notificacoes').classList.contains('aberto')) return; // painel já fechado
-
-    const itens = candidatos.slice(0, 3).map(x => {
-      const distTxt = x.dist < 1 ? Math.round(x.dist * 1000) + 'm' : x.dist.toFixed(1) + 'km';
-      const qd = x.diff === null ? 'sem data de retorno' : x.diff <= 0 ? 'retorno é hoje' : `retorno em ${x.diff}d`;
-      return `<div onclick="event.stopPropagation();fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${x.c.id}','clientes'),200)" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid rgba(167,139,250,.2);cursor:pointer;">
-        <div style="min-width:0;">
-          <div style="font-size:12px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(x.c.nome)}</div>
-          <div style="font-size:10.5px;color:#A78BFA;">${qd}</div>
-        </div>
-        <div style="font-size:11px;color:var(--texto2);flex-shrink:0;">📍 ${distTxt}</div>
-      </div>`;
-    }).join('');
-    const resto = candidatos.length > 3 ? `<div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-top:6px;">+${candidatos.length - 3} outra${candidatos.length - 3 > 1 ? 's' : ''} por perto</div>` : '';
-
-    cont.insertAdjacentHTML('afterbegin', `<div style="background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.35);border-radius:12px;padding:12px;margin-bottom:8px;">
-      <div style="display:flex;align-items:flex-start;gap:10px;">
-        <span style="font-size:20px;flex-shrink:0;">🔭</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:700;color:var(--texto);">Prospecção por perto</div>
-          <div style="font-size:11px;color:var(--texto2);margin-top:2px;">Você está a poucos km de ${candidatos.length > 1 ? 'prospecções com retorno pendente' : 'uma prospecção com retorno pendente'}</div>
-        </div>
-      </div>
-      ${itens}
-      ${resto}
-    </div>`);
-  }, () => { /* sem permissão/GPS indisponível — o painel segue igual, sem esse card */ }, { enableHighAccuracy: false, timeout: 8000 });
+    if (document.getElementById('modal-notificacoes')?.classList.contains('aberto')) _renderizarCardProspeccaoPerto(pos.coords.latitude, pos.coords.longitude);
+  }, () => { /* sem permissão/GPS indisponível — segue só com a menor distância já vista */ }, { enableHighAccuracy: false, timeout: 8000 });
 }
 
 function _abrirGatilhoCliente(clienteId) {

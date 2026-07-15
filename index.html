@@ -3668,6 +3668,8 @@ async function _sbPull() {
       }
       if (JSON.stringify(merged) !== JSON.stringify(remoto)) {
         _sbAgendarPush('clientes'); // a nuvem estava desatualizada → sobe o merge
+      } else {
+        setData('cv_clientes_' + email + '_pushedHash', _hashStr(JSON.stringify(merged))); // nuvem já reflete esse estado
       }
     }
     if (rf.data) {
@@ -3740,6 +3742,12 @@ const _SB_PUSHERS = {
   clientes: async () => {
     const email = usuarioAtual.email;
     const local = getData('cv_clientes_' + email) || [];
+    // Evita o round-trip completo (download + merge + upload do blob inteiro) quando
+    // nada local mudou desde o último push bem-sucedido — acontece em reenvios de
+    // rotina (_sbManterSessao a cada 4min) sem edição real do rep nesse meio-tempo.
+    const hashLocal = _hashStr(JSON.stringify(local));
+    const hashPushado = getData('cv_clientes_' + email + '_pushedHash');
+    if (hashPushado === hashLocal) { setData('cv_clientes_' + email + '_ts', Date.now()); return; }
     // Baixa o que está na nuvem e junta cliente a cliente antes de subir (merge).
     const { data: row, error: e1 } = await _sb.from('clientes').select('dados').eq('user_id', _sbUserId).maybeSingle();
     if (e1) throw e1;
@@ -3750,6 +3758,7 @@ const _SB_PUSHERS = {
     const { error: e2 } = await _sb.from('clientes').upsert({ user_id: _sbUserId, dados: merged, atualizado_em: new Date().toISOString() });
     if (e2) throw e2;
     setData('cv_clientes_' + email + '_ts', Date.now());
+    setData('cv_clientes_' + email + '_pushedHash', _hashStr(JSON.stringify(merged)));
     if (mudouLocal) _sbDepoisDeMerge();
   },
   config: async () => {

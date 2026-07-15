@@ -533,6 +533,20 @@ if ('serviceWorker' in navigator) {
   }
   .texto-pulsa { display:inline-block; font-weight:800; animation:pulsaTexto 1.1s ease-in-out infinite; }
 
+  /* GLOW "AMBILIGHT" — halo roxo pulsante ao redor do chip de localização detectada */
+  @keyframes ambilightGlow {
+    0%,100% { box-shadow:0 0 0 0 rgba(167,139,250,.45), 0 0 0 0 rgba(167,139,250,.22); }
+    50%     { box-shadow:0 0 16px 3px rgba(167,139,250,.55), 0 0 34px 11px rgba(167,139,250,.26); }
+  }
+  .gps-glow { animation:ambilightGlow 1.8s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .gps-glow { animation:none; box-shadow:0 0 14px 3px rgba(167,139,250,.4); } }
+
+  /* Contato de hotel: pisca o botão certo — Telefone se o número for fixo (sem 9), WhatsApp se for celular */
+  @keyframes piscaContatoAzul  { 0%,100% { box-shadow:0 0 0 0 rgba(56,189,248,0); }  50% { box-shadow:0 0 0 5px rgba(56,189,248,.4); } }
+  @keyframes piscaContatoVerde { 0%,100% { box-shadow:0 0 0 0 rgba(34,197,94,0); }   50% { box-shadow:0 0 0 5px rgba(34,197,94,.4); } }
+  .pisca-contato-azul  { animation:piscaContatoAzul 1.3s ease-in-out infinite; }
+  .pisca-contato-verde { animation:piscaContatoVerde 1.3s ease-in-out infinite; }
+
   /* BOTÃO "SEM TELEFONE" (resumo do dia) — pisca 2x para chamar o cadastro */
   @keyframes piscaSemTel {
     0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(255,77,106,0); }
@@ -2021,7 +2035,7 @@ if ('serviceWorker' in navigator) {
         </div>
         <div style="font-size:11px;color:#A78BFA;margin-bottom:8px;font-weight:600;">Ideal quando você está na porta da loja — só para gerar a rota</div>
         <div style="font-size:11px;color:var(--texto2);margin-bottom:8px;line-height:1.5;">Sua localização atual vira o endereço do cliente. Preencha o nome da loja e do comprador — pronto.</div>
-        <div id="nc-gps-chip" onclick="aplicarLocalizacaoNc()" style="display:none;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#A78BFA;cursor:pointer;">
+        <div id="nc-gps-chip" class="gps-glow" onclick="aplicarLocalizacaoNc()" style="display:none;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#A78BFA;cursor:pointer;">
           📍 Localização detectada — <span class="texto-pulsa">toque aqui para usar</span><br><span id="nc-gps-chip-texto" style="color:var(--texto2);font-weight:400;"></span>
         </div>
         <div id="nc-gps-status" style="display:none;font-size:12px;color:var(--texto2);">📡 Detectando sua localização...</div>
@@ -2085,6 +2099,18 @@ if ('serviceWorker' in navigator) {
     <div class="modal-btns">
       <button class="btn-secundario" onclick="fecharModal('modal-novo-cliente')">Cancelar</button>
       <button class="btn-primario" style="flex:2" onclick="salvarNovoCliente()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAÇÃO GENÉRICO (substitui confirm() nativo — evita mostrar o domínio do app) -->
+<div class="modal-overlay" id="modal-confirm-custom" style="z-index:400;align-items:center;">
+  <div class="modal-box" style="max-width:340px;">
+    <div class="modal-titulo" id="confirm-custom-titulo" style="margin-bottom:8px;"></div>
+    <div class="modal-sub" id="confirm-custom-msg" style="white-space:pre-line;margin-bottom:4px;"></div>
+    <div class="modal-btns" style="margin-top:16px;">
+      <button class="btn-secundario" id="confirm-custom-cancelar">Cancelar</button>
+      <button class="btn-primario" style="flex:2" id="confirm-custom-ok">OK</button>
     </div>
   </div>
 </div>
@@ -4585,7 +4611,6 @@ async function buscarHoteisProximos(raio) {
         return { nome, tipo, stars, end, cidade, dist, elLat, elLng, tel };
       }).filter(r => r.dist !== null).sort((a,b) => a.dist - b.dist).slice(0, 20);
 
-      const nomeEsc = r => r.nome.replace(/'/g,"\\'").replace(/"/g,'&quot;');
       listaDiv.innerHTML = resultados.map((r, idx) => {
         const distTxt   = r.dist < 1 ? Math.round(r.dist*1000)+'m' : r.dist.toFixed(1)+'km';
         const starsHtml = r.stars > 0 ? `<span style="color:#FBBF24;font-size:11px;">${'★'.repeat(r.stars)}</span>` : '';
@@ -4593,9 +4618,7 @@ async function buscarHoteisProximos(raio) {
         const navWaze   = `https://waze.com/ul?ll=${r.elLat},${r.elLng}&navigate=yes`;
         const navMaps   = `https://www.google.com/maps/dir/?api=1&destination=${r.elLat},${r.elLng}`;
         // Suporta múltiplos telefones separados por ; ou / — e tira o +55 do OSM
-        const tels = r.tel.split(/[;\/]/).map(_normTelBR).filter(t => t.length >= 8);
-        const temTel = tels.length > 0;
-        const telPrimario = tels[0] || '';
+        r.tels = r.tel.split(/[;\/]/).map(_normTelBR).filter(t => t.length >= 8);
         const btnStyle = `border-radius:8px;padding:8px 6px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-align:center;`;
 
         // Botões de data — orientação passo-a-passo (o app monta a mensagem pro hotel)
@@ -4621,22 +4644,7 @@ async function buscarHoteisProximos(raio) {
             </div>
           </div>`;
 
-        // Botões de contato — aparecem após escolher data
-        const buscaGoogle = `https://www.google.com/search?q=${encodeURIComponent(r.nome+' '+(r.cidade||'')+' telefone')}`;
-        const fixo = telPrimario.length === 10; // fixo (sem o 9) raramente tem WhatsApp
-        const contatoBtns = temTel ? `
-          <div style="font-size:11px;color:var(--verde);font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:6px;">2️⃣ Mensagem pronta! Agora é só enviar:</div>
-          <div style="display:flex;gap:5px;margin-bottom:6px;">
-            <a href="tel:${telPrimario}" style="${btnStyle}flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:#38BDF8;text-decoration:none;display:block;">📞 Ligar</a>
-            <button id="hwpp-${idx}" onclick="abrirWppHotel(${idx},'${telPrimario}','${nomeEsc(r)}')" style="${btnStyle}flex:1.6;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;">💬 Enviar mensagem</button>
-            <button onclick="copiarMsgHotel(${idx},'${nomeEsc(r)}')" title="Copiar mensagem" style="${btnStyle}flex:0 0 44px;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📋</button>
-          </div>
-          ${fixo ? `<div style="font-size:10.5px;color:var(--amarelo);font-family:'DM Sans',sans-serif;margin-bottom:6px;">☎️ Este número parece ser fixo e pode não ter WhatsApp. Se a conversa não abrir, ligue direto — ou copie a mensagem 📋 e mande por onde preferir.</div>` : ''}` : `
-          <div style="display:flex;gap:5px;margin-bottom:6px;">
-            <a href="${buscaGoogle}" target="_blank" style="${btnStyle}flex:1;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);color:#FBBF24;text-decoration:none;display:block;">🔍 Buscar contato</a>
-            <button onclick="copiarMsgHotel(${idx},'${nomeEsc(r)}')" style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📋 Copiar msg</button>
-          </div>
-          <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:6px;">Número não encontrado — busque o contato no Google ou copie a mensagem pronta.</div>`;
+        const { chipsHtml, contatoHtml } = _gerarBlocoContatoHotel(idx, r);
 
         return `<div style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:13px 14px;margin-bottom:10px;">
           <div style="margin-bottom:10px;">
@@ -4645,21 +4653,26 @@ async function buscarHoteisProximos(raio) {
               ${tipoBadge}${starsHtml}
               <span style="font-size:11px;font-weight:700;color:var(--texto2);font-family:'DM Sans',sans-serif;">📍 ${distTxt}</span>
               ${r.cidade ? `<span style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;">${esc(r.cidade)}</span>` : ''}
-              ${temTel ? tels.map(t=>`<a href="tel:${t}" style="font-size:10px;color:var(--verde);background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.2);border-radius:5px;padding:2px 7px;text-decoration:none;white-space:nowrap;">📞 ${t.length===11?`(${t.slice(0,2)}) ${t.slice(2,7)}-${t.slice(7)}`:`(${t.slice(0,2)}) ${t.slice(2,6)}-${t.slice(6)}`}</a>`).join('') : ''}
+              <span id="htelchips-${idx}">${chipsHtml}</span>
             </div>
             ${r.end ? `<div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:3px;">${esc(r.end)}</div>` : ''}
           </div>
           ${dataBtns}
           <div id="hcontato-${idx}" style="display:none;">
-            ${contatoBtns}
+            <div id="hcontato-inner-${idx}">${contatoHtml}</div>
           </div>
           <div style="display:flex;gap:5px;margin-top:2px;">
             <a href="${navWaze}" target="_blank" style="${btnStyle}flex:1;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);color:#38BDF8;text-decoration:none;display:block;">🚗 Waze</a>
-            <a href="${navMaps}" target="_blank" style="${btnStyle}flex:1;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);color:#FBBF24;text-decoration:none;display:block;">🗺️ Maps</a>
+            <a href="${navMaps}" target="_blank" style="${btnStyle}flex:1;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);color:#FBBF24;text-decoration:none;display:block;">🗺️ G.Maps</a>
             <button onclick='salvarHotelDaGps(${JSON.stringify({nome:r.nome,cidade:r.cidade,end:r.end,lat:String(r.elLat),lng:String(r.elLng),stars:r.stars}).replace(/'/g,"\\'")})' style="${btnStyle}flex:1;background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.2);color:var(--verde);">💾 Salvar hotel</button>
           </div>
         </div>`;
       }).join('');
+
+      // Telefone não veio do OSM? Com a chave do Google Places configurada, tenta achar
+      // automaticamente (silencioso — se falhar ou não tiver chave, fica no fallback manual).
+      window._hotelBuscaResultados = resultados;
+      resultados.forEach((r, idx) => { if (!r.tels.length) _buscarTelGooglePlaces(idx); });
 
     } catch(e) {
       loadDiv.style.display = 'none';
@@ -4677,6 +4690,75 @@ function salvarHotelDaGps(dados) {
     endereco: dados.end, lat: dados.lat, lng: dados.lng,
     estrelas: dados.stars || 0
   });
+}
+
+// Gera os dois blocos de contato do card de hotel (chips de telefone no topo +
+// botões de ação) a partir de r.tels — reaproveitado no render inicial e depois
+// de _buscarTelGooglePlaces achar um telefone que o OSM não tinha.
+function _gerarBlocoContatoHotel(idx, r) {
+  const tels = r.tels || [];
+  const temTel = tels.length > 0;
+  const telPrimario = tels[0] || '';
+  const fixo = telPrimario.length === 10; // fixo (sem o 9) raramente tem WhatsApp
+  const nomeEsc = (r.nome || '').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  const btnStyle = `border-radius:8px;padding:8px 6px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-align:center;`;
+  const buscaGoogle = `https://www.google.com/search?q=${encodeURIComponent(r.nome+' '+(r.cidade||'')+' telefone')}`;
+
+  const chipsHtml = temTel ? tels.map(t=>`<a href="tel:${t}" style="font-size:10px;color:var(--verde);background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.2);border-radius:5px;padding:2px 7px;text-decoration:none;white-space:nowrap;">📞 ${t.length===11?`(${t.slice(0,2)}) ${t.slice(2,7)}-${t.slice(7)}`:`(${t.slice(0,2)}) ${t.slice(2,6)}-${t.slice(6)}`}</a>`).join('') : '';
+
+  const contatoHtml = temTel ? `
+    <div style="font-size:11px;color:var(--verde);font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:6px;">2️⃣ Mensagem pronta! Agora é só enviar:</div>
+    <div style="display:flex;gap:5px;margin-bottom:6px;">
+      <a href="tel:${telPrimario}" class="${fixo ? 'pisca-contato-azul' : ''}" style="${btnStyle}flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:#38BDF8;text-decoration:none;display:block;">📞 Ligar</a>
+      <button id="hwpp-${idx}" class="${fixo ? '' : 'pisca-contato-verde'}" onclick="abrirWppHotel(${idx},'${telPrimario}','${nomeEsc}')" style="${btnStyle}flex:1.6;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;">💬 Enviar mensagem</button>
+      <button onclick="copiarMsgHotel(${idx},'${nomeEsc}')" title="Copiar mensagem" style="${btnStyle}flex:0 0 44px;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📋</button>
+    </div>
+    ${fixo ? `<div style="font-size:10.5px;color:var(--amarelo);font-family:'DM Sans',sans-serif;margin-bottom:6px;">☎️ Este número parece ser fixo e pode não ter WhatsApp. Se a conversa não abrir, ligue direto — ou copie a mensagem 📋 e mande por onde preferir.</div>` : ''}` : `
+    <div style="display:flex;gap:5px;margin-bottom:6px;">
+      <a href="${buscaGoogle}" target="_blank" style="${btnStyle}flex:1;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);color:#FBBF24;text-decoration:none;display:block;">🔍 Buscar contato</a>
+      <button onclick="copiarMsgHotel(${idx},'${nomeEsc}')" style="${btnStyle}flex:1;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📋 Copiar msg</button>
+    </div>
+    <div style="font-size:10px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:6px;">Número não encontrado — busque o contato no Google ou copie a mensagem pronta.</div>`;
+
+  return { chipsHtml, contatoHtml };
+}
+
+// Busca telefone via Google Places API (New) quando o OSM não tem o dado.
+// Precisa de GOOGLE_PLACES_API_KEY configurada (Places API (New) habilitada no
+// Google Cloud, chave restrita ao domínio do app). Sem chave, não faz nada — o
+// rep continua com o fallback manual (🔍 Buscar contato / 📋 copiar mensagem).
+async function _buscarTelGooglePlaces(idx) {
+  if (!GOOGLE_PLACES_API_KEY) return;
+  const r = window._hotelBuscaResultados?.[idx];
+  if (!r || (r.tels && r.tels.length)) return;
+  try {
+    const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': 'places.nationalPhoneNumber,places.internationalPhoneNumber'
+      },
+      body: JSON.stringify({
+        textQuery: `${r.nome} ${r.cidade || ''}`.trim(),
+        locationBias: { circle: { center: { latitude: r.elLat, longitude: r.elLng }, radius: 3000 } },
+        maxResultCount: 1
+      })
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const place = (data.places || [])[0];
+    const telRaw = place?.nationalPhoneNumber || place?.internationalPhoneNumber;
+    if (!telRaw) return;
+    const tel = _normTelBR(telRaw);
+    if (tel.length < 8) return;
+    r.tels = [tel];
+    const { chipsHtml, contatoHtml } = _gerarBlocoContatoHotel(idx, r);
+    const chipsEl = document.getElementById('htelchips-'+idx);
+    const contatoEl = document.getElementById('hcontato-inner-'+idx);
+    if (chipsEl) chipsEl.innerHTML = chipsHtml;
+    if (contatoEl) contatoEl.innerHTML = contatoHtml;
+  } catch (e) { /* silencioso — mantém o fallback manual */ }
 }
 
 // ===== CONTATO COM HOTEL (GPS) =====
@@ -5057,6 +5139,12 @@ function salvarConfigData(cfg) { setData('cv_config_' + usuarioAtual.email, cfg)
 // Troque os '#' pelos links de assinatura do gateway (Mercado Pago/Asaas/Stripe).
 const URL_CHECKOUT_PRO = '#';
 const URL_CHECKOUT_RENOVAR = '#';
+// Busca automática de telefone/WhatsApp de hotéis (quando o OpenStreetMap não tem o dado):
+// 1) Google Cloud Console → ative a "Places API (New)" e crie uma chave de API.
+// 2) Restrinja a chave por "HTTP referrers" ao domínio onde o app roda (ex: seu-app.pages.dev/*).
+// 3) Cole a chave abaixo. Vazia = a busca automática fica desligada e o app usa só o
+//    fallback manual (🔍 Buscar contato no Google / 📋 copiar mensagem).
+const GOOGLE_PLACES_API_KEY = '';
 // Dia 5 do manual: depois de publicar a Edge Function "gestor-ia" no Supabase
 // (com o secret GROQ_API_KEY), mude para true — o Gestor IA passa a usar a SUA
 // chave no servidor e o cliente não precisa mais configurar nada.
@@ -9216,8 +9304,8 @@ function renderizarSemanaManual() {
         return `${lacuna}
         <div style="display:flex;align-items:center;gap:7px;padding:7px 0;border-top:1px solid var(--borda);">
           ${chip}
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:12.5px;font-weight:600;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(x.c.nome)}</div>
+          <div style="flex:1;min-width:0;cursor:pointer;" onclick="event.stopPropagation();_abrirClienteDaSemanaManual('${x.c.id}')" title="Ver card do cliente">
+            <div style="font-size:12.5px;font-weight:600;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:underline;text-decoration-color:var(--borda);text-underline-offset:2px;">${esc(x.c.nome)}</div>
             <div style="font-size:10.5px;color:var(--texto3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${x.it.marcas && x.it.marcas.length ? esc(x.it.marcas.join(' + ')) + ' · ' : ''}${_fmtMinRM(x.it.tempo || 30)}${!(x.c.lat && x.c.lng) ? ' · 📍 sem GPS' : ''}</div>
             ${atrasoLinha}
           </div>
@@ -10087,7 +10175,7 @@ function confirmarSugestaoNc(idx) {
     ? `<span style="color:var(--verde);">✅ Endereço validado! Alfinete será criado no mapa.</span>`
     : `<span style="color:var(--verde);">✅ Endereço validado!</span> <span style="color:var(--texto3);">(mapa não tem o nº exato — alfinete fica próximo)</span>`;
   window._lembreteAtivo = true;
-  _mostrarLembreteCampos();
+  _mostrarLembreteCampos(true);
   // Preenche cidade usando o campo address do Nominatim (preciso, não mais extração por posição)
   const cidadeEl = document.getElementById('nc-cidade');
   if (cidadeEl && !cidadeEl.value) {
@@ -10267,7 +10355,7 @@ function _confirmarEndCnpj() {
   }
   toast('✅ Endereço confirmado!');
   window._lembreteAtivo = true;
-  _mostrarLembreteCampos();
+  _mostrarLembreteCampos(true);
 }
 
 function _outroEndCnpj() {
@@ -10629,7 +10717,7 @@ function detectarLocalizacaoNc() {
   }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
-function _mostrarLembreteCampos() {
+function _mostrarLembreteCampos(autoFocar = false) {
   const lembrete = document.getElementById('nc-lembrete-campos');
   if (!lembrete || lembrete.style.display === 'none' && !window._lembreteAtivo) return;
   const nome = document.getElementById('nc-nome')?.value.trim() || '';
@@ -10652,7 +10740,9 @@ function _mostrarLembreteCampos() {
   lembrete.innerHTML = html;
   lembrete.style.display = 'block';
   window._lembreteAtivo = true;
-  if (faltaObrig.length) {
+  // Só puxa o foco automaticamente logo após validar endereço/CNPJ/GPS (autoFocar=true).
+  // Enquanto o rep digita nos campos (oninput), NÃO deve roubar o foco no meio da digitação.
+  if (autoFocar && faltaObrig.length) {
     setTimeout(() => {
       const el = document.getElementById(faltaObrig[0].id);
       if (el) { el.scrollIntoView({ behavior:'smooth', block:'center' }); el.focus(); }
@@ -10694,7 +10784,7 @@ function aplicarLocalizacaoNc() {
   st.innerHTML = `<span style="color:var(--verde);">✅ Localização aplicada.</span>`;
   _piscarCamposVazios();
   window._lembreteAtivo = true;
-  _mostrarLembreteCampos();
+  _mostrarLembreteCampos(true);
 }
 
 function abrirMapaParaNovoCliente() {
@@ -11064,6 +11154,13 @@ function renderizarEsquecidos() {
       <div class="alerta-seta">›</div>
     </div>`;
   }).join('');
+}
+
+// Abre o card do cliente a partir do planejamento semanal (modal), fechando o modal antes
+// para o card não ficar escondido atrás do overlay.
+function _abrirClienteDaSemanaManual(clienteId) {
+  fecharModal('modal-semana-manual');
+  setTimeout(() => abrirDetalhe(clienteId, 'clientes'), 150);
 }
 
 // ===== DETALHE =====
@@ -12394,8 +12491,9 @@ function salvarNovoCliente() {
   toast(msg);
 
   // Convite: cadastrar aniversário do dono/comprador (o app lembra 3d antes, 2d antes e no dia)
-  setTimeout(() => {
-    if (confirm(`🎂 Quer cadastrar o aniversário do dono ou do comprador de ${novoCliente.nome}?\n\nO app te lembra 3 dias antes, 2 dias antes e no dia — com a mensagem de parabéns pronta.`)) {
+  setTimeout(async () => {
+    const ok = await confirmarModal(`🎂 Quer cadastrar o aniversário do dono ou do comprador de ${novoCliente.nome}?\n\nO app te lembra 3 dias antes, 2 dias antes e no dia — com a mensagem de parabéns pronta.`, {textoOk:'Cadastrar', textoCancelar:'Agora não'});
+    if (ok) {
       clienteAtualId = novoCliente.id;
       abrirModalEditarCliente('aniversario');
     }
@@ -16662,6 +16760,28 @@ function popularUnidadesPedido(valorAtual, selId) {
 function fecharModal(id) {
   document.getElementById(id).classList.remove('aberto');
   if (id === 'modal-contato') document.getElementById('modal-pedido').classList.remove('aberto');
+}
+// Substitui o confirm() nativo (que expõe o domínio do app no dialog) por um modal
+// próprio. Uso: if (await confirmarModal('mensagem', {titulo, textoOk, textoCancelar})) { ... }
+function confirmarModal(mensagem, opts = {}) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('modal-confirm-custom');
+    document.getElementById('confirm-custom-titulo').textContent = opts.titulo || '';
+    document.getElementById('confirm-custom-titulo').style.display = opts.titulo ? '' : 'none';
+    document.getElementById('confirm-custom-msg').textContent = mensagem;
+    const btnOk = document.getElementById('confirm-custom-ok');
+    const btnCancelar = document.getElementById('confirm-custom-cancelar');
+    btnOk.textContent = opts.textoOk || 'OK';
+    btnCancelar.textContent = opts.textoCancelar || 'Cancelar';
+    const limpar = (resultado) => {
+      overlay.classList.remove('aberto');
+      btnOk.onclick = null; btnCancelar.onclick = null;
+      resolve(resultado);
+    };
+    btnOk.onclick = () => limpar(true);
+    btnCancelar.onclick = () => limpar(false);
+    overlay.classList.add('aberto');
+  });
 }
 function copiarMensagem() {
   const msg = document.getElementById('det-mensagem').textContent;

@@ -2578,7 +2578,7 @@ if ('serviceWorker' in navigator) {
     <div style="font-size:14px;color:var(--texto2);line-height:1.6;margin-bottom:16px;">Caso queira ajustar marcas, metas ou notificações a qualquer momento, é só abrir ⚙️ Configurações, no canto inferior direito.</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
       <div style="flex:1;height:3px;border-radius:2px;background:var(--borda);overflow:hidden;">
-        <div id="bv-barra" style="width:100%;height:100%;background:var(--texto3);transition:width 5s linear;"></div>
+        <div id="bv-barra" style="width:100%;height:100%;background:var(--texto3);transition:width 10s linear;"></div>
       </div>
     </div>
     <button class="btn-primario" onclick="_fecharBoasVindas()" style="width:100%;">Entendi</button>
@@ -13503,11 +13503,11 @@ function _abrirBoasVindas() {
   barra.style.transition = 'none';
   barra.style.width = '100%';
   requestAnimationFrame(() => {
-    barra.style.transition = 'width 5s linear';
+    barra.style.transition = 'width 10s linear';
     barra.style.width = '0%';
   });
   clearTimeout(_bvTimer);
-  _bvTimer = setTimeout(_fecharBoasVindas, 5000);
+  _bvTimer = setTimeout(_fecharBoasVindas, 10000);
 }
 
 let _bvTimer = null;

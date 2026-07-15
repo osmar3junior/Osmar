@@ -4117,12 +4117,12 @@ const OVERPASS_MIRRORS = [
   'https://overpass.kumi.systems/api/interpreter',
   'https://overpass.openstreetmap.ru/api/interpreter'
 ];
-async function _overpassFetch(query) {
+async function _overpassFetch(query, timeoutMs) {
   let ultimoErro;
   for (const base of OVERPASS_MIRRORS) {
     try {
       const ctrl = new AbortController();
-      const to = setTimeout(() => ctrl.abort(), 15000);
+      const to = setTimeout(() => ctrl.abort(), timeoutMs || 15000);
       const resp = await fetch(base + '?data=' + encodeURIComponent(query), { signal: ctrl.signal });
       clearTimeout(to);
       if (!resp.ok) throw new Error('Overpass ' + resp.status);
@@ -4131,6 +4131,9 @@ async function _overpassFetch(query) {
   }
   throw ultimoErro;
 }
+
+const PARKING_RAIOS = [800, 2000, 5000];
+function _fmtRaio(m) { return m < 1000 ? `${m}m` : `${m/1000}km`; }
 
 async function buscarProximosAoVivo(tipo, raioParam) {
   const proxDiv  = document.getElementById('estrada-proximos');
@@ -4142,7 +4145,7 @@ async function buscarProximosAoVivo(tipo, raioParam) {
   const emojiSpinner = document.getElementById('estrada-loading-emoji');
   const subSpinner   = document.getElementById('estrada-loading-sub');
   if (emojiSpinner) emojiSpinner.textContent = tipo === 'fuel' ? '⛽' : '🅿️';
-  if (subSpinner)   subSpinner.textContent   = raioParam >= 10000 ? `Raio de ${raioParam/1000}km — pode demorar alguns segundos` : `Raio de ${(raioParam||800)/1000 < 1 ? (raioParam||800)+'m' : (raioParam||3000)/1000+'km'}`;
+  if (subSpinner)   subSpinner.textContent   = raioParam >= 10000 ? `Raio de ${raioParam/1000}km — pode demorar alguns segundos` : `Raio de ${_fmtRaio(raioParam || (tipo === 'parking' ? 800 : 3000))}`;
 
   proxDiv.style.display = 'block';
   loadDiv.style.display = 'block';
@@ -4165,13 +4168,17 @@ async function buscarProximosAoVivo(tipo, raioParam) {
     const query = `[out:json][timeout:${timeout}];(node["amenity"="${amenity}"](around:${raio},${lat},${lng});way["amenity"="${amenity}"](around:${raio},${lat},${lng}););out center;`;
 
     try {
-      const data = await _overpassFetch(query);
+      const data = await _overpassFetch(query, (timeout + 10) * 1000);
       const elementos = data.elements || [];
       loadDiv.style.display = 'none';
 
       if (!elementos.length) {
         const _mw = document.getElementById('estrada-mapa-wrap'); if (_mw) _mw.style.display = 'none';
-        listaDiv.innerHTML = `<div style="text-align:center;padding:20px;font-family:'DM Sans',sans-serif;"><div style="font-size:28px;margin-bottom:8px;">${tipo==='fuel'?'⛽':'🅿️'}</div><div style="font-size:13px;color:var(--texto2);">Nenhum ${tipo==='fuel'?'posto':'estacionamento'} encontrado num raio de ${raio/1000}km.</div></div>`;
+        const proximoRaio = tipo === 'parking' ? PARKING_RAIOS.find(r => r > raio) : null;
+        const btnAmpliar = proximoRaio
+          ? `<button onclick="buscarProximosAoVivo('parking',${proximoRaio})" style="margin-top:12px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 16px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔭 Ampliar para ${_fmtRaio(proximoRaio)}</button>`
+          : '';
+        listaDiv.innerHTML = `<div style="text-align:center;padding:20px;font-family:'DM Sans',sans-serif;"><div style="font-size:28px;margin-bottom:8px;">${tipo==='fuel'?'⛽':'🅿️'}</div><div style="font-size:13px;color:var(--texto2);">Nenhum ${tipo==='fuel'?'posto':'estacionamento'} encontrado num raio de ${_fmtRaio(raio)}.</div>${btnAmpliar}</div>`;
         return;
       }
 
@@ -4655,7 +4662,7 @@ async function buscarHoteisProximos(raio) {
     const query = `[out:json][timeout:${timeout}];(${filtro});out center;`;
 
     try {
-      const data = await _overpassFetch(query);
+      const data = await _overpassFetch(query, (timeout + 10) * 1000);
       const elementos = data.elements || [];
       loadDiv.style.display = 'none';
 

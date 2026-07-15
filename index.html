@@ -541,6 +541,10 @@ if ('serviceWorker' in navigator) {
   .gps-glow { animation:ambilightGlow 1.8s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce) { .gps-glow { animation:none; box-shadow:0 0 14px 3px rgba(167,139,250,.4); } }
 
+  /* Nome de cliente sublinhado dentro do texto do Gestor IA — clicável, abre o card do cliente */
+  .link-cliente-ia { text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer; font-weight:700; }
+  .link-cliente-ia:hover { color:var(--verde); }
+
   /* Contato de hotel: pisca o botão certo — Telefone se o número for fixo (sem 9), WhatsApp se for celular */
   @keyframes piscaContatoAzul  { 0%,100% { box-shadow:0 0 0 0 rgba(56,189,248,0); }  50% { box-shadow:0 0 0 5px rgba(56,189,248,.4); } }
   @keyframes piscaContatoVerde { 0%,100% { box-shadow:0 0 0 0 rgba(34,197,94,0); }   50% { box-shadow:0 0 0 5px rgba(34,197,94,.4); } }
@@ -1869,7 +1873,10 @@ if ('serviceWorker' in navigator) {
     <button onclick="_msgSortear()" style="width:100%;background:var(--bg3);border:1px dashed var(--borda);border-radius:11px;padding:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;">🎲 Quero outra versão</button>
     <div style="display:flex;gap:8px;">
       <button onclick="_msgCopiar()" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:11px;padding:13px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📋 Copiar</button>
-      <button onclick="_msgAbrirWpp()" style="flex:2;background:linear-gradient(135deg,#25D366,#1DA851);border:none;border-radius:11px;padding:13px;color:#04110B;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;">💬 Abrir no WhatsApp</button>
+      <button onclick="_msgAbrirWpp()" style="flex:2;background:linear-gradient(135deg,#25D366,#1DA851);border:none;border-radius:11px;padding:13px;color:#04110B;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Abrir no WhatsApp
+      </button>
     </div>
     <div id="msg-sem-tel" style="display:none;font-size:11.5px;color:var(--amarelo);margin-top:8px;text-align:center;">Este cliente não tem WhatsApp cadastrado — a mensagem abre para você escolher o contato.</div>
   </div>
@@ -2106,11 +2113,11 @@ if ('serviceWorker' in navigator) {
 <!-- MODAL CONFIRMAÇÃO GENÉRICO (substitui confirm() nativo — evita mostrar o domínio do app) -->
 <div class="modal-overlay" id="modal-confirm-custom" style="z-index:400;align-items:center;">
   <div class="modal-box" style="max-width:340px;">
-    <div class="modal-titulo" id="confirm-custom-titulo" style="margin-bottom:8px;"></div>
-    <div class="modal-sub" id="confirm-custom-msg" style="white-space:pre-line;margin-bottom:4px;"></div>
+    <div class="modal-titulo" id="confirm-custom-titulo" style="margin-bottom:8px;font-family:'DM Sans',sans-serif;"></div>
+    <div class="modal-sub" id="confirm-custom-msg" style="white-space:pre-line;margin-bottom:4px;font-family:'DM Sans',sans-serif;"></div>
     <div class="modal-btns" style="margin-top:16px;">
-      <button class="btn-secundario" id="confirm-custom-cancelar">Cancelar</button>
-      <button class="btn-primario" style="flex:2" id="confirm-custom-ok">OK</button>
+      <button class="btn-secundario" id="confirm-custom-cancelar" style="font-family:'DM Sans',sans-serif;">Cancelar</button>
+      <button class="btn-primario" style="flex:2;font-family:'DM Sans',sans-serif;" id="confirm-custom-ok">OK</button>
     </div>
   </div>
 </div>
@@ -4669,10 +4676,10 @@ async function buscarHoteisProximos(raio) {
         </div>`;
       }).join('');
 
-      // Telefone não veio do OSM? Com a chave do Google Places configurada, tenta achar
-      // automaticamente (silencioso — se falhar ou não tiver chave, fica no fallback manual).
+      // Telefone não veio do OSM? Tenta achar automaticamente: primeiro no cache
+      // compartilhado (grátis), só cai no Google Places se ninguém nunca achou esse hotel.
       window._hotelBuscaResultados = resultados;
-      resultados.forEach((r, idx) => { if (!r.tels.length) _buscarTelGooglePlaces(idx); });
+      resultados.forEach((r, idx) => { if (!r.tels.length) _buscarTelHotel(idx); });
 
     } catch(e) {
       loadDiv.style.display = 'none';
@@ -4709,7 +4716,7 @@ function _gerarBlocoContatoHotel(idx, r) {
   const contatoHtml = temTel ? `
     <div style="font-size:11px;color:var(--verde);font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:6px;">2️⃣ Mensagem pronta! Agora é só enviar:</div>
     <div style="display:flex;gap:5px;margin-bottom:6px;">
-      <a href="tel:${telPrimario}" class="${fixo ? 'pisca-contato-azul' : ''}" style="${btnStyle}flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:#38BDF8;text-decoration:none;display:block;">📞 Ligar</a>
+      <a href="tel:${telPrimario}" id="htel-${idx}" class="${fixo ? 'pisca-contato-azul' : ''}" style="${btnStyle}flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:#38BDF8;text-decoration:none;display:block;">📞 Ligar</a>
       <button id="hwpp-${idx}" class="${fixo ? '' : 'pisca-contato-verde'}" onclick="abrirWppHotel(${idx},'${telPrimario}','${nomeEsc}')" style="${btnStyle}flex:1.6;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;">💬 Enviar mensagem</button>
       <button onclick="copiarMsgHotel(${idx},'${nomeEsc}')" title="Copiar mensagem" style="${btnStyle}flex:0 0 44px;background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">📋</button>
     </div>
@@ -4723,7 +4730,53 @@ function _gerarBlocoContatoHotel(idx, r) {
   return { chipsHtml, contatoHtml };
 }
 
-// Busca telefone via Google Places API (New) quando o OSM não tem o dado.
+// Normaliza texto pra chave de cache (sem acento, minúsculo, sem pontuação) —
+// "Hotel São José" e "hotel sao jose" batem na mesma linha do cache.
+function _normTexto(s) {
+  return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// Aplica um telefone achado (cache ou Google) no card já renderizado na tela.
+function _aplicarTelHotelNoCard(idx, r) {
+  const { chipsHtml, contatoHtml } = _gerarBlocoContatoHotel(idx, r);
+  const chipsEl = document.getElementById('htelchips-'+idx);
+  const contatoEl = document.getElementById('hcontato-inner-'+idx);
+  if (chipsEl) chipsEl.innerHTML = chipsHtml;
+  if (contatoEl) contatoEl.innerHTML = contatoHtml;
+}
+
+// Orquestra a busca de telefone quando o OSM não tem o dado: primeiro olha o
+// cache compartilhado no Supabase (de graça — outro rep já pode ter achado esse
+// mesmo hotel antes); só cai no Google Places (pago) se ninguém achou ainda.
+async function _buscarTelHotel(idx) {
+  const r = window._hotelBuscaResultados?.[idx];
+  if (!r || (r.tels && r.tels.length)) return;
+  try {
+    const { data } = await _sb.from('hoteis_cache').select('telefone')
+      .eq('nome_norm', _normTexto(r.nome)).eq('cidade_norm', _normTexto(r.cidade)).maybeSingle();
+    if (data?.telefone) {
+      r.tels = [data.telefone];
+      _aplicarTelHotelNoCard(idx, r);
+      return;
+    }
+  } catch (e) { /* cache indisponível (tabela não criada ainda, offline etc.) — segue pro Google */ }
+  await _buscarTelGooglePlaces(idx);
+}
+
+// Salva no cache compartilhado o telefone achado, pra nenhum outro rep (nem você
+// de novo) pagar o Google Places pelo mesmo hotel outra vez. Precisa da tabela
+// hoteis_cache no Supabase — ver instruções perto de GOOGLE_PLACES_API_KEY.
+async function _salvarTelCacheHotel(nome, cidade, telefone) {
+  try {
+    await _sb.from('hoteis_cache').upsert({
+      nome_norm: _normTexto(nome), cidade_norm: _normTexto(cidade),
+      nome, cidade, telefone, fonte: 'google_places'
+    }, { onConflict: 'nome_norm,cidade_norm', ignoreDuplicates: true });
+  } catch (e) { /* silencioso — não trava o fluxo do rep por causa do cache */ }
+}
+
+// Busca telefone via Google Places API (New) quando nem o OSM nem o cache têm o dado.
 // Precisa de GOOGLE_PLACES_API_KEY configurada (Places API (New) habilitada no
 // Google Cloud, chave restrita ao domínio do app). Sem chave, não faz nada — o
 // rep continua com o fallback manual (🔍 Buscar contato / 📋 copiar mensagem).
@@ -4753,11 +4806,8 @@ async function _buscarTelGooglePlaces(idx) {
     const tel = _normTelBR(telRaw);
     if (tel.length < 8) return;
     r.tels = [tel];
-    const { chipsHtml, contatoHtml } = _gerarBlocoContatoHotel(idx, r);
-    const chipsEl = document.getElementById('htelchips-'+idx);
-    const contatoEl = document.getElementById('hcontato-inner-'+idx);
-    if (chipsEl) chipsEl.innerHTML = chipsHtml;
-    if (contatoEl) contatoEl.innerHTML = contatoHtml;
+    _aplicarTelHotelNoCard(idx, r);
+    _salvarTelCacheHotel(r.nome, r.cidade, tel);
   } catch (e) { /* silencioso — mantém o fallback manual */ }
 }
 
@@ -4838,10 +4888,13 @@ function _atualizarContatoHotel(idx) {
   const wrap = document.getElementById('hcontato-'+idx);
   if (!wrap) return;
   wrap.style.display = dataIso ? 'block' : 'none';
-  // Escolheu a entrada → garante os campos de período visíveis e faz o WhatsApp pulsar
+  // Escolheu a entrada → garante os campos de período visíveis e pisca o botão certo:
+  // WhatsApp se o número for celular (começa com 9), Ligar se for fixo.
   if (dataIso) _mostrarPeriodoHotel(idx);
-  const btnW = document.getElementById('hwpp-'+idx);
-  if (btnW && dataIso) { btnW.style.animation = 'none'; void btnW.offsetWidth; btnW.style.animation = 'piscaValidar 1.5s ease-in-out 4'; }
+  const r = window._hotelBuscaResultados?.[idx];
+  const fixo = (r?.tels?.[0] || '').length === 10;
+  const btnAlvo = document.getElementById(fixo ? 'htel-'+idx : 'hwpp-'+idx);
+  if (btnAlvo && dataIso) { btnAlvo.style.animation = 'none'; void btnAlvo.offsetWidth; btnAlvo.style.animation = 'piscaValidar 1.5s ease-in-out 4'; }
 }
 
 function setHotelDataFimGps(idx, val) {
@@ -5144,7 +5197,10 @@ const URL_CHECKOUT_RENOVAR = '#';
 // 2) Restrinja a chave por "HTTP referrers" ao domínio onde o app roda (ex: seu-app.pages.dev/*).
 // 3) Cole a chave abaixo. Vazia = a busca automática fica desligada e o app usa só o
 //    fallback manual (🔍 Buscar contato no Google / 📋 copiar mensagem).
-const GOOGLE_PLACES_API_KEY = '';
+// 4) Rode no SQL Editor do Supabase a tabela "hoteis_cache" (ver comentário em
+//    _buscarTelHotel) ANTES de colar a chave — sem ela o cache falha silenciosamente
+//    e toda busca vira uma chamada paga ao Google, que é exatamente o que o cache evita.
+const GOOGLE_PLACES_API_KEY = 'AIzaSyCmUV-sQ7F7KIgvHT8RNFJ-30dVdNZKtHA';
 // Dia 5 do manual: depois de publicar a Edge Function "gestor-ia" no Supabase
 // (com o secret GROQ_API_KEY), mude para true — o Gestor IA passa a usar a SUA
 // chave no servidor e o cliente não precisa mais configurar nada.
@@ -5719,7 +5775,7 @@ function abrirNotificacoes() {
   const nivers = _calcularAniversarios();
   if (nivers.length) {
     html += `<div style="font-size:10px;font-weight:700;color:#F472B6;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🎂 Aniversários</div>`;
-    nivers.forEach(({ c, a, diff, data }) => {
+    nivers.forEach(({ c, a, diff, data, chave }) => {
       const qd = diff === 0
         ? '<b style="color:#F472B6;">é HOJE 🎉</b>'
         : `em ${diff} dias (${data.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})})`;
@@ -5731,6 +5787,7 @@ function abrirNotificacoes() {
             <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${esc(c.nome)}${c.loja ? ' — ' + esc(c.loja) : ''} · aniversário ${qd}</div>
             <div style="font-size:11px;color:#F472B6;margin-top:2px;font-style:italic;">Um parabéns na hora certa vale mais que desconto</div>
           </div>
+          <button onclick="_marcarParabensAvisado('${c.id}','${esc(chave)}')" title="Já mandei os parabéns — pode tirar" style="flex-shrink:0;align-self:flex-start;background:var(--bg3);border:1px solid var(--borda);border-radius:8px;padding:5px 9px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Parabéns já enviado</button>
         </div>
         <button onclick="_abrirParabens('${c.id}','${esc(a.nome)}')" style="width:100%;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.35);border-radius:9px;padding:9px;color:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Enviar os parabéns no WhatsApp</button>
       </div>`;
@@ -12492,7 +12549,7 @@ function salvarNovoCliente() {
 
   // Convite: cadastrar aniversário do dono/comprador (o app lembra 3d antes, 2d antes e no dia)
   setTimeout(async () => {
-    const ok = await confirmarModal(`🎂 Quer cadastrar o aniversário do dono ou do comprador de ${novoCliente.nome}?\n\nO app te lembra 3 dias antes, 2 dias antes e no dia — com a mensagem de parabéns pronta.`, {textoOk:'Cadastrar', textoCancelar:'Agora não'});
+    const ok = await confirmarModal(`🎂 Deseja cadastrar o aniversário do dono ou do comprador de ${novoCliente.nome}?\n\nO app te lembra 3 dias antes, 2 dias antes e no dia — com a mensagem de parabéns pronta.`, {textoOk:'Cadastrar', textoCancelar:'Agora não'});
     if (ok) {
       clienteAtualId = novoCliente.id;
       abrirModalEditarCliente('aniversario');
@@ -13670,10 +13727,27 @@ function _calcularAniversarios() {
       let prox = new Date(hoje.getFullYear(), Number(p[1]) - 1, Number(p[2]));
       if (prox < hoje) prox = new Date(hoje.getFullYear() + 1, Number(p[1]) - 1, Number(p[2]));
       const diff = Math.round((prox - hoje) / 86400000);
-      if (diff === 3 || diff === 2 || diff === 0) out.push({ c, a, diff, data: prox });
+      if (diff !== 3 && diff !== 2 && diff !== 0) return;
+      const chave = a.nome + '_' + prox.getFullYear();
+      if ((c.parabensAvisados || {})[chave]) return; // rep já tocou "Parabéns já enviado" nesse aniversário
+      out.push({ c, a, diff, data: prox, chave });
     });
   });
   return out.sort((x, y) => x.diff - y.diff);
+}
+
+// "Parabéns já enviado": rep já mandou a mensagem → some a notificação até o
+// aniversário do ano que vem (flag por nome do aniversariante + ano em c.parabensAvisados).
+function _marcarParabensAvisado(clienteId, chave) {
+  const clientes = getClientes();
+  const idx = clientes.findIndex(c => c.id === clienteId);
+  if (idx === -1) return;
+  if (!clientes[idx].parabensAvisados) clientes[idx].parabensAvisados = {};
+  clientes[idx].parabensAvisados[chave] = true;
+  salvarClientes(clientes);
+  toast('✅ Feito! Parabéns marcado como enviado');
+  _atualizarBadgeNotif();
+  abrirNotificacoes();
 }
 
 // Abre a biblioteca de mensagens já com os parabéns prontos NO NOME do aniversariante
@@ -14550,13 +14624,51 @@ Responda APENAS com JSON válido, sem texto antes ou depois:
   }
 }
 
+// Sublinha nomes de clientes reais dentro do texto livre da IA e deixa clicáveis —
+// clicar abre o card principal do cliente (média de compra, máximo já comprado etc.),
+// sem sair da análise. Casa pelo primeiro nome (é assim que a IA se refere ao cliente);
+// se dois clientes ativos tiverem o mesmo primeiro nome, prioriza quem tem a cidade
+// citada logo depois entre parênteses no texto — senão, linka o primeiro que achar.
+function _linkificarClientesIA(texto) {
+  const seguro = esc(texto || '');
+  const ativos = getClientesAtivos().filter(c => c.nome);
+  if (!ativos.length) return seguro;
+  const porPrimeiroNome = {};
+  ativos.forEach(c => {
+    const primeiro = c.nome.trim().split(/\s+/)[0];
+    if (!primeiro) return;
+    (porPrimeiroNome[primeiro.toUpperCase()] ||= []).push(c);
+  });
+  const nomes = Object.keys(porPrimeiroNome).sort((a, b) => b.length - a.length);
+  if (!nomes.length) return seguro;
+  const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('\\b(' + nomes.map(escapeRegex).join('|') + ')\\b', 'gi');
+  return seguro.replace(re, (match, _g, offset) => {
+    const candidatos = porPrimeiroNome[match.toUpperCase()] || [];
+    if (!candidatos.length) return match;
+    let alvo = candidatos[0];
+    if (candidatos.length > 1) {
+      const depois = seguro.slice(offset, offset + match.length + 40).toUpperCase();
+      const comCidade = candidatos.find(c => c.cidade && depois.includes(c.cidade.toUpperCase()));
+      if (comCidade) alvo = comCidade;
+    }
+    return `<span class="link-cliente-ia" onclick="_abrirClienteDoGestorIA('${alvo.id}')" title="Ver card do cliente">${match}</span>`;
+  });
+}
+
+// Fecha o modal do Gestor IA e abre o card do cliente clicado no texto da análise.
+function _abrirClienteDoGestorIA(clienteId) {
+  fecharModal('modal-gerente');
+  setTimeout(() => abrirDetalhe(clienteId, 'clientes'), 150);
+}
+
 function _exibirAnaliseGerente(analise, doCache) {
   document.getElementById('gerente-loading').style.display = 'none';
   document.getElementById('gerente-erro').style.display = 'none';
   document.getElementById('gerente-resultado').style.display = 'block';
-  document.getElementById('gerente-marca-texto').textContent = analise.marca;
-  document.getElementById('gerente-negocio-texto').textContent = analise.negocio;
-  document.getElementById('gerente-acoes-texto').textContent = analise.acoes;
+  document.getElementById('gerente-marca-texto').innerHTML = _linkificarClientesIA(analise.marca);
+  document.getElementById('gerente-negocio-texto').innerHTML = _linkificarClientesIA(analise.negocio);
+  document.getElementById('gerente-acoes-texto').innerHTML = _linkificarClientesIA(analise.acoes);
   const _cfgBloco = document.getElementById('gerente-config-bloco');
   let _cfgTxt = (analise.configuracao || '').trim();
   // Só mostra o bloco de configurações se HÁ pendência real (metas do mês sem

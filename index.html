@@ -3416,6 +3416,7 @@ if ('serviceWorker' in navigator) {
         <div><div style="font-size:11px;color:var(--texto2);margin-bottom:4px;">Diesel</div><input type="text" inputmode="decimal" class="campo-input" id="pos-diesel" placeholder="0,00"></div>
       </div>
       <div style="font-size:10.5px;color:var(--texto3);margin-top:6px;">A data do preço é registrada automaticamente.</div>
+      <div id="pos-preco-cache-aviso" style="display:none;margin-top:6px;font-size:11px;color:var(--amarelo);"></div>
     </div>
     <div class="campo-grupo" style="display:flex;gap:8px;flex-wrap:wrap;">
       <div style="flex:1;min-width:90px;">
@@ -4000,6 +4001,14 @@ function _normTelBR(d) {
   d = (d || '').replace(/\D/g, '');
   if ((d.length === 12 || d.length === 13) && d.startsWith('55')) d = d.slice(2);
   return d;
+}
+
+// Celular no Brasil SEMPRE tem 9 como 1º dígito do número (logo após o DDD de 2
+// dígitos) — é essa regra que decide se tem WhatsApp, não o tamanho da string.
+// Usar só "length === 11" falha quando o número vem malformado do OSM/Places
+// (ex: fixo de 11 dígitos que começa com 3, 4 etc. — aí piscava WhatsApp errado).
+function _telEhCelularBR(tel) {
+  return (tel || '').length >= 3 && tel[2] === '9';
 }
 
 function _distKm(lat1, lng1, lat2, lng2) {
@@ -4706,7 +4715,7 @@ function _gerarBlocoContatoHotel(idx, r) {
   const tels = r.tels || [];
   const temTel = tels.length > 0;
   const telPrimario = tels[0] || '';
-  const fixo = telPrimario.length === 10; // fixo (sem o 9) raramente tem WhatsApp
+  const fixo = temTel && !_telEhCelularBR(telPrimario); // fixo (sem o 9) raramente tem WhatsApp
   const nomeEsc = (r.nome || '').replace(/'/g,"\\'").replace(/"/g,'&quot;');
   const btnStyle = `border-radius:8px;padding:8px 6px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-align:center;`;
   const buscaGoogle = `https://www.google.com/search?q=${encodeURIComponent(r.nome+' '+(r.cidade||'')+' telefone')}`;
@@ -4892,7 +4901,7 @@ function _atualizarContatoHotel(idx) {
   // WhatsApp se o número for celular (começa com 9), Ligar se for fixo.
   if (dataIso) _mostrarPeriodoHotel(idx);
   const r = window._hotelBuscaResultados?.[idx];
-  const fixo = (r?.tels?.[0] || '').length === 10;
+  const fixo = !_telEhCelularBR(r?.tels?.[0] || '');
   const btnAlvo = document.getElementById(fixo ? 'htel-'+idx : 'hwpp-'+idx);
   if (btnAlvo && dataIso) { btnAlvo.style.animation = 'none'; void btnAlvo.offsetWidth; btnAlvo.style.animation = 'piscaValidar 1.5s ease-in-out 4'; }
 }
@@ -4982,7 +4991,51 @@ function abrirCadPosto(p) {
   setSimNao('pos-cartao', p ? (p.aceitaCartao ? 'sim' : 'nao') : 'sim');
   setSimNao('pos-conv', p ? (p.conveniencia ? 'sim' : 'nao') : 'nao');
   document.getElementById('pos-gps-status').style.display = 'none';
+  const avisoCache = document.getElementById('pos-preco-cache-aviso');
+  if (avisoCache) avisoCache.style.display = 'none';
   document.getElementById('modal-cad-posto').classList.add('aberto');
+  // Sem preço próprio ainda pra esse posto? Busca o último preço que outro rep informou.
+  if (!p || (!p.gasolina && !p.etanol && !p.diesel)) _preencherPrecoPostoDoCache();
+}
+
+// Preenche gasolina/etanol/diesel com o último preço que QUALQUER rep informou pra
+// esse posto (nome+cidade), puxado do cache compartilhado no Supabase. Nunca
+// sobrescreve um valor que o rep já tenha digitado, e some sozinho se o modal
+// for fechado antes da resposta chegar.
+async function _preencherPrecoPostoDoCache() {
+  const nome = document.getElementById('pos-nome').value.trim();
+  const cidade = document.getElementById('pos-cidade').value.trim();
+  if (!nome) return;
+  try {
+    const { data } = await _sb.from('postos_preco_cache').select('gasolina,etanol,diesel,atualizado_em')
+      .eq('nome_norm', _normTexto(nome)).eq('cidade_norm', _normTexto(cidade)).maybeSingle();
+    if (!data || !document.getElementById('modal-cad-posto').classList.contains('aberto')) return;
+    const gEl = document.getElementById('pos-gasolina'), eEl = document.getElementById('pos-etanol'), dEl = document.getElementById('pos-diesel');
+    if (gEl && !gEl.value.trim() && data.gasolina) gEl.value = data.gasolina;
+    if (eEl && !eEl.value.trim() && data.etanol) eEl.value = data.etanol;
+    if (dEl && !dEl.value.trim() && data.diesel) dEl.value = data.diesel;
+    const aviso = document.getElementById('pos-preco-cache-aviso');
+    if (aviso && (data.gasolina || data.etanol || data.diesel)) {
+      const dias = data.atualizado_em ? Math.floor((Date.now() - new Date(data.atualizado_em)) / 86400000) : null;
+      aviso.textContent = `💡 Preço informado por outro rep${dias === null ? '' : dias <= 0 ? ' hoje' : ' há ' + dias + 'd'} — confirme ou corrija se mudou.`;
+      aviso.style.display = 'block';
+    }
+  } catch (e) { /* cache indisponível (tabela ainda não criada, offline etc.) — segue sem preencher */ }
+}
+
+// Salva no cache compartilhado o preço que este rep acabou de informar, pra outros
+// reps (e você mesmo, na próxima passagem) verem o último preço desse posto.
+// Aqui o mais recente sempre sobrescreve — preço muda com o tempo, diferente do
+// telefone de hotel (cache que não sobrescreve, ver hoteis_cache).
+async function _salvarPrecoPostoCache(nome, cidade, gasolina, etanol, diesel) {
+  if (!gasolina && !etanol && !diesel) return;
+  try {
+    await _sb.from('postos_preco_cache').upsert({
+      nome_norm: _normTexto(nome), cidade_norm: _normTexto(cidade),
+      nome, cidade, gasolina: gasolina || null, etanol: etanol || null, diesel: diesel || null,
+      atualizado_em: new Date().toISOString()
+    }, { onConflict: 'nome_norm,cidade_norm' });
+  } catch (e) { /* silencioso — não trava o fluxo do rep por causa do cache */ }
 }
 
 function salvarPosto() {
@@ -4997,9 +5050,10 @@ function salvarPosto() {
   const die = document.getElementById('pos-diesel').value.trim();
   const antigo = log.postos.find(x => x.id === id);
   const mudouPreco = !antigo || antigo.gasolina !== gas || antigo.etanol !== eta || antigo.diesel !== die;
+  const cidade = document.getElementById('pos-cidade').value.trim();
   const obj = {
     id, nome,
-    cidade: document.getElementById('pos-cidade').value.trim(),
+    cidade,
     endereco: document.getElementById('pos-endereco').value.trim(),
     lat: lat || undefined, lng: lng || undefined,
     gasolina: gas, etanol: eta, diesel: die,
@@ -5011,6 +5065,7 @@ function salvarPosto() {
   const idx = log.postos.findIndex(x => x.id === id);
   if (idx >= 0) log.postos[idx] = obj; else log.postos.unshift(obj);
   salvarLogistica(log);
+  if (mudouPreco) _salvarPrecoPostoCache(nome, cidade, gas, eta, die);
   fecharModal('modal-cad-posto');
   renderizarEstrada();
   toast('⛽ Posto salvo!');

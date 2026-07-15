@@ -4112,6 +4112,26 @@ function _renderMapaEstrada(tipo, lat, lng, resultados, naEstrada) {
   resumoDe(resultados[0], true);
 }
 
+const OVERPASS_MIRRORS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.openstreetmap.ru/api/interpreter'
+];
+async function _overpassFetch(query) {
+  let ultimoErro;
+  for (const base of OVERPASS_MIRRORS) {
+    try {
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort(), 15000);
+      const resp = await fetch(base + '?data=' + encodeURIComponent(query), { signal: ctrl.signal });
+      clearTimeout(to);
+      if (!resp.ok) throw new Error('Overpass ' + resp.status);
+      return await resp.json();
+    } catch (e) { ultimoErro = e; }
+  }
+  throw ultimoErro;
+}
+
 async function buscarProximosAoVivo(tipo, raioParam) {
   const proxDiv  = document.getElementById('estrada-proximos');
   const loadDiv  = document.getElementById('estrada-proximos-loading');
@@ -4145,9 +4165,7 @@ async function buscarProximosAoVivo(tipo, raioParam) {
     const query = `[out:json][timeout:${timeout}];(node["amenity"="${amenity}"](around:${raio},${lat},${lng});way["amenity"="${amenity}"](around:${raio},${lat},${lng}););out center;`;
 
     try {
-      const resp = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query));
-      if (!resp.ok) throw new Error('Overpass ' + resp.status);
-      const data = await resp.json();
+      const data = await _overpassFetch(query);
       const elementos = data.elements || [];
       loadDiv.style.display = 'none';
 
@@ -4637,9 +4655,7 @@ async function buscarHoteisProximos(raio) {
     const query = `[out:json][timeout:${timeout}];(${filtro});out center;`;
 
     try {
-      const resp = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query));
-      if (!resp.ok) throw new Error('Overpass ' + resp.status);
-      const data = await resp.json();
+      const data = await _overpassFetch(query);
       const elementos = data.elements || [];
       loadDiv.style.display = 'none';
 

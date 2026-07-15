@@ -2362,8 +2362,8 @@ if ('serviceWorker' in navigator) {
 
     <div id="sm-dias"></div>
 
-    <button onclick="ajeitarSemanaRM()" style="width:100%;background:linear-gradient(135deg,var(--roxo),#7C3AED);border:none;border-radius:12px;padding:13px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px;">🪄 Ajeitar minha semana</button>
-    <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin:6px 0 12px;">Redistribui o que não couber para o dia seguinte</div>
+    <button onclick="otimizarSemanaRM()" style="width:100%;background:linear-gradient(135deg,var(--roxo),#7C3AED);border:none;border-radius:12px;padding:13px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px;">🧠 Otimizar minha semana</button>
+    <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin:6px 0 12px;">Redistribui pela semana toda por potencial de compra e cidade — não só empurra pra frente</div>
 
     <button onclick="dispararRotaManualWpp()" style="width:100%;background:#25D366;border:none;border-radius:12px;padding:13px;color:#04231A;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="#04231A"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
@@ -3967,12 +3967,12 @@ function renderizarArquivo() {
     </div>`).join('');
 }
 
-function reativarCliente(id) {
+async function reativarCliente(id) {
   const clientes = getClientes();
   const idx = clientes.findIndex(c => c.id === id);
   if (idx === -1) return;
   const nome = clientes[idx].nome;
-  if (!confirm(`Reativar ${nome}?\n\nO cliente volta para a base ativa com todo o histórico preservado.`)) return;
+  if (!(await confirmarModal(`Reativar ${nome}?\n\nO cliente volta para a base ativa com todo o histórico preservado.`, {textoOk:'Reativar'}))) return;
   delete clientes[idx].statusArquivo;
   delete clientes[idx].arquivadoEm;
   salvarClientes(clientes);
@@ -5151,12 +5151,12 @@ function editarLog(tipo, id) {
   else { const p = log.postos.find(x => x.id === id); if (p) abrirCadPosto(p); }
 }
 
-function excluirLog(tipo, id) {
+async function excluirLog(tipo, id) {
   const log = getLogistica();
   const arr = tipo === 'hot' ? log.hoteis : log.postos;
   const item = arr.find(x => x.id === id);
   if (!item) return;
-  if (!confirm(`Excluir "${item.nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
+  if (!(await confirmarModal(`Excluir "${item.nome}"?\n\nEssa ação não pode ser desfeita.`, {textoOk:'Excluir'}))) return;
   if (tipo === 'hot') log.hoteis = log.hoteis.filter(x => x.id !== id);
   else log.postos = log.postos.filter(x => x.id !== id);
   salvarLogistica(log);
@@ -5556,8 +5556,8 @@ async function fazerCadastro() {
   setTimeout(_licencaCarregar, 2500); // novo rep: inicia o teste grátis (TRIAL_DIAS)
   setTimeout(_checarOnboarding, 600); // novo rep: mostra o assistente de boas-vindas
 }
-function sair() {
-  if (!confirm('Deseja mesmo sair?\n\nSeus dados continuam salvos, mas você vai precisar entrar com email e senha de novo.')) return;
+async function sair() {
+  if (!(await confirmarModal('Deseja mesmo sair?\n\nSeus dados continuam salvos, mas você vai precisar entrar com email e senha de novo.', {textoOk:'Sair'}))) return;
   usuarioAtual = null;
   _sbUserId = null;
   _licenca = null;
@@ -8427,9 +8427,9 @@ function ncDescartarProspecto() {
   toast('Prospecção descartada.');
 }
 
-function excluirProspecto() {
+async function excluirProspecto() {
   if (!clienteAtualId) return;
-  if (!confirm('Excluir este prospecto do app? Esta ação não pode ser desfeita.')) return;
+  if (!(await confirmarModal('Excluir este prospecto do app? Esta ação não pode ser desfeita.', {textoOk:'Excluir'}))) return;
   const clientes = getClientes();
   const novos = clientes.filter(c => c.id !== clienteAtualId);
   salvarClientes(novos);
@@ -9454,22 +9454,22 @@ function _smToggleDia(d) {
 }
 
 // ---- Apagar rota (semana inteira ou um dia) ----
-function apagarSemanaRM() {
+async function apagarSemanaRM() {
   const rm = getRotaManual();
   const total = RM_DIAS.reduce((s, d) => s + rm.dias[d].length, 0);
   if (!total) { toast('A semana já está vazia'); return; }
-  if (!confirm(`Apagar a rota da semana inteira? (${total} cliente${total > 1 ? 's' : ''})`)) return;
+  if (!(await confirmarModal(`Apagar a rota da semana inteira? (${total} cliente${total > 1 ? 's' : ''})`, {textoOk:'Apagar'}))) return;
   RM_DIAS.forEach(d => rm.dias[d] = []);
   salvarRotaManual(rm);
   _smAbertos.clear();
   renderizarSemanaManual();
   toast('🗑️ Semana apagada — começar do zero');
 }
-function apagarDiaRM(dia) {
+async function apagarDiaRM(dia) {
   const rm = getRotaManual();
   const n = rm.dias[dia].length;
   if (!n) return;
-  if (!confirm(`Apagar a ${RM_NOMES[dia].toLowerCase()}? (${n} cliente${n > 1 ? 's' : ''})`)) return;
+  if (!(await confirmarModal(`Apagar a ${RM_NOMES[dia].toLowerCase()}? (${n} cliente${n > 1 ? 's' : ''})`, {textoOk:'Apagar'}))) return;
   rm.dias[dia] = [];
   salvarRotaManual(rm);
   renderizarSemanaManual();
@@ -9490,7 +9490,7 @@ function abrirHoraRM(id) {
   document.getElementById('hora-rm-remover').style.display = entrada.item.hora ? 'block' : 'none';
   document.getElementById('modal-hora-rm').classList.add('aberto');
 }
-function confirmarHoraRM() {
+async function confirmarHoraRM() {
   const hora = document.getElementById('hora-rm-input').value;
   if (!hora) { toast('Escolha um horário primeiro'); return; }
   const entrada = _rmEntradaDo(_horaRmAlvo);
@@ -9503,7 +9503,7 @@ function confirmarHoraRM() {
   const calc = _calcDiaRM(entrada.dia, rm);
   const meuAtraso = calc.items.find(x => x.it.id === _horaRmAlvo);
   if (calc.conflitos > 0) {
-    const ok = confirm(`⚠️ Com esse horário, ${calc.conflitos > 1 ? 'alguns horários fixos atrasam' : 'um horário fixo atrasa'}${meuAtraso && meuAtraso.atraso > 0 ? ` (você só chega ~${_minParaHHMM(meuAtraso.inicio)})` : ''}.\n\nFixar mesmo assim? Você decide.`);
+    const ok = await confirmarModal(`⚠️ Com esse horário, ${calc.conflitos > 1 ? 'alguns horários fixos atrasam' : 'um horário fixo atrasa'}${meuAtraso && meuAtraso.atraso > 0 ? ` (você só chega ~${_minParaHHMM(meuAtraso.inicio)})` : ''}.\n\nFixar mesmo assim? Você decide.`, {textoOk:'Fixar assim mesmo'});
     if (!ok) { item.hora = horaAnterior; return; }
   }
   salvarRotaManual(rm);
@@ -9568,30 +9568,33 @@ function removerClienteRMSemana(id) {
   renderizarSemanaManual();
 }
 
+// Reordena {it,c}[] pelo vizinho mais próximo (nearest neighbor) — parte do primeiro
+// com GPS e sempre pula pro mais perto ainda não visitado; sem-GPS vai pro final.
+function _ordenarPorLogistica(cs) {
+  const comGps = cs.filter(x => x.c.lat && x.c.lng);
+  const semGps = cs.filter(x => !(x.c.lat && x.c.lng));
+  if (comGps.length > 1) {
+    const ordered = [comGps[0]];
+    const rest = comGps.slice(1);
+    let lat = +comGps[0].c.lat, lng = +comGps[0].c.lng;
+    while (rest.length) {
+      let bi = 0, bd = Infinity;
+      rest.forEach((x, i) => { const dd = calcularDistancia(lat, lng, +x.c.lat, +x.c.lng); if (dd < bd) { bd = dd; bi = i; } });
+      const p = rest.splice(bi, 1)[0];
+      ordered.push(p); lat = +p.c.lat; lng = +p.c.lng;
+    }
+    return [...ordered, ...semGps];
+  }
+  return [...comGps, ...semGps];
+}
+
 function ordenarSemanaRM(modo) {
   const rm = getRotaManual();
   const map = {}; getClientes().forEach(c => map[c.id] = c);
   RM_DIAS.forEach(d => {
     if (rm.dias[d].length < 2) return;
-    const cs = rm.dias[d].map(it => ({ it, c: map[it.id] })).filter(x => x.c);
-    if (modo === 'potencial') {
-      cs.sort((a, b) => notaClienteRM(b.c) - notaClienteRM(a.c));
-    } else {
-      const comGps = cs.filter(x => x.c.lat && x.c.lng);
-      const semGps = cs.filter(x => !(x.c.lat && x.c.lng));
-      if (comGps.length > 1) {
-        const ordered = [comGps[0]];
-        const rest = comGps.slice(1);
-        let lat = +comGps[0].c.lat, lng = +comGps[0].c.lng;
-        while (rest.length) {
-          let bi = 0, bd = Infinity;
-          rest.forEach((x, i) => { const dd = calcularDistancia(lat, lng, +x.c.lat, +x.c.lng); if (dd < bd) { bd = dd; bi = i; } });
-          const p = rest.splice(bi, 1)[0];
-          ordered.push(p); lat = +p.c.lat; lng = +p.c.lng;
-        }
-        cs.length = 0; cs.push(...ordered, ...semGps);
-      }
-    }
+    let cs = rm.dias[d].map(it => ({ it, c: map[it.id] })).filter(x => x.c);
+    cs = modo === 'potencial' ? cs.sort((a, b) => notaClienteRM(b.c) - notaClienteRM(a.c)) : _ordenarPorLogistica(cs);
     rm.dias[d] = cs.map(x => x.it);
   });
   salvarRotaManual(rm);
@@ -9599,34 +9602,84 @@ function ordenarSemanaRM(modo) {
   toast(modo === 'potencial' ? '🏆 Dias ordenados por potencial' : '🛣️ Dias ordenados por logística');
 }
 
-function ajeitarSemanaRM() {
-  const rm = getRotaManual(), cfg = getConfig();
+// Otimiza a semana inteira do zero (não é cascata): junta todos os clientes
+// FLUTUANTES (sem 🔒) da semana num pool só, agrupa por cidade e redistribui
+// pelo dia com mais espaço livre — podendo tirar cliente de um dia cheio e
+// jogar num dia vazio mais cedo na semana, não só empurrar pra frente. Prioriza
+// clientes com nota mais alta (mais no ponto de comprar); quem não couber em
+// nenhum dia mesmo assim é tirado da rota (não da carteira) e listado pro rep.
+function otimizarSemanaRM() {
+  const rmOriginal = getRotaManual(), cfg = getConfig();
   const map = {}; getClientes().forEach(c => map[c.id] = c);
   const diasUteis = cfg.sabAtivo ? RM_DIAS : RM_DIAS.slice(0, 5);
-  let movidos = 0;
-  for (let i = 0; i < diasUteis.length - 1; i++) {
-    const d = diasUteis[i];
-    let calc = _calcDiaRM(d, rm);
-    let guarda = 30; // trava de segurança
-    while ((calc.estoura || calc.conflitos > 0) && guarda-- > 0) {
-      // move o FLUTUANTE de menor nota para o dia seguinte (🔒 é compromisso, não se move)
-      let wi = -1, wn = Infinity;
-      rm.dias[d].forEach((it, idx) => {
-        if (it.hora) return; // horário fixo fica onde está
-        const c = map[it.id];
-        const n = c ? notaClienteRM(c) : 0;
-        if (n < wn) { wn = n; wi = idx; }
+
+  // Recalcula a base de normalização da nota (mesmo cálculo usado no resto do app)
+  _rmMaxPot = 0;
+  getClientesAtivos().forEach(c => {
+    const potC = calcularPotencialCliente(c);
+    Object.values(potC).forEach(pv => { _rmMaxPot = Math.max(_rmMaxPot, pv.max || pv.avg || 0); });
+  });
+
+  const rmNovo = JSON.parse(JSON.stringify(rmOriginal));
+  const pool = [];
+  RM_DIAS.forEach(d => {
+    rmNovo.dias[d] = rmNovo.dias[d].filter(it => {
+      if (it.hora) return true; // 🔒 é compromisso do rep — nunca se move
+      const c = map[it.id];
+      if (c) pool.push({ it, c });
+      return false; // some do dia — volta pro pool pra ser redistribuído
+    });
+  });
+
+  if (!pool.length) { toast('👌 Sua semana só tem horários fixos — nada pra otimizar'); return; }
+
+  // Agrupa por cidade (menos estrada = mais visita); grupo com o cliente mais
+  // quente entra primeiro na fila, puxando os vizinhos da mesma cidade junto
+  const grupos = {};
+  pool.forEach(p => (grupos[(p.c.cidade || '—').trim().toUpperCase()] ||= []).push(p));
+  const gruposOrdenados = Object.values(grupos)
+    .map(g => { g.sort((a, b) => notaClienteRM(b.c) - notaClienteRM(a.c)); return { itens: g, nota: notaClienteRM(g[0].c) }; })
+    .sort((a, b) => b.nota - a.nota);
+
+  const foraDaSemana = [];
+  gruposOrdenados.forEach(grupo => {
+    grupo.itens.forEach(({ it, c }) => {
+      const cidadeC = (c.cidade || '').trim().toUpperCase();
+      let melhorDia = null, melhorPontos = -Infinity;
+      diasUteis.forEach(d => {
+        const teste = JSON.parse(JSON.stringify(rmNovo));
+        teste.dias[d].push({ id: it.id, marcas: it.marcas, tempo: it.tempo });
+        const calc = _calcDiaRM(d, teste);
+        if (calc.estoura) return; // não cabe nesse dia, nem tenta
+        const folga = calc.fim - calc.termina;
+        const jaTemCidade = rmNovo.dias[d].some(x => (map[x.id]?.cidade || '').trim().toUpperCase() === cidadeC);
+        const pontos = folga + (jaTemCidade ? 180 : 0); // preferência forte, não absoluta, por continuidade geográfica
+        if (pontos > melhorPontos) { melhorPontos = pontos; melhorDia = d; }
       });
-      if (wi === -1) break; // só sobraram horários fixos — nada a mover
-      const mv = rm.dias[d].splice(wi, 1)[0];
-      rm.dias[diasUteis[i + 1]].unshift(mv);
-      movidos++;
-      calc = _calcDiaRM(d, rm);
-    }
-  }
-  salvarRotaManual(rm);
+      if (melhorDia) rmNovo.dias[melhorDia].push({ id: it.id, marcas: it.marcas, tempo: it.tempo });
+      else foraDaSemana.push(c);
+    });
+  });
+
+  // Dentro de cada dia mexido, encadeia a visita pelo trajeto mais curto (mesma lógica de "Por logística")
+  diasUteis.forEach(d => {
+    if (rmNovo.dias[d].length < 2) return;
+    const cs = rmNovo.dias[d].map(it => ({ it, c: map[it.id] })).filter(x => x.c);
+    const ancoras = cs.filter(x => x.it.hora), soltos = cs.filter(x => !x.it.hora);
+    rmNovo.dias[d] = [..._ordenarPorLogistica(soltos), ...ancoras].map(x => x.it);
+  });
+
+  salvarRotaManual(rmNovo);
+  _smAbertos = new Set(diasUteis.filter(d => rmNovo.dias[d].length));
   renderizarSemanaManual();
-  toast(movidos ? `🪄 Movi ${movidos} cliente${movidos > 1 ? 's' : ''} para caber na jornada` : '👌 Sua semana já cabe nos dias');
+
+  if (foraDaSemana.length) {
+    const nomes = foraDaSemana.map(c => `• ${c.nome}${c.cidade ? ' — ' + c.cidade : ''}`).join('\n');
+    confirmarModal(`Distribuí do melhor jeito possível, mas a semana não tem espaço pra todo mundo. Estes ${foraDaSemana.length} cliente${foraDaSemana.length > 1 ? 's são os de' : ' é o de'} menor prioridade agora e saíram da rota desta semana (continuam normalmente na sua carteira):\n\n${nomes}`,
+      { titulo: '🧠 Não coube na semana', textoOk: 'Entendi', somenteOk: true });
+  } else {
+    toast('🧠 Semana otimizada! Priorizei quem está mais no ponto de comprar e agrupei por cidade.');
+  }
 }
 
 function dispararRotaManualWpp() {
@@ -10704,7 +10757,7 @@ function _gpsNaLoja() {
         if (cEl) cEl.value = cidade.toUpperCase();
         if (uf) enderecoValidado.uf = uf;
       } else if (cidadeAtual.toUpperCase() !== cidade.toUpperCase()) {
-        if (confirm(`📍 O GPS indica ${cidade}${uf ? '/' + uf : ''}, mas este cliente está como ${cidadeAtual}. Atualizar para a localização atual?`)) {
+        if (await confirmarModal(`📍 O GPS indica ${cidade}${uf ? '/' + uf : ''}, mas este cliente está como ${cidadeAtual}. Atualizar para a localização atual?`, {textoOk:'Atualizar'})) {
           if (cEl) cEl.value = cidade.toUpperCase();
           if (uf) enderecoValidado.uf = uf;
         }
@@ -10755,7 +10808,7 @@ function adicionarEnderecoCliente() {
           clientes[idx].cidade = cidade.toUpperCase();
           if (uf) clientes[idx].uf = uf;
         } else if (cidadeAtual.toUpperCase() !== cidade.toUpperCase()) {
-          if (confirm(`📍 O GPS indica ${cidade}${uf ? '/' + uf : ''}, mas este cliente está como ${cidadeAtual}. Atualizar para a localização atual?`)) {
+          if (await confirmarModal(`📍 O GPS indica ${cidade}${uf ? '/' + uf : ''}, mas este cliente está como ${cidadeAtual}. Atualizar para a localização atual?`, {textoOk:'Atualizar'})) {
             clientes[idx].cidade = cidade.toUpperCase();
             if (uf) clientes[idx].uf = uf;
           }
@@ -11635,7 +11688,7 @@ function _atualizarPotBoxDetalhe(cliente) {
   potBox.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">${headerLabel}<span style="font-size:10px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.5px;">Histórico de compra</span></div>${linhas.join('')}`;
 }
 
-function excluirHistorico(idx) {
+async function excluirHistorico(idx) {
   const clientes = getClientes();
   const i = clientes.findIndex(c => c.id === clienteAtualId);
   if (i === -1) return;
@@ -11646,7 +11699,7 @@ function excluirHistorico(idx) {
   const regFoiPresencial = !(reg.pedidos && reg.pedidos.length && reg.pedidos.every(p => p.canal === 'wpp'));
   const tipoTxt = reg.tipo === 'visita' ? (regFoiPresencial ? 'Visita presencial' : 'Contato com cliente') : 'Contato WhatsApp';
   const motivoTxt = MOTIVOS_BASE[reg.motivo]?.label || reg.motivo;
-  if (!confirm(`Excluir este registro do histórico?\n\n${tipoTxt} · ${motivoTxt}\n${formatarData(reg.data)}\n\nEssa ação não pode ser desfeita.`)) return;
+  if (!(await confirmarModal(`Excluir este registro do histórico?\n\n${tipoTxt} · ${motivoTxt}\n${formatarData(reg.data)}\n\nEssa ação não pode ser desfeita.`, {textoOk:'Excluir'}))) return;
 
   hist.splice(idx, 1);
   clientes[i].historico = hist;
@@ -12463,8 +12516,8 @@ function salvarEdicaoCliente() {
   toast(msg);
 }
 
-function confirmarExcluirCliente() {
-  if (!confirm('Excluir este cliente e todo o histórico? Essa ação não pode ser desfeita.')) return;
+async function confirmarExcluirCliente() {
+  if (!(await confirmarModal('Excluir este cliente e todo o histórico? Essa ação não pode ser desfeita.', {textoOk:'Excluir'}))) return;
   // Tombstone: marca como excluído (não remove) para a exclusão propagar entre aparelhos.
   const raw = getClientesRaw();
   const cl = raw.find(c => c.id === clienteAtualId);
@@ -13196,8 +13249,8 @@ function onbProximo() {
   if (_onbPasso < 5) { _onbIrPasso(_onbPasso + 1); return; }
   _onbFinalizar(false);
 }
-function onbPular() {
-  if (!confirm('Pular a configuração inicial?\n\nVocê pode cadastrar tudo depois em ⚙️ Configurações.')) return;
+async function onbPular() {
+  if (!(await confirmarModal('Pular a configuração inicial?\n\nVocê pode cadastrar tudo depois em ⚙️ Configurações.', {textoOk:'Pular'}))) return;
   _onbFinalizar(true);
 }
 
@@ -16940,6 +16993,8 @@ function confirmarModal(mensagem, opts = {}) {
     const btnCancelar = document.getElementById('confirm-custom-cancelar');
     btnOk.textContent = opts.textoOk || 'OK';
     btnCancelar.textContent = opts.textoCancelar || 'Cancelar';
+    btnCancelar.style.display = opts.somenteOk ? 'none' : '';
+    btnOk.style.flex = opts.somenteOk ? '1' : '2';
     const limpar = (resultado) => {
       overlay.classList.remove('aberto');
       btnOk.onclick = null; btnCancelar.onclick = null;
@@ -18128,8 +18183,8 @@ function salvarNovaDespesa() {
   renderizarDespesas();
 }
 
-function excluirDespesa(id) {
-  if (!confirm('Excluir esta despesa?')) return;
+async function excluirDespesa(id) {
+  if (!(await confirmarModal('Excluir esta despesa?', {textoOk:'Excluir'}))) return;
   salvarDespesasData(getDespesas().filter(d=>d.id!==id));
   renderizarDespesas();
 }

@@ -2570,6 +2570,21 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- MODAL BOAS-VINDAS PÓS-ONBOARDING -->
+<div class="modal-overlay" id="modal-boas-vindas" style="align-items:flex-end;">
+  <div class="modal-box" style="position:relative;padding-bottom:20px;">
+    <button onclick="_fecharBoasVindas()" style="position:absolute;top:12px;right:12px;background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    <div class="modal-titulo" style="margin-bottom:8px;">Bem-vindo ao Carteira Viva</div>
+    <div style="font-size:14px;color:var(--texto2);line-height:1.6;margin-bottom:16px;">Caso queira ajustar marcas, metas ou notificações a qualquer momento, é só abrir ⚙️ Configurações, no canto inferior direito.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <div style="flex:1;height:3px;border-radius:2px;background:var(--borda);overflow:hidden;">
+        <div id="bv-barra" style="width:100%;height:100%;background:var(--texto3);transition:width 5s linear;"></div>
+      </div>
+    </div>
+    <button class="btn-primario" onclick="_fecharBoasVindas()" style="width:100%;">Entendi</button>
+  </div>
+</div>
+
 <!-- MODAL SELETOR ROTA WHATSAPP -->
 <div class="modal-overlay" id="modal-rota-wpp">
   <div class="modal-box" style="padding-bottom:20px;">
@@ -13476,8 +13491,29 @@ function _onbFinalizar(pulou) {
   cfg.onboardingFeito = true;
   salvarConfigData(cfg);
   document.getElementById('onboarding').style.display = 'none';
+  irPara('dashboard');
   atualizarDashboard();
-  toast(pulou ? 'Tudo certo — configure quando quiser em ⚙️ Configurações.' : '🎉 Tudo pronto! Bem-vindo ao Carteira Viva.');
+  _abrirBoasVindas();
+}
+
+function _abrirBoasVindas() {
+  const modal = document.getElementById('modal-boas-vindas');
+  modal.classList.add('aberto');
+  const barra = document.getElementById('bv-barra');
+  barra.style.transition = 'none';
+  barra.style.width = '100%';
+  requestAnimationFrame(() => {
+    barra.style.transition = 'width 5s linear';
+    barra.style.width = '0%';
+  });
+  clearTimeout(_bvTimer);
+  _bvTimer = setTimeout(_fecharBoasVindas, 5000);
+}
+
+let _bvTimer = null;
+function _fecharBoasVindas() {
+  clearTimeout(_bvTimer);
+  document.getElementById('modal-boas-vindas').classList.remove('aberto');
 }
 
 // Toggle nas Configurações (para você reabrir o onboarding e testar).

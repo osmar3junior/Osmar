@@ -549,6 +549,14 @@ if ('serviceWorker' in navigator) {
   .farol-pct.verde { color:var(--verde); }
   .farol-pct.amarelo { color:var(--amarelo); }
   .farol-pct.vermelho { color:#FF4D6A; }
+
+  /* Mini-carrossel de hotéis salvos, ordenado por proximidade — acha o hotel
+     certo num toque mesmo com a lista cheia recolhida por baixo dele. */
+  .hotel-mini-chip { flex-shrink:0; scroll-snap-align:start; background:var(--bg3); border:1px solid var(--borda); border-radius:11px; padding:8px 12px; cursor:pointer; min-width:126px; max-width:190px; text-align:left; font-family:'DM Sans',sans-serif; }
+  .hotel-mini-chip:active { border-color:var(--roxo); }
+  .hotel-mini-cidade { font-size:9.5px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--texto3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hotel-mini-nome { font-size:12.5px; font-weight:700; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+  .hotel-mini-km { font-size:10px; color:var(--texto3); margin-top:2px; font-variant-numeric:tabular-nums; }
   @keyframes amberGlow {
     0%,100% { text-shadow:0 0 0px rgba(255,192,67,0); color:#FFC043; }
     50%      { text-shadow:0 0 14px rgba(255,192,67,.9), 0 0 28px rgba(255,192,67,.4); color:#FFD97A; }
@@ -1001,9 +1009,14 @@ if ('serviceWorker' in navigator) {
         <div class="resumo-numero" id="num-essa-semana">0</div>
         <div class="resumo-link">Ver lista →</div>
       </div>
-      <div class="resumo-card roxo" onclick="abrirRelatorios()">
-        <div class="resumo-topo"><span class="resumo-card-icone">📊</span><span class="resumo-label">Meta &amp; Real</span></div>
-        <div class="resumo-link" style="margin-top:2px;">Abrir →</div>
+      <!-- "Meta & Real" perdeu função aqui quando o farol de marcas (logo abaixo
+           do grid) passou a mostrar isso melhor, marca por marca. "Minhas
+           Análises" continua a um toque: pelo farol (aba Metas) ou pelo card
+           Radar (aba Radar) — só o atalho genérico saiu. -->
+      <div class="resumo-card roxo" onclick="abrirProspectos()">
+        <div class="resumo-topo"><span class="resumo-card-icone">🔭</span><span class="resumo-label">Em Prospecção</span></div>
+        <div class="resumo-numero" id="num-prospectos-dash">0</div>
+        <div class="resumo-link">Ver todos →</div>
       </div>
       <div class="resumo-card azul" onclick="abrirRelatorios();setTimeout(()=>trocarAbaRelatorio('acoes'),150)">
         <div class="resumo-topo"><span class="resumo-card-icone">📡</span><span class="resumo-label">Radar de Clientes</span></div>
@@ -2419,8 +2432,8 @@ if ('serviceWorker' in navigator) {
 
 <!-- MODAL ROTA MANUAL DA SEMANA — passo 1: escolher clientes -->
 <div class="modal-overlay" id="modal-rota-manual">
-  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:12px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-top:0;padding-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding-top:24px;">
       <div class="modal-titulo" style="margin-bottom:0;font-family:'DM Sans',sans-serif;">🗓️ Planejamento semanal de visita</div>
       <button onclick="fecharModal('modal-rota-manual')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
     </div>
@@ -2428,8 +2441,14 @@ if ('serviceWorker' in navigator) {
 
     <!-- Fixo ao rolar a lista (pode ter dezenas de clientes) — só os controles que
          se usa o tempo todo: trocar dia, buscar, filtrar cidade. Título/instrução
-         acima rolam pra fora, pra sobrar mais tela pra lista. -->
-    <div style="position:sticky;top:0;background:var(--bg2);z-index:2;padding-top:2px;margin-top:-2px;border-bottom:1px solid var(--borda);">
+         acima rolam pra fora, pra sobrar mais tela pra lista.
+         .modal-box não tem padding-top próprio (ver acima) — é o que deixa este
+         bloco realmente rente ao topo do scroll. Antes ele tentava cancelar esse
+         padding com margin-top:-2px, 22px insuficiente pra cancelar os 24px reais,
+         e sobrava uma fresta por onde os clientes rolando apareciam por trás.
+         translateZ(0) evita o mesmo vazamento que o iOS/WebKit causa em
+         sticky+overflow+conteúdo rolando (visto e corrigido em "Minhas Análises"). -->
+    <div style="position:sticky;top:0;background:var(--bg2);z-index:2;padding-top:14px;border-bottom:1px solid var(--borda);-webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform;">
       <div id="rm-dias-chips" style="display:flex;gap:4px;margin-bottom:4px;"></div>
       <div style="font-size:10.5px;color:var(--texto3);text-align:center;margin-bottom:10px;">Tocar no cliente adiciona no dia marcado</div>
 
@@ -2980,6 +2999,10 @@ if ('serviceWorker' in navigator) {
     <!-- Fica ABAIXO das abas de propósito: "Criciúma · 2" só significa alguma coisa
          depois de saber se são 2 hotéis ou 2 postos. Categoria escopa, cidade filtra. -->
     <div id="estrada-cidades"></div>
+
+    <!-- Um hotel por chip, ordenado por proximidade — some sozinho com <2 ou
+         fora da aba Hotéis (ver _renderMiniCarrosselHoteis). -->
+    <div id="estrada-hoteis-mini"></div>
 
     <div id="estrada-lista"></div>
 
@@ -4377,7 +4400,7 @@ function trocarAbaEstrada(t) {
   abaEstrada = t;
   resetarFiltroEstrada();
   atualizarAbaEstrada();
-  if (t === 'estacionar') { document.getElementById('estrada-cidades').innerHTML = ''; buscarProximosAoVivo('parking'); return; }
+  if (t === 'estacionar') { document.getElementById('estrada-cidades').innerHTML = ''; document.getElementById('estrada-hoteis-mini').innerHTML = ''; buscarProximosAoVivo('parking'); return; }
   renderizarEstrada();
 }
 
@@ -4706,14 +4729,22 @@ function ampliarRaioEstrada() {
   if (c) c.scrollTo({ left: c.scrollWidth, behavior: 'smooth' });
 }
 
+let _hotelListaExpandida = false;
+
 function resetarFiltroEstrada() {
   cidadeSelEstrada = null;
   anelEstrada = 0;
   _cidadesEstradaAnteriores = new Set();
+  _hotelListaExpandida = false;
 }
 
 function renderizarEstrada() {
   const cont = document.getElementById('estrada-lista');
+  // Limpa aqui, incondicional: o branch de postos retorna cedo (antes de
+  // chegar em _renderMiniCarrosselHoteis) e deixava o carrossel de hotéis da
+  // renderização anterior "grudado" na tela ao trocar de aba.
+  const miniCont = document.getElementById('estrada-hoteis-mini');
+  if (miniCont && abaEstrada !== 'hoteis') miniCont.innerHTML = '';
   const base = _itensEstrada();
   const cidades = _cidadesEstrada(base);
   _ajustarAnelEstrada(cidades);          // antes de qualquer filtro, p/ lista e carrossel concordarem
@@ -4743,7 +4774,53 @@ function renderizarEstrada() {
     cont.innerHTML = `<div class="empty-state" style="padding:28px 16px;"><div class="empty-icon">${v.e}</div><div class="empty-titulo">${v.t}</div><div class="empty-desc">${v.d}</div></div>`;
     return;
   }
-  cont.innerHTML = _ordenarEstrada(itens).map(abaEstrada === 'hoteis' ? _cardHotel : _cardPosto).join('');
+  const ordenados = _ordenarEstrada(itens);
+  _renderMiniCarrosselHoteis(ordenados);
+  // Com poucos hotéis a lista cabe na tela sem incomodar — só recolhe quando
+  // tem gente o bastante pra empurrar "cidades em volta" (busca por GPS) lá
+  // pra baixo, que era o problema relatado.
+  if (abaEstrada === 'hoteis' && ordenados.length > 3 && !_hotelListaExpandida) {
+    cont.innerHTML = `<button onclick="_hotelListaExpandida=true;renderizarEstrada();" style="width:100%;background:var(--bg3);border:1px dashed var(--borda);border-radius:12px;padding:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;">Ver todos os ${ordenados.length} hotéis salvos ▾</button>`;
+    return;
+  }
+  const cabecalhoRecolher = (abaEstrada === 'hoteis' && ordenados.length > 3) ? `
+    <button onclick="_hotelListaExpandida=false;renderizarEstrada();" style="width:100%;background:transparent;border:none;color:var(--texto3);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;text-align:left;padding:0 2px 8px;">▴ Ocultar lista</button>` : '';
+  cont.innerHTML = cabecalhoRecolher + ordenados.map(abaEstrada === 'hoteis' ? _cardHotel : _cardPosto).join('');
+}
+
+// Carrossel compacto dos hotéis salvos, ordenado por proximidade (mesma ordem
+// de _ordenarEstrada) — existe pra achar o hotel certo num toque mesmo com a
+// lista cheia recolhida por baixo. Só aparece na aba Hotéis, com >1 hotel (com
+// 1 só, não tem o que "achar mais rápido").
+function _renderMiniCarrosselHoteis(ordenados) {
+  const cont = document.getElementById('estrada-hoteis-mini');
+  if (!cont) return;
+  if (abaEstrada !== 'hoteis' || ordenados.length < 2) { cont.innerHTML = ''; return; }
+  const chips = ordenados.map(h => {
+    const km = _kmEstrada(h);
+    const kmTxt = km === null ? '' : `<div class="hotel-mini-km">📍 ${km < 1 ? Math.round(km*1000)+'m' : Math.round(km)+'km'}</div>`;
+    return `<button class="hotel-mini-chip" onclick="_irParaHotelNaLista('${h.id}')">
+      ${h.cidade ? `<div class="hotel-mini-cidade">${esc(h.cidade)}</div>` : ''}
+      <div class="hotel-mini-nome">${esc(h.nome)}</div>
+      ${kmTxt}
+    </button>`;
+  }).join('');
+  cont.innerHTML = `<div class="estrada-carrossel">${chips}</div>`;
+}
+
+// Toque num chip do mini-carrossel: expande a lista (se estava recolhida) e
+// rola até o card daquele hotel — mesmo padrão do farol de marcas.
+function _irParaHotelNaLista(hotelId) {
+  _hotelListaExpandida = true;
+  renderizarEstrada();
+  setTimeout(() => {
+    const card = document.querySelector(`#estrada-lista [data-hotel-id="${hotelId}"]`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.style.transition = 'box-shadow .2s';
+    card.style.boxShadow = '0 0 0 2px var(--roxo)';
+    setTimeout(() => { card.style.boxShadow = ''; }, 900);
+  }, 120);
 }
 
 // Com GPS, a ordem é a distância real. Sem GPS, cai no comportamento antigo:
@@ -4768,6 +4845,13 @@ function _ordenarEstrada(itens) {
     });
   }
   return itens;
+}
+
+// (XX) XXXXX-XXXX pra celular/whatsapp (11 dígitos), (XX) XXXX-XXXX pra fixo
+// (10). Único lugar que formata telefone de hotel — usado no card salvo e no
+// card de descoberta, pra nunca formatarem diferente um do outro.
+function _fmtTelBR(t) {
+  return t.length === 11 ? `(${t.slice(0,2)}) ${t.slice(2,7)}-${t.slice(7)}` : `(${t.slice(0,2)}) ${t.slice(2,6)}-${t.slice(6)}`;
 }
 
 function _cardHotel(h) {
@@ -4796,17 +4880,22 @@ function _cardHotel(h) {
       <button class="notif-pernoite-nao" onclick="dispensarNotifPernoite()">Não</button>
     </div>` : '';
   const btnStyle = 'border:none;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;width:36px;height:32px;font-size:16px;';
-  return `<div class="${classe}" style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
+  // WhatsApp em cima, fixo embaixo — nessa ordem porque é o número que o rep
+  // realmente vai usar 9 em cada 10 vezes. Número por extenso (não só o ícone),
+  // no mesmo formato do card de descoberta (ver _fmtTelBR), pra reconhecer o
+  // hotel certo batendo o olho sem precisar tocar.
+  const wppChip = wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" style="display:flex;align-items:center;gap:5px;text-decoration:none;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:7px;padding:4px 8px;font-size:11px;color:#4ade80;font-weight:600;white-space:nowrap;">${WPP_ICON} ${_fmtTelBR(wpp)}</a>` : '';
+  const telChip = tel ? `<a href="tel:${tel}" style="display:flex;align-items:center;gap:5px;text-decoration:none;background:var(--bg2);border:1px solid var(--borda);border-radius:7px;padding:4px 8px;font-size:11px;color:var(--texto2);font-weight:600;white-space:nowrap;">📞 ${_fmtTelBR(tel)}</a>` : '';
+  return `<div class="${classe}" data-hotel-id="${h.id}" style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
-      <div style="font-weight:700;font-size:14px;color:var(--texto);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h.nome}${h.cidade ? `<span style="font-size:11px;color:var(--texto2);font-weight:400;"> · ${h.cidade}</span>` : ''}</div>
+      <div style="font-size:14px;color:var(--texto);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h.cidade ? `<span style="font-weight:400;color:var(--texto2);font-size:11px;">${esc(h.cidade)} · </span>` : ''}<span style="font-weight:700;">${esc(h.nome)}</span></div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">${chips.join('')}${estrelas ? `<span style="font-size:11px;">${estrelas}</span>` : ''}</div>
     </div>
     ${precos.length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px;">${precos.join('')}</div>` : `<div style="margin-bottom:5px;"><span onclick="editarLog('hot','${h.id}')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#F59E0B;background:rgba(245,158,11,.1);border:1px dashed rgba(245,158,11,.45);border-radius:7px;padding:3px 8px;cursor:pointer;">✏️ Preencher preço</span></div>`}
     <div style="display:flex;gap:8px;align-items:center;">
       <div style="flex:1;min-width:0;">
+        ${(wppChip || telChip) ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-bottom:5px;">${wppChip}${telChip}</div>` : ''}
         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-          ${tel ? `<a href="tel:${tel}" style="text-decoration:none;width:30px;height:28px;background:var(--bg2);border:1px solid var(--borda);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">📞</a>` : ''}
-          ${wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" style="text-decoration:none;width:30px;height:28px;background:#1C2A1E;border:1px solid #25D366;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${WPP_ICON}</a>` : ''}
           <span style="font-size:10px;color:var(--texto3);white-space:nowrap;">📅</span>
           ${ultimaHosp}
         </div>
@@ -5338,7 +5427,7 @@ function _gerarBlocoContatoHotel(idx, r) {
   const btnStyle = `border-radius:8px;padding:8px 6px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-align:center;`;
   const buscaGoogle = `https://www.google.com/search?q=${encodeURIComponent(r.nome+' '+(r.cidade||'')+' telefone')}`;
 
-  const chipsHtml = temTel ? tels.map(t=>`<a href="tel:${t}" style="font-size:10px;color:var(--verde);background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.2);border-radius:5px;padding:2px 7px;text-decoration:none;white-space:nowrap;">📞 ${t.length===11?`(${t.slice(0,2)}) ${t.slice(2,7)}-${t.slice(7)}`:`(${t.slice(0,2)}) ${t.slice(2,6)}-${t.slice(6)}`}</a>`).join('') : '';
+  const chipsHtml = temTel ? tels.map(t=>`<a href="tel:${t}" style="font-size:10px;color:var(--verde);background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.2);border-radius:5px;padding:2px 7px;text-decoration:none;white-space:nowrap;">📞 ${_fmtTelBR(t)}</a>`).join('') : '';
 
   const contatoHtml = temTel ? `
     <div style="font-size:11px;color:var(--verde);font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:6px;">2️⃣ Mensagem pronta! Agora é só enviar:</div>
@@ -9285,6 +9374,12 @@ function renderizarProspectos() {
 }
 
 function atualizarBadgeProspectos() {
+  // Card do dashboard mostra o total da carteira (quantos tem, sem rolar até o
+  // botão largo); o badge abaixo mostra só os vencidos (quantos precisam de
+  // atenção agora) — números diferentes de propósito, não duplicados.
+  const numDash = document.getElementById('num-prospectos-dash');
+  if (numDash) numDash.textContent = getProspectos().length;
+
   const badge = document.getElementById('badge-prospectos');
   if (!badge) return;
   const hoje = new Date();
@@ -9605,7 +9700,7 @@ function montarRota(clientes, latRep, lngRep) {
 
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:${urg.bg};border:1.5px solid ${urg.borda};border-radius:12px;margin-bottom:8px;cursor:pointer;" onclick="fecharModal('modal-rota-hoje');window._rotaIdx=${i};window._vindoDaRota=true;setTimeout(()=>abrirDetalhe('${c.id}','mapa'),200)">
-        <div style="width:32px;height:32px;background:${urg.hex};border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#000;flex-shrink:0;">${i+1}</div>
+        <div style="width:32px;height:32px;background:${urg.hex};border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:800;color:#000;flex-shrink:0;">${i+1}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:600;font-size:14px;color:${urg.textColor};">${esc(c.nome)}</div>
           <div style="font-size:11px;color:${urg.textColor};opacity:.7;">${esc(c.loja)}${c.cidade?' · '+esc(c.cidade):''}</div>

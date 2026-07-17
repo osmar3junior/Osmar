@@ -524,6 +524,10 @@ if ('serviceWorker' in navigator) {
   .estrada-chip-raio { background:rgba(255,192,67,.08); border:1px dashed rgba(255,192,67,.45); }
   .estrada-chip-raio .estrada-chip-nome { color:var(--amarelo); }
   .estrada-chip-raio .estrada-chip-meta { color:rgba(255,192,67,.7); }
+  .estrada-chip:disabled { opacity:.5; cursor:default; }
+  .estrada-chip-prox { background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.3); }
+  .estrada-chip-prox .estrada-chip-nome { color:#38BDF8; }
+  .estrada-chip-prox .estrada-chip-meta { color:rgba(56,189,248,.65); }
   .estrada-chip-novo { animation:estradaChipEntra .34s cubic-bezier(.2,.8,.3,1) backwards; }
   @keyframes estradaChipEntra { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:none; } }
   @keyframes amberGlow {
@@ -2928,10 +2932,10 @@ if ('serviceWorker' in navigator) {
 
     <!-- BUSCA GPS DE HOTÉIS -->
     <div id="hotel-gps-wrap" style="display:none;margin-top:12px;">
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <button id="btn-hotel-50k" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('estrada-btn-ativo'));this.classList.add('estrada-btn-ativo');buscarHoteisProximos(50000)" style="flex:1;border-radius:10px;padding:11px 6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.35);color:#38BDF8;">🛏️ Próximos<br><span style="font-size:10px;opacity:.7;">até 50 km</span></button>
-        <button id="btn-hotel-100k" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('estrada-btn-ativo'));this.classList.add('estrada-btn-ativo');buscarHoteisProximos(100000)" style="flex:1;border-radius:10px;padding:11px 6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.35);color:#38BDF8;">🔭 Mais distantes<br><span style="font-size:10px;opacity:.7;">até 100 km</span></button>
-      </div>
+      <!-- Descoberta: as cidades em volta com quantos hotéis cada uma tem. Os
+           botões de 50/100 km viraram o 1º chip ("Mais próximos"), porque "qual o
+           hotel mais perto agora" continua sendo pergunta legítima às 2 da manhã. -->
+      <div id="hotel-cidades"></div>
       <div id="hotel-gps-loading" style="display:none;text-align:center;padding:24px 16px;">
         <div class="estrada-spinner" style="font-size:32px;margin-bottom:10px;">🛏️</div>
         <div class="estrada-buscando-txt" style="font-size:13px;font-weight:700;color:var(--texto2);font-family:'DM Sans',sans-serif;">Buscando hotéis...</div>
@@ -4294,6 +4298,10 @@ function atualizarAbaEstrada() {
   document.getElementById('hotel-busca-wrap').style.display = ehHotel ? 'block' : 'none';
   document.getElementById('hotel-gps-wrap').style.display   = ehHotel ? 'block' : 'none';
   if (!ehHotel) { document.getElementById('hotel-gps-loading').style.display='none'; document.getElementById('hotel-gps-lista').innerHTML=''; }
+  // As cidades em volta são o ponto de partida da aba Hotéis: já busca ao abrir,
+  // sem esperar toque. O cache por posição evita repetir a espera a cada abertura.
+  if (ehHotel && !_cidadesHotel.length) descobrirCidadesComHoteis();
+  else if (ehHotel) _renderCarrosselDescoberta();
   document.getElementById('estrada-proximos').style.display = 'none';
   document.getElementById('estrada-proximos-lista').innerHTML = '';
   const addBtn = document.getElementById('estrada-add-btn');
@@ -4556,24 +4564,38 @@ function _cidadesEstrada(itens) {
   });
 }
 
-const _temRaioEstrada = cidades => cidades.some(c => c.km !== null);
-const _dentroDoAnel   = km => km === null || km <= ANEIS_ESTRADA[anelEstrada];
+// O raio só faz sentido se ele alcança alguma coisa. Se a cidade mais próxima
+// está além do último anel (rep em casa, longe de tudo que salvou), filtrar por
+// raio só esconderia a carteira inteira — então nesse caso não há raio nenhum.
+const _raioAplicavel = cidades => cidades.some(c => c.km !== null && c.km <= ANEIS_ESTRADA[ANEIS_ESTRADA.length - 1]);
+const _dentroDoAnel  = km => km === null || km <= ANEIS_ESTRADA[anelEstrada];
 
-function _filtrarPorCidadeERaio(base) {
+// Abre o raio até o primeiro anel que alcance alguma cidade. Sem isso, quem tem
+// tudo a mais de 60 km abria o modal numa lista vazia mandando "amplie o raio" —
+// e o chip de ampliar sequer era desenhado, porque o carrossel voltava antes.
+function _ajustarAnelEstrada(cidades) {
+  if (!_raioAplicavel(cidades)) return;
+  while (anelEstrada < ANEIS_ESTRADA.length - 1
+         && !cidades.some(c => c.km !== null && c.km <= ANEIS_ESTRADA[anelEstrada])) {
+    anelEstrada++;
+  }
+}
+
+function _filtrarPorCidadeERaio(base, cidades) {
   let itens = base;
-  if (_temRaioEstrada(_cidadesEstrada(base))) itens = itens.filter(i => _dentroDoAnel(_kmEstrada(i)));
+  if (_raioAplicavel(cidades)) itens = itens.filter(i => _dentroDoAnel(_kmEstrada(i)));
   if (cidadeSelEstrada) itens = itens.filter(i => (i.cidade || '').trim() === cidadeSelEstrada);
   return itens;
 }
 
-function _renderCarrosselCidades(base) {
+function _renderCarrosselCidades(base, todas) {
   const cont = document.getElementById('estrada-cidades');
   if (!cont) return;
-  const todas   = _cidadesEstrada(base);
-  const temRaio = _temRaioEstrada(todas);
+  // A regra da mobília olha o TOTAL de cidades, não as do anel: com 5 cidades e
+  // nenhuma perto, o carrossel precisa existir para oferecer o "Ampliar raio".
+  if (todas.length < 2) { cont.innerHTML = ''; _cidadesEstradaAnteriores = new Set(); return; }
+  const temRaio  = _raioAplicavel(todas);
   const visiveis = temRaio ? todas.filter(c => _dentroDoAnel(c.km)) : todas;
-  // Com uma cidade só o carrossel é mobília: não nasce.
-  if (visiveis.length < 2) { cont.innerHTML = ''; _cidadesEstradaAnteriores = new Set(); return; }
   const atual = (window._cidadeAtualEstrada || '').toLowerCase();
   const chips = visiveis.map(c => {
     const aqui  = atual && c.cidade.toLowerCase().includes(atual) ? '📍 ' : '';
@@ -4630,9 +4652,11 @@ function resetarFiltroEstrada() {
 function renderizarEstrada() {
   const cont = document.getElementById('estrada-lista');
   const base = _itensEstrada();
-  _renderCarrosselCidades(base);
+  const cidades = _cidadesEstrada(base);
+  _ajustarAnelEstrada(cidades);          // antes de qualquer filtro, p/ lista e carrossel concordarem
+  _renderCarrosselCidades(base, cidades);
   const nadaSalvo = base.length === 0;
-  let itens = _filtrarPorCidadeERaio(base);
+  let itens = _filtrarPorCidadeERaio(base, cidades);
   if (abaEstrada === 'postos') {
     // Sempre mostra o botão de busca ao vivo no topo
     const btnStyle = `flex:1;border-radius:10px;padding:10px 6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:rgba(251,191,36,.1);border:1.5px solid rgba(251,191,36,.35);color:#FBBF24;`;
@@ -4856,29 +4880,312 @@ async function buscarHoteisProximos(raio) {
         listaDiv.innerHTML = `<div style="text-align:center;padding:20px;font-family:'DM Sans',sans-serif;">
           <div style="font-size:28px;margin-bottom:8px;">🛏️</div>
           <div style="font-size:13px;color:var(--texto2);">Nenhum hotel encontrado num raio de ${raio/1000}km.</div>
-          ${raioMaior ? `<button onclick="document.getElementById('btn-hotel-100k').click()" style="margin-top:12px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 16px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔭 Ampliar para 100km</button>` : ''}
+          ${raioMaior ? `<button onclick="buscarHoteisProximos(100000)" style="margin-top:12px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 16px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔭 Ampliar para 100km</button>` : ''}
         </div>`;
         return;
       }
 
-      const tipoLabel = { hotel:'Hotel', pousada:'Pousada', hostel:'Hostel', motel:'Motel', guest_house:'Casa de hóspedes' };
+      const resultados = _mapearHoteisOverpass(elementos, lat, lng).slice(0, 20);
+      _renderHoteisGps(resultados, listaDiv);
 
-      const resultados = elementos.map(el => {
-        const elLat = el.lat || el.center?.lat;
-        const elLng = el.lon || el.center?.lon;
-        const dist  = elLat ? _distKm(lat, lng, elLat, elLng) : null;
-        const tipo  = el.tags?.tourism || 'hotel';
-        const nome  = el.tags?.name || tipoLabel[tipo] || 'Hotel';
-        const stars = Number(el.tags?.stars || el.tags?.['hotel:stars'] || 0);
-        const end   = el.tags?.['addr:street']
-          ? `${el.tags['addr:street']}${el.tags['addr:housenumber'] ? ', '+el.tags['addr:housenumber'] : ''}`
-          : '';
-        const cidade = el.tags?.['addr:city'] || el.tags?.['addr:municipality'] || '';
-        const tel = (el.tags?.phone || el.tags?.['contact:phone'] || el.tags?.['contact:mobile'] || '').replace(/[\s\-\(\)]/g,'');
-        return { nome, tipo, stars, end, cidade, dist, elLat, elLng, tel };
-      }).filter(r => r.dist !== null).sort((a,b) => a.dist - b.dist).slice(0, 20);
+    } catch(e) {
+      loadDiv.style.display = 'none';
+      listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-family:'DM Sans',sans-serif;">
+        <div style="font-size:13px;color:var(--texto3);">O serviço de mapas está ocupado agora — acontece nos horários de pico.</div>
+        <button onclick="buscarHoteisProximos(${raio})" style="margin-top:12px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 16px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔄 Tentar de novo</button>
+      </div>`;
+    }
+  }, () => {
+    loadDiv.style.display = 'none';
+    listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Permita o acesso à localização para buscar próximos.</div>`;
+  }, { enableHighAccuracy: true, timeout: 8000 });
+}
 
-      listaDiv.innerHTML = resultados.map((r, idx) => {
+// ===== DESCOBERTA: CIDADES EM VOLTA COM QUANTOS HOTÉIS CADA UMA TEM =====
+// O `addr:city` do hotel não serve p/ isso: só 17% dos hotéis têm a etiqueta
+// (medido em 50 km de Florianópolis — 55 de 324). E jogar cada hotel na cidade
+// de centro mais próximo erra feio, porque município não é círculo: daria
+// "Gov. Celso Ramos: 56" quando são 6. O jeito certo é o Overpass contar dentro
+// do limite municipal real (admin_level=8) e devolver só o número — 22KB p/ 34
+// municípios. Os hotéis só descem quando o rep toca na cidade (~1,5-2,5s).
+const TIPOS_HOSP_RX = 'hotel|pousada|hostel|motel|guest_house';
+// Passo 1 pega largo (80 km) porque é barato: ~2s, só nomes e centros. Passo 2 é
+// o caro, então conta SÓ os 10 que vão virar chip — contar os 34 do raio inteiro
+// custava 36s, contar 10 custa ~13s, e o que aparece na tela é idêntico.
+const RAIO_LISTA_MUN = 80000;
+const RAIO_MOSTRAR_KM = 60;
+// 80 - 60 = 20: enquanto ele estiver a menos de 20 km de onde a lista foi puxada,
+// toda cidade dentro dos 60 km dele já está na lista. Aí a reordenação é local.
+const TOLERANCIA_LISTA_KM = 20;
+const MAX_CIDADES = 10;
+const TTL_LISTA = 30 * 24 * 3600 * 1000;    // município não muda de lugar
+const TTL_CONTAGEM = 7 * 24 * 3600 * 1000;  // hotel novo no OSM é raro
+const _K_LISTA = 'cv_cache_muns';
+const _K_CONTAGEM = 'cv_cache_cont_hotel';
+
+let _cidadesHotel = [];        // [{nome, relId, lat, lng, km, n}] — n=null é "ainda contando"
+let _cidadeHotelSel = null;    // relId selecionado, ou 'proximos'
+let _hoteisCidadeTodos = [];
+let _hoteisCidadeMostrados = 0;
+const PAGINA_HOTEIS = 20;
+
+// A lista vale enquanto ele não se afastar demais de onde ela foi puxada. É isso
+// que faz o carro andando não torrar a cota: a 100 km/h, uma chave arredondada em
+// 1 km invalidaria a cada 40 segundos.
+function _lerListaMuns(lat, lng) {
+  const c = getData(_K_LISTA);
+  if (!c || !c.muns || !c.muns.length) return null;
+  if (Date.now() - c.ts > TTL_LISTA) return null;
+  if (_distKm(lat, lng, c.lat, c.lng) > TOLERANCIA_LISTA_KM) return null;
+  return c.muns;
+}
+
+async function _buscarListaMuns(lat, lng) {
+  const q = `[out:json][timeout:60];rel["boundary"="administrative"]["admin_level"="8"](around:${RAIO_LISTA_MUN},${lat},${lng});out center tags;`;
+  const d = await _overpassFetch(q, 70000);
+  const muns = (d.elements || [])
+    .filter(e => e.center && e.tags && e.tags.name)
+    .map(e => ({ relId: e.id, nome: e.tags.name, lat: e.center.lat, lng: e.center.lon }));
+  if (muns.length) setData(_K_LISTA, { lat, lng, ts: Date.now(), muns });
+  return muns;
+}
+
+function _lerContagens() {
+  const c = getData(_K_CONTAGEM) || {};
+  const agora = Date.now();
+  let mudou = false;
+  for (const k of Object.keys(c)) if (agora - c[k].ts > TTL_CONTAGEM) { delete c[k]; mudou = true; }
+  if (mudou) setData(_K_CONTAGEM, c);
+  return c;
+}
+
+async function _buscarContagens(ids) {
+  const q = `[out:json][timeout:90];rel(id:${ids.join(',')})->.m;
+foreach.m->.x(
+  .x out ids;
+  .x map_to_area->.a;
+  nwr["tourism"~"^(${TIPOS_HOSP_RX})$"]["name"](area.a);
+  out count;
+);`;
+  const d = await _overpassFetch(q, 100000);
+  // Vem intercalado: a relação e, logo depois, a contagem dela. Casar fora dessa
+  // ordem embaralha os números entre cidades.
+  const novas = {};
+  let atual = null;
+  for (const el of d.elements || []) {
+    if (el.type === 'relation') atual = el.id;
+    else if (el.type === 'count' && atual != null) { novas[atual] = Number(el.tags?.total || 0); atual = null; }
+  }
+  const cache = _lerContagens();
+  for (const id of Object.keys(novas)) cache[id] = { n: novas[id], ts: Date.now() };
+  setData(_K_CONTAGEM, cache);
+  return novas;
+}
+
+// Monta _cidadesHotel a partir da lista + do que já se sabe de contagem. A ordem
+// e a distância SEMPRE saem daqui, da posição atual — é o que faz Tubarão ser a
+// 5ª às 9h e a 2ª às 11h sem consultar nada.
+function _montarCidades(muns, lat, lng) {
+  const contagens = _lerContagens();
+  return muns
+    .map(m => ({
+      ...m,
+      km: _distKm(lat, lng, m.lat, m.lng),
+      n: contagens[m.relId] ? contagens[m.relId].n : null
+    }))
+    .filter(m => m.km <= RAIO_MOSTRAR_KM)
+    // Cidade que já se sabe não ter hotel não vira botão — e some ANTES do corte,
+    // senão ela ocupa uma das 10 vagas só p/ dizer "0 hotéis" e abrir lista vazia.
+    .filter(m => m.n === null || m.n > 0)
+    .sort((a, b) => a.km - b.km)
+    .slice(0, MAX_CIDADES);
+}
+
+async function descobrirCidadesComHoteis(forcar) {
+  const cont = document.getElementById('hotel-cidades');
+  const listaDiv = document.getElementById('hotel-gps-lista');
+  if (!cont) return;
+  if (!navigator.geolocation) {
+    cont.innerHTML = `<div style="text-align:center;padding:14px;font-size:12px;color:var(--texto3);font-family:'DM Sans',sans-serif;">GPS não disponível neste dispositivo.</div>`;
+    return;
+  }
+  cont.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 2px;">
+    <span class="estrada-spinner" style="font-size:16px;">🛰️</span>
+    <span class="estrada-buscando-txt" style="font-size:12px;font-weight:700;color:var(--texto2);font-family:'DM Sans',sans-serif;">Vendo quais cidades têm hotel por aqui...</span></div>`;
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    window._posEstrada = { lat, lng };
+    // Passo 1 (a lista) é o que não dá pra viver sem: falhou, não há tela.
+    try {
+      let muns = forcar ? null : _lerListaMuns(lat, lng);
+      if (!muns) muns = await _buscarListaMuns(lat, lng);
+      _cidadesHotel = _montarCidades(muns, lat, lng);
+      _renderCarrosselDescoberta();   // nomes e distâncias já na tela (~2s)
+    } catch (e) {
+      cont.innerHTML = `<div style="text-align:center;padding:14px;font-family:'DM Sans',sans-serif;">
+        <div style="font-size:12px;color:var(--texto3);">O serviço de mapas está ocupado — acontece nos horários de pico.</div>
+        <button onclick="descobrirCidadesComHoteis(true)" style="margin-top:10px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:9px 14px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔄 Tentar de novo</button>
+      </div>`;
+      return;
+    }
+
+    // Passo 2 (as contagens) é enfeite perto disso. Se falhar, o chip fica sem
+    // número mas continua clicável — perder a contagem não pode custar o botão,
+    // ainda mais com os chips que já vieram do cache prontos na tela.
+    const faltam = _cidadesHotel.filter(c => c.n === null).map(c => c.relId);
+    if (faltam.length) {
+      try {
+        const novas = await _buscarContagens(faltam);
+        _cidadesHotel.forEach(c => { if (novas[c.relId] != null) c.n = novas[c.relId]; });
+        _cidadesHotel = _cidadesHotel.filter(c => c.n === null || c.n !== 0);
+      } catch (e) {
+        _cidadesHotel.forEach(c => { if (c.n === null) c.n = -1; }); // -1 = não sei quantos
+      }
+      _renderCarrosselDescoberta();
+    }
+
+    if (!_cidadesHotel.length && listaDiv) {
+      listaDiv.innerHTML = `<div style="text-align:center;padding:20px;font-family:'DM Sans',sans-serif;"><div style="font-size:28px;margin-bottom:8px;">🛏️</div><div style="font-size:13px;color:var(--texto2);">Nenhuma cidade com hotel cadastrado num raio de ${RAIO_MOSTRAR_KM} km.</div></div>`;
+    }
+  }, () => {
+    cont.innerHTML = `<div style="text-align:center;padding:14px;font-size:12px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Permita o acesso à localização para ver as cidades em volta.</div>`;
+  }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 120000 });
+}
+
+// Passo 1 em segundo plano, ao abrir o app: 2s, leve, deixa os nomes prontos.
+// NUNCA dispara a contagem — essa é a parte cara, e o rep pode nem abrir o modal;
+// gastar os slots do Overpass à toa faria a busca de verdade tomar 429.
+// E só roda se a permissão de GPS JÁ existe: abrir o app não é hora de pedir.
+async function _prefetchMunicipios() {
+  try {
+    if (!navigator.geolocation || !navigator.permissions) return;
+    const p = await navigator.permissions.query({ name: 'geolocation' });
+    if (p.state !== 'granted') return;
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      if (_lerListaMuns(lat, lng)) return;   // já tenho: não gasta cota
+      try { await _buscarListaMuns(lat, lng); } catch (e) {}
+    }, () => {}, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+  } catch (e) {}
+}
+
+function _renderCarrosselDescoberta() {
+  const cont = document.getElementById('hotel-cidades');
+  if (!cont) return;
+  const chips = _cidadesHotel.map(c => {
+    const ativo = _cidadeHotelSel === c.relId ? ' ativo' : '';
+    const meta = c.n === null ? `${Math.round(c.km)} km · contando…`
+               : c.n < 0     ? `${Math.round(c.km)} km`
+               : `${Math.round(c.km)} km · ${c.n} ${c.n === 1 ? 'hotel' : 'hotéis'}`;
+    return `<button class="estrada-chip${ativo}"${c.n === null ? ' disabled' : ''} onclick="abrirCidadeHotel(${c.relId})">
+      <span class="estrada-chip-nome">${esc(c.nome)}</span>
+      <span class="estrada-chip-meta">${meta}</span></button>`;
+  }).join('');
+  const contadas = _cidadesHotel.filter(c => c.n !== null && c.n >= 0);
+  const total = contadas.reduce((s, c) => s + c.n, 0);
+  // "contando" só enquanto realmente conta: se a contagem falhou, some o número
+  // em vez de deixar na tela um progresso que não existe mais.
+  const rotulo = _cidadesHotel.some(c => c.n === null) ? 'contando hotéis...'
+               : contadas.length ? `${total} hotéis · até ${RAIO_MOSTRAR_KM} km`
+               : `até ${RAIO_MOSTRAR_KM} km`;
+  cont.innerHTML = `
+    <div class="estrada-geo-label">
+      <span>Cidades em volta</span>
+      <span>${rotulo}</span>
+    </div>
+    <div class="estrada-carrossel">
+      <button class="estrada-chip estrada-chip-prox${_cidadeHotelSel === 'proximos' ? ' ativo' : ''}" onclick="verHoteisMaisProximos()">
+        <span class="estrada-chip-nome">📍 Mais próximos</span>
+        <span class="estrada-chip-meta">sem filtrar cidade</span>
+      </button>
+      ${chips}
+    </div>`;
+}
+
+// O "mais perto de mim agora, não importa a cidade" — a busca por raio de antes,
+// que continua sendo a pergunta certa quando é tarde e ele só quer uma cama.
+function verHoteisMaisProximos() {
+  _cidadeHotelSel = 'proximos';
+  _renderCarrosselDescoberta();
+  buscarHoteisProximos(50000);
+}
+
+async function abrirCidadeHotel(relId) {
+  const cidade = _cidadesHotel.find(c => c.relId === relId);
+  if (!cidade) return;
+  _cidadeHotelSel = relId;
+  _renderCarrosselDescoberta();
+  const loadDiv = document.getElementById('hotel-gps-loading');
+  const listaDiv = document.getElementById('hotel-gps-lista');
+  const subDiv = document.getElementById('hotel-gps-sub');
+  loadDiv.style.display = 'block';
+  listaDiv.innerHTML = '';
+  if (subDiv) subDiv.textContent = `${cidade.nome} — ${cidade.n} ${cidade.n === 1 ? 'hotel' : 'hotéis'}`;
+  const origem = window._posEstrada || { lat: cidade.lat, lng: cidade.lng };
+  // 3600000000 + id da relação = id da área no Overpass. Buscar pela área (e não
+  // pelo nome) evita pegar a "São José" de outro estado.
+  const query = `[out:json][timeout:60][maxsize:16777216];area(${3600000000 + relId})->.a;nwr["tourism"~"^(${TIPOS_HOSP_RX})$"]["name"](area.a);out center;`;
+  try {
+    const data = await _overpassFetch(query, 70000);
+    loadDiv.style.display = 'none';
+    _hoteisCidadeTodos = _mapearHoteisOverpass(data.elements || [], origem.lat, origem.lng);
+    _hoteisCidadeMostrados = 0;
+    verMaisHoteisCidade();
+  } catch (e) {
+    loadDiv.style.display = 'none';
+    listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-family:'DM Sans',sans-serif;">
+      <div style="font-size:13px;color:var(--texto3);">Não consegui carregar os hotéis de ${esc(cidade.nome)} agora.</div>
+      <button onclick="abrirCidadeHotel(${relId})" style="margin-top:12px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 16px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔄 Tentar de novo</button>
+    </div>`;
+  }
+}
+
+// Florianópolis tem 175 hotéis: renderizar todos de uma vez não trava o celular,
+// mas ninguém lê 175. Ordenado por distância, ele decide no quinto.
+function verMaisHoteisCidade() {
+  const listaDiv = document.getElementById('hotel-gps-lista');
+  _hoteisCidadeMostrados = Math.min(_hoteisCidadeMostrados + PAGINA_HOTEIS, _hoteisCidadeTodos.length);
+  const mostrar = _hoteisCidadeTodos.slice(0, _hoteisCidadeMostrados);
+  _renderHoteisGps(mostrar, listaDiv);
+  const faltam = _hoteisCidadeTodos.length - _hoteisCidadeMostrados;
+  if (faltam > 0) {
+    listaDiv.insertAdjacentHTML('beforeend', `<button onclick="verMaisHoteisCidade()" style="width:100%;margin-top:2px;background:var(--bg3);border:1px solid var(--borda);border-radius:10px;padding:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Ver mais ${Math.min(faltam, PAGINA_HOTEIS)} — faltam ${faltam}</button>`);
+  }
+}
+
+const TIPO_LABEL_HOSP = { hotel:'Hotel', pousada:'Pousada', hostel:'Hostel', motel:'Motel', guest_house:'Casa de hóspedes' };
+
+// Overpass -> objetos de hotel, já com distância e ordenados. Sem corte: quem
+// chama decide quantos mostrar (a busca por raio corta em 20, a por cidade pagina).
+function _mapearHoteisOverpass(elementos, lat, lng) {
+  return elementos.map(el => {
+    const elLat = el.lat || el.center?.lat;
+    const elLng = el.lon || el.center?.lon;
+    const dist  = elLat ? _distKm(lat, lng, elLat, elLng) : null;
+    const tipo  = el.tags?.tourism || 'hotel';
+    const nome  = el.tags?.name || TIPO_LABEL_HOSP[tipo] || 'Hotel';
+    const stars = Number(el.tags?.stars || el.tags?.['hotel:stars'] || 0);
+    const end   = el.tags?.['addr:street']
+      ? `${el.tags['addr:street']}${el.tags['addr:housenumber'] ? ', '+el.tags['addr:housenumber'] : ''}`
+      : '';
+    const cidade = el.tags?.['addr:city'] || el.tags?.['addr:municipality'] || '';
+    const tel = (el.tags?.phone || el.tags?.['contact:phone'] || el.tags?.['contact:mobile'] || '').replace(/[\s\-\(\)]/g,'');
+    return { nome, tipo, stars, end, cidade, dist, elLat, elLng, tel };
+  }).filter(r => r.dist !== null).sort((a,b) => a.dist - b.dist);
+}
+
+// Os índices dos cards são posições em window._hotelBuscaResultados — é assim que
+// _buscarTelHotel e setHotelDataGps se acham. Renderizar e publicar a lista tem
+// que andar junto, senão o telefone cai no card errado.
+function _renderHoteisGps(resultados, listaDiv) {
+  listaDiv.innerHTML = resultados.map(_cardHotelGps).join('');
+  window._hotelBuscaResultados = resultados;
+  resultados.forEach((r, idx) => { if (!r.tels.length) _buscarTelHotel(idx); });
+}
+
+function _cardHotelGps(r, idx) {
+  const tipoLabel = TIPO_LABEL_HOSP;
         const distTxt   = r.dist < 1 ? Math.round(r.dist*1000)+'m' : r.dist.toFixed(1)+'km';
         const starsHtml = r.stars > 0 ? `<span style="color:#FBBF24;font-size:11px;">${'★'.repeat(r.stars)}</span>` : '';
         const tipoBadge = `<span style="font-size:10px;font-weight:700;color:#7DD3FC;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:5px;padding:1px 6px;">${tipoLabel[r.tipo]||'Hotel'}</span>`;
@@ -4934,24 +5241,6 @@ async function buscarHoteisProximos(raio) {
             <button onclick='salvarHotelDaGps(${JSON.stringify({nome:r.nome,cidade:r.cidade,end:r.end,lat:String(r.elLat),lng:String(r.elLng),stars:r.stars}).replace(/'/g,"\\'")})' style="${btnStyle}flex:1;background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.2);color:var(--verde);">💾 Salvar hotel</button>
           </div>
         </div>`;
-      }).join('');
-
-      // Telefone não veio do OSM? Tenta achar automaticamente: primeiro no cache
-      // compartilhado (grátis), só cai no Google Places se ninguém nunca achou esse hotel.
-      window._hotelBuscaResultados = resultados;
-      resultados.forEach((r, idx) => { if (!r.tels.length) _buscarTelHotel(idx); });
-
-    } catch(e) {
-      loadDiv.style.display = 'none';
-      listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-family:'DM Sans',sans-serif;">
-        <div style="font-size:13px;color:var(--texto3);">O serviço de mapas está ocupado agora — acontece nos horários de pico.</div>
-        <button onclick="buscarHoteisProximos(${raio})" style="margin-top:12px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;padding:10px 16px;color:#38BDF8;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔄 Tentar de novo</button>
-      </div>`;
-    }
-  }, () => {
-    loadDiv.style.display = 'none';
-    listaDiv.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--texto3);font-family:'DM Sans',sans-serif;">Permita o acesso à localização para buscar próximos.</div>`;
-  }, { enableHighAccuracy: true, timeout: 8000 });
 }
 
 function salvarHotelDaGps(dados) {
@@ -19167,6 +19456,7 @@ function ajustarAlturaListaMotivos() {
   if (session && getUsuarios()[session.email]) {
     usuarioAtual = session;
     irPara('dashboard');
+    setTimeout(_prefetchMunicipios, 3000); // deixa os nomes das cidades prontos p/ o "Na estrada"
     setTimeout(_checarOnboarding, 2500); // mostra o assistente se ainda não foi concluído
     setTimeout(_checarPlanoMes, 4000);   // no 1º acesso do mês, convida a planejar o mês novo
     setTimeout(verificarEnderecosPendentes, 3000);

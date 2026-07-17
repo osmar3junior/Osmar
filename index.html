@@ -714,6 +714,16 @@ if ('serviceWorker' in navigator) {
   /* Abas da Central de Relatórios */
   .rel-tab { flex-shrink:0; background:var(--bg3); border:1px solid var(--borda); border-radius:10px; padding:8px 12px; color:var(--texto2); font-family:'DM Sans',sans-serif; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; transition:background .15s,color .15s,border-color .15s; }
   .rel-tab.ativa { background:rgba(249,115,22,.14); border-color:rgba(249,115,22,.45); color:#F97316; }
+  /* Título + abas fixos no topo de "Minhas Análises" ao rolar — sem isso, tocar
+     num chip do farol e cair num card lá embaixo escondia até o botão de fechar.
+     Margem negativa cancela o padding do .modal-box pra ficar rente às bordas
+     quando gruda; o padding interno devolve o respiro visual de antes. */
+  .rel-header-sticky { position:sticky; top:0; z-index:5; background:var(--bg2); margin:-24px -20px 0; padding:24px 20px 16px; border-radius:20px 20px 0 0; }
+  .rel-header-sticky.rolou { border-bottom:1px solid var(--borda); box-shadow:0 8px 12px -8px rgba(0,0,0,.4); }
+  /* scrollIntoView (abrirRelatorioMarca, farol de marcas) não sabe que o cabeçalho
+     ficou fixo por cima do conteúdo — sem isso, o card podia parar centralizado
+     mas com o topo escondido atrás do cabeçalho. Reserva o espaço dele. */
+  .rel-card { scroll-margin-top: 160px; }
   .comp-exp-chip { flex:1; background:var(--bg2); border:1px solid var(--borda); border-radius:8px; padding:7px 4px; color:var(--texto2); font-family:'DM Sans',sans-serif; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; transition:background .15s,color .15s,border-color .15s; }
   .comp-exp-chip.ativo { background:rgba(0,214,143,.12); border-color:rgba(0,214,143,.4); color:var(--verde); }
 
@@ -2763,31 +2773,23 @@ if ('serviceWorker' in navigator) {
 
 <div class="modal-overlay" id="modal-relatorios">
   <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:24px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div class="modal-titulo" style="margin-bottom:0;">📊 Minhas Análises</div>
-      <button onclick="fecharModal('modal-relatorios')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
-    </div>
+    <div class="rel-header-sticky" id="rel-header-sticky">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="modal-titulo" style="margin-bottom:0;">📊 Minhas Análises</div>
+        <button onclick="fecharModal('modal-relatorios')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+      </div>
 
-    <!-- ABAS -->
-    <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:2px;-webkit-overflow-scrolling:touch;">
-      <button class="rel-tab ativa" data-tab="metas" onclick="trocarAbaRelatorio('metas')">🎯 Metas</button>
-      <button class="rel-tab" data-tab="vendas" onclick="trocarAbaRelatorio('vendas')">💰 Vendas</button>
-      <button class="rel-tab" data-tab="comparativo" onclick="trocarAbaRelatorio('comparativo')">📈 Análises</button>
-      <button class="rel-tab" data-tab="acoes" onclick="trocarAbaRelatorio('acoes')">📡 Radar</button>
+      <!-- ABAS -->
+      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;">
+        <button class="rel-tab ativa" data-tab="metas" onclick="trocarAbaRelatorio('metas')">🎯 Metas</button>
+        <button class="rel-tab" data-tab="vendas" onclick="trocarAbaRelatorio('vendas')">💰 Vendas</button>
+        <button class="rel-tab" data-tab="comparativo" onclick="trocarAbaRelatorio('comparativo')">📈 Análises</button>
+        <button class="rel-tab" data-tab="acoes" onclick="trocarAbaRelatorio('acoes')">📡 Radar</button>
+      </div>
     </div>
 
     <!-- ABA METAS -->
     <div id="rel-aba-metas">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
-        <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
-          <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Meta total</div>
-          <div style="font-size:22px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;" id="rel-meta-total">—</div>
-        </div>
-        <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;">
-          <div style="font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Real acumulado</div>
-          <div style="font-size:22px;font-weight:700;color:var(--verde);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;" id="rel-real-total">—</div>
-        </div>
-      </div>
       <div id="rel-lista"></div>
     </div>
 
@@ -15117,6 +15119,11 @@ function atualizarSemaforoDash() {
 // "o que eu faço agora?" pro rep catar rolando a lista inteira de novo.
 function abrirRelatorioMarca(metaId) {
   abrirRelatorios();
+  // Se o rep já apontou a marca no farol, a aba Vendas não precisa perguntar nada
+  // de novo: abre direto filtrada nela. Só a Vendas — quem entrou pelo card roxo
+  // genérico (sem marca escolhida) continua vendo o que já estava selecionado.
+  const meta = getMetasConfig().find(m => m.id === metaId);
+  if (meta) _relMarcaVendas = meta.marca;
   setTimeout(() => {
     const card = document.getElementById('rel-card-' + metaId);
     if (!card) return;
@@ -15757,6 +15764,21 @@ function abrirRelatorios() {
   });
   document.querySelectorAll('.rel-tab').forEach(b => b.classList.toggle('ativa', b.dataset.tab === 'metas'));
   document.getElementById('modal-relatorios').classList.add('aberto');
+  _bindScrollSombraRelatorios();
+}
+
+// Sombra + linha embaixo do cabeçalho fixo só depois que o conteúdo rolou um
+// pouco — sem isso ele fica sempre "colado" visualmente mesmo no topo, quando
+// não tem nada por baixo dele ainda. `dataset.scrollBound` evita empilhar um
+// listener novo a cada vez que o rep reabre "Minhas Análises".
+function _bindScrollSombraRelatorios() {
+  const box = document.querySelector('#modal-relatorios .modal-box');
+  const header = document.getElementById('rel-header-sticky');
+  if (!box || !header || box.dataset.scrollBound) return;
+  box.dataset.scrollBound = '1';
+  box.addEventListener('scroll', () => {
+    header.classList.toggle('rolou', box.scrollTop > 4);
+  }, { passive: true });
 }
 
 function trocarAbaRelatorio(aba) {
@@ -17007,8 +17029,6 @@ function renderizarRelatorios() {
 
   if (!metas.length) {
     lista.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-titulo">Nenhuma meta cadastrada</div><div class="empty-desc">Vá em Configurações → Metas por marca para cadastrar.</div></div>`;
-    document.getElementById('rel-meta-total').textContent = '—';
-    document.getElementById('rel-real-total').textContent = '—';
     return;
   }
 
@@ -17021,8 +17041,6 @@ function renderizarRelatorios() {
     }
     return Math.ceil(v).toLocaleString('pt-BR');
   };
-
-  let metaTotalN = 0, realTotalN = 0;
 
   const cards = metas.map(meta => {
     const real   = calcularRealMarca(meta);
@@ -17067,9 +17085,6 @@ function renderizarRelatorios() {
     const tendCor = (metaBatida || tendPct >= 100) ? '#00D68F' : tendPct >= 80 ? '#F59E0B' : '#EF4444';
     const tendPctTxt = (tendPct > 999 ? '+999' : tendPct) + '%';
     const detalheHTML = _detalheVendasMarca(meta);
-
-    metaTotalN += meta.valor;
-    realTotalN += real;
 
     return `
     <div class="rel-card" id="rel-card-${meta.id}" style="padding:0;overflow:hidden;margin-bottom:12px;border:1.5px solid ${corHex}44;cursor:pointer;" onclick="toggleRelCard('${meta.id}')">
@@ -17131,8 +17146,6 @@ function renderizarRelatorios() {
   }).join('');
 
   lista.innerHTML = cards;
-  document.getElementById('rel-meta-total').textContent = fmtN(metaTotalN);
-  document.getElementById('rel-real-total').textContent = fmtN(realTotalN);
 }
 
 // ----- Config de metas -----

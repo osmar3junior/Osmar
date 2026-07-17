@@ -554,6 +554,7 @@ if ('serviceWorker' in navigator) {
      certo num toque mesmo com a lista cheia recolhida por baixo dele. */
   .hotel-mini-chip { flex-shrink:0; scroll-snap-align:start; background:var(--bg3); border:1px solid var(--borda); border-radius:11px; padding:8px 12px; cursor:pointer; min-width:126px; max-width:190px; text-align:left; font-family:'DM Sans',sans-serif; }
   .hotel-mini-chip:active { border-color:var(--roxo); }
+  .hotel-mini-chip.ativo { border-color:var(--roxo); background:rgba(167,139,250,.12); }
   .hotel-mini-cidade { font-size:9.5px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--texto3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .hotel-mini-nome { font-size:12.5px; font-weight:700; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
   .hotel-mini-km { font-size:10px; color:var(--texto3); margin-top:2px; font-variant-numeric:tabular-nums; }
@@ -4719,13 +4720,20 @@ function ampliarRaioEstrada() {
   if (c) c.scrollTo({ left: c.scrollWidth, behavior: 'smooth' });
 }
 
-let _hotelListaExpandida = false;
+// Qual hotel salvo está aberto (accordion). A lista sempre-visível saiu: o
+// carrossel é a interface, e só o hotel tocado abre o card por baixo dele —
+// mantém "cidades em volta" (busca por GPS) sempre ao alcance, sem rolar.
+let _hotelExpandidoId = null;
+let _reservaDataIso = null;    // check-in escolhido no bloco de reserva
+let _reservaModoData = false;  // mostra o <input type=date> quando o rep toca "Data"
 
 function resetarFiltroEstrada() {
   cidadeSelEstrada = null;
   anelEstrada = 0;
   _cidadesEstradaAnteriores = new Set();
-  _hotelListaExpandida = false;
+  _hotelExpandidoId = null;
+  _reservaDataIso = null;
+  _reservaModoData = false;
 }
 
 function renderizarEstrada() {
@@ -4765,17 +4773,17 @@ function renderizarEstrada() {
     return;
   }
   const ordenados = _ordenarEstrada(itens);
-  _renderMiniCarrosselHoteis(ordenados);
-  // Com poucos hotéis a lista cabe na tela sem incomodar — só recolhe quando
-  // tem gente o bastante pra empurrar "cidades em volta" (busca por GPS) lá
-  // pra baixo, que era o problema relatado.
-  if (abaEstrada === 'hoteis' && ordenados.length > 3 && !_hotelListaExpandida) {
-    cont.innerHTML = `<button onclick="_hotelListaExpandida=true;renderizarEstrada();" style="width:100%;background:var(--bg3);border:1px dashed var(--borda);border-radius:12px;padding:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;">Ver todos os ${ordenados.length} hotéis salvos ▾</button>`;
+  _renderMiniCarrosselHoteis(ordenados); // limpa sozinho quando <2 hotéis
+  // Um hotel só: sem carrossel (não há o que escolher), mostra o card direto.
+  if (ordenados.length === 1) {
+    cont.innerHTML = _cardHotelExpandido(ordenados[0]);
     return;
   }
-  const cabecalhoRecolher = (abaEstrada === 'hoteis' && ordenados.length > 3) ? `
-    <button onclick="_hotelListaExpandida=false;renderizarEstrada();" style="width:100%;background:transparent;border:none;color:var(--texto3);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;text-align:left;padding:0 2px 8px;">▴ Ocultar lista</button>` : '';
-  cont.innerHTML = cabecalhoRecolher + ordenados.map(abaEstrada === 'hoteis' ? _cardHotel : _cardPosto).join('');
+  // 2+: carrossel em cima; o card aparece só quando o rep toca num chip.
+  const exp = _hotelExpandidoId ? ordenados.find(h => h.id === _hotelExpandidoId) : null;
+  cont.innerHTML = exp
+    ? _cardHotelExpandido(exp)
+    : `<div style="text-align:center;padding:14px 16px;font-size:12px;color:var(--texto3);font-family:'DM Sans',sans-serif;">👆 Toque num hotel acima para ver os detalhes e pedir reserva</div>`;
 }
 
 // Carrossel compacto dos hotéis salvos, ordenado por proximidade (mesma ordem
@@ -4789,7 +4797,8 @@ function _renderMiniCarrosselHoteis(ordenados) {
   const chips = ordenados.map(h => {
     const km = _kmEstrada(h);
     const kmTxt = km === null ? '' : `<div class="hotel-mini-km">📍 ${km < 1 ? Math.round(km*1000)+'m' : Math.round(km)+'km'}</div>`;
-    return `<button class="hotel-mini-chip" onclick="_irParaHotelNaLista('${h.id}')">
+    const ativo = _hotelExpandidoId === h.id ? ' ativo' : '';
+    return `<button class="hotel-mini-chip${ativo}" onclick="_toggleHotelExpandido('${h.id}')">
       ${h.cidade ? `<div class="hotel-mini-cidade">${esc(h.cidade)}</div>` : ''}
       <div class="hotel-mini-nome">${esc(h.nome)}</div>
       ${kmTxt}
@@ -4798,19 +4807,91 @@ function _renderMiniCarrosselHoteis(ordenados) {
   cont.innerHTML = `<div class="estrada-carrossel">${chips}</div>`;
 }
 
-// Toque num chip do mini-carrossel: expande a lista (se estava recolhida) e
-// rola até o card daquele hotel — mesmo padrão do farol de marcas.
-function _irParaHotelNaLista(hotelId) {
-  _hotelListaExpandida = true;
+// Toque num chip: abre o card daquele hotel logo abaixo do carrossel (ou fecha,
+// se já era o aberto). Só um por vez — accordion.
+function _toggleHotelExpandido(hotelId) {
+  if (_hotelExpandidoId === hotelId) {
+    _hotelExpandidoId = null;
+  } else {
+    _hotelExpandidoId = hotelId;
+    _reservaDataIso = null;      // cada hotel começa sem data escolhida
+    _reservaModoData = false;
+  }
   renderizarEstrada();
-  setTimeout(() => {
-    const card = document.querySelector(`#estrada-lista [data-hotel-id="${hotelId}"]`);
-    if (!card) return;
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    card.style.transition = 'box-shadow .2s';
-    card.style.boxShadow = '0 0 0 2px var(--roxo)';
-    setTimeout(() => { card.style.boxShadow = ''; }, 900);
-  }, 120);
+  if (_hotelExpandidoId) {
+    setTimeout(() => {
+      const card = document.querySelector(`#estrada-lista [data-hotel-id="${hotelId}"]`);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+  }
+}
+
+// Card do hotel salvo (o mesmo _cardHotel de sempre) + o bloco de pedir reserva.
+function _cardHotelExpandido(h) {
+  return _cardHotel(h) + _blocoReservaHotel(h);
+}
+
+const _isoLocalHotel = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+// Mensagem calorosa pra hotel que o rep já conhece (≠ da mensagem fria da busca
+// por GPS). "Já me hospedei aí" só quando há pernoite registrado — senão não
+// inventa intimidade que não houve.
+function _getMsgReservaHotel(h) {
+  const nomeRep = (usuarioAtual && usuarioAtual.nome || '').trim().split(/\s+/)[0];
+  const jaHospedou = h.pernoites && h.pernoites.length;
+  const conhece = jaHospedou ? `Já me hospedei aí no ${h.nome} 🙂` : `Conheço o ${h.nome} 🙂`;
+  const cidade = h.cidade ? ` em ${h.cidade}` : '';
+  const dt = _reservaDataIso ? _fmtDataHotel(_reservaDataIso) : '[data]';
+  const saud = nomeRep ? `Oi! Aqui é o ${nomeRep}.` : 'Oi!';
+  return `${saud} ${conhece} Vou estar${cidade} no dia ${dt} e queria ver disponibilidade — consegue me passar o valor e me segurar um quarto? Obrigado!`;
+}
+
+function _setReservaData(tipo) {
+  if (tipo === 'data') { _reservaModoData = true; }
+  else {
+    _reservaModoData = false;
+    _reservaDataIso = _isoLocalHotel(tipo === 'amanha' ? new Date(Date.now() + 86400000) : new Date());
+  }
+  renderizarEstrada();
+}
+function _setReservaDataCustom(val) {
+  _reservaDataIso = val || null;
+  renderizarEstrada();
+}
+
+function _pedirReservaHotel(id) {
+  const h = getLogistica().hoteis.find(x => x.id === id);
+  if (!h) return;
+  const wpp = _normTelBR(h.whatsapp || h.telefone || '');
+  if (!wpp) { toast('Sem número salvo — toque em ✏️ e cadastre o WhatsApp'); return; }
+  window.open(`https://wa.me/55${wpp}?text=${encodeURIComponent(_getMsgReservaHotel(h))}`, '_blank');
+}
+
+function _blocoReservaHotel(h) {
+  const temNum = !!(h.whatsapp || h.telefone);
+  const hoje = _isoLocalHotel(new Date());
+  const amanha = _isoLocalHotel(new Date(Date.now() + 86400000));
+  const ehHoje = _reservaDataIso === hoje;
+  const ehAmanha = _reservaDataIso === amanha;
+  const ehData = _reservaModoData || (!!_reservaDataIso && !ehHoje && !ehAmanha);
+  const chipStyle = ativo => `flex:1;border-radius:9px;padding:9px 4px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;${ativo ? 'background:var(--verde);color:#04231A;border:1px solid var(--verde);' : 'background:var(--bg2);color:var(--texto2);border:1px solid var(--borda);'}`;
+  const dateInput = ehData ? `<input type="date" value="${ehData && _reservaDataIso && !ehHoje && !ehAmanha ? _reservaDataIso : ''}" onchange="_setReservaDataCustom(this.value)" class="campo-input" style="width:100%;margin-top:8px;">` : '';
+  const wppCircle = `<span style="width:20px;height:20px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${WPP_ICON}</span>`;
+  const acao = !temNum
+    ? `<div style="font-size:10.5px;color:var(--amarelo);margin-top:10px;text-align:center;font-family:'DM Sans',sans-serif;">Sem número salvo — toque em ✏️ no card e cadastre o WhatsApp.</div>`
+    : _reservaDataIso
+      ? `<button onclick="_pedirReservaHotel('${h.id}')" style="width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;border:none;border-radius:10px;padding:12px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">${wppCircle} Pedir reserva no WhatsApp</button>`
+      : `<div style="font-size:10.5px;color:var(--texto3);margin-top:10px;text-align:center;font-family:'DM Sans',sans-serif;">Escolha o dia pra montar a mensagem 👆</div>`;
+  return `<div style="background:var(--bg3);border:1px solid rgba(167,139,250,.35);border-radius:12px;padding:12px;margin:-2px 0 8px;">
+    <div style="font-size:11px;font-weight:700;color:var(--roxo);font-family:'DM Sans',sans-serif;margin-bottom:8px;">🗓️ Pedir reserva — escolha o dia</div>
+    <div style="display:flex;gap:6px;">
+      <button onclick="_setReservaData('hoje')" style="${chipStyle(ehHoje)}">Hoje</button>
+      <button onclick="_setReservaData('amanha')" style="${chipStyle(ehAmanha)}">Amanhã</button>
+      <button onclick="_setReservaData('data')" style="${chipStyle(ehData)}">📅 Data</button>
+    </div>
+    ${dateInput}
+    ${acao}
+  </div>`;
 }
 
 // Com GPS, a ordem é a distância real. Sem GPS, cai no comportamento antigo:

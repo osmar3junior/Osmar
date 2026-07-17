@@ -530,6 +530,25 @@ if ('serviceWorker' in navigator) {
   .estrada-chip-prox .estrada-chip-meta { color:rgba(56,189,248,.65); }
   .estrada-chip-novo { animation:estradaChipEntra .34s cubic-bezier(.2,.8,.3,1) backwards; }
   @keyframes estradaChipEntra { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:none; } }
+
+  /* Farol de marcas do dashboard: bolinha + marca + % de meta, pior primeiro.
+     A cor chega antes da leitura — é o ponto inteiro de ser um farol. */
+  .farol-label { display:flex; align-items:center; justify-content:space-between; margin:2px 0 7px; }
+  .farol-label span { font-size:10px; font-weight:700; letter-spacing:.9px; text-transform:uppercase; color:var(--texto3); }
+  .farol-carrossel { display:flex; gap:7px; overflow-x:auto; padding:2px 0 12px; margin-bottom:2px; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .farol-carrossel::-webkit-scrollbar { height:0; }
+  .farol-chip { flex-shrink:0; scroll-snap-align:start; display:flex; align-items:center; gap:7px; background:var(--bg3); border:1px solid var(--borda); border-radius:11px; padding:9px 12px; cursor:pointer; transition:border-color .16s; }
+  .farol-chip:active { transform:translateY(1px); }
+  .farol-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .farol-dot.verde { background:#22C55E; box-shadow:0 0 6px rgba(34,197,94,.55); }
+  .farol-dot.amarelo { background:#F59E0B; box-shadow:0 0 6px rgba(245,158,11,.55); }
+  .farol-dot.vermelho { background:#EF4444; box-shadow:0 0 6px rgba(239,68,68,.55); }
+  .farol-info { display:flex; flex-direction:column; line-height:1.2; }
+  .farol-marca { font-size:12.5px; font-weight:700; color:var(--texto); white-space:nowrap; }
+  .farol-pct { font-size:10.5px; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .farol-pct.verde { color:var(--verde); }
+  .farol-pct.amarelo { color:var(--amarelo); }
+  .farol-pct.vermelho { color:#FF4D6A; }
   @keyframes amberGlow {
     0%,100% { text-shadow:0 0 0px rgba(255,192,67,0); color:#FFC043; }
     50%      { text-shadow:0 0 14px rgba(255,192,67,.9), 0 0 28px rgba(255,192,67,.4); color:#FFD97A; }
@@ -961,9 +980,8 @@ if ('serviceWorker' in navigator) {
         <div class="resumo-link">Ver lista →</div>
       </div>
       <div class="resumo-card roxo" onclick="abrirRelatorios()">
-        <div class="resumo-topo"><span class="resumo-card-icone">📊</span><span class="resumo-label">Meta &amp; Real + Análises</span></div>
-        <div class="resumo-numero" id="num-metas" style="font-size:22px;">—</div>
-        <div class="resumo-link">Abrir →</div>
+        <div class="resumo-topo"><span class="resumo-card-icone">📊</span><span class="resumo-label">Meta &amp; Real</span></div>
+        <div class="resumo-link" style="margin-top:2px;">Abrir →</div>
       </div>
       <div class="resumo-card azul" onclick="abrirRelatorios();setTimeout(()=>trocarAbaRelatorio('acoes'),150)">
         <div class="resumo-topo"><span class="resumo-card-icone">📡</span><span class="resumo-label">Radar de Clientes</span></div>
@@ -976,6 +994,11 @@ if ('serviceWorker' in navigator) {
         <div class="resumo-link">Lançar agora →</div>
       </div>
     </div>
+
+    <!-- FAROL DE MARCAS: preenchido por atualizarSemaforoDash(). Fica escondido
+         (innerHTML vazio) quando não há metas cadastradas ou nenhuma marca — não
+         aparece um carrossel vazio pra confundir quem ainda não configurou nada. -->
+    <div id="farol-marcas"></div>
 
     <!-- BOTÃO ROTA DE HOJE -->
     <button id="btn-rota-hoje" onclick="abrirRotaDeHoje()" style="width:100%;background:linear-gradient(135deg,#0D1F18,#1a3328);border:1.5px solid rgba(0,214,143,.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
@@ -1228,6 +1251,23 @@ if ('serviceWorker' in navigator) {
   <div class="detalhe-header">
     <div class="detalhe-nome" id="det-nome">-</div>
     <div class="detalhe-loja" id="det-loja">-</div>
+
+    <!-- Só aparece na 1ª vez que o rep abre um cliente vindo de importação em massa
+         cujo nome ainda é idêntico ao da loja — sinal de que a planilha não tinha
+         uma coluna separada pra quem de fato compra ali. Fica logo abaixo do nome,
+         onde o rep já está olhando, sem bloquear nada: ele decide preencher ou
+         "Agora não" e segue pro resto da tela sem esse desvio de novo. -->
+    <div id="comprador-banner" style="display:none;background:rgba(255,192,67,.08);border:1px solid rgba(255,192,67,.3);border-radius:12px;padding:12px 14px;margin:10px 0 4px;">
+      <div style="font-size:12.5px;color:var(--texto2);line-height:1.45;margin-bottom:9px;">✏️ <strong style="color:var(--texto);">"<span id="comprador-banner-loja"></span>"</strong> é o nome cadastrado da loja. Quer registrar o nome de quem você atende lá, pra chamar pelo nome certo?</div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="comprador-banner-input" placeholder="Nome de quem compra..." onkeydown="if(event.key==='Enter')salvarNomeComprador()" style="flex:1;min-width:0;background:var(--bg2);border:1px solid var(--borda);border-radius:9px;padding:9px 10px;color:var(--texto);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+        <button onclick="salvarNomeComprador()" style="background:var(--amarelo);border:none;border-radius:9px;padding:0 14px;color:#3D2E00;font-weight:700;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;flex-shrink:0;">Salvar</button>
+      </div>
+      <div style="text-align:right;margin-top:7px;">
+        <span onclick="dispensarBannerComprador()" style="font-size:11.5px;color:var(--texto3);cursor:pointer;text-decoration:underline;">Agora não</span>
+      </div>
+    </div>
+
     <div class="detalhe-acoes">
       <button class="btn-acao btn-visita" style="width:100%;" onclick="abrirModalContato('visita')">📍 Resultado da visita ou contato</button>
       <div style="display:flex;gap:8px;margin-top:8px;">
@@ -2713,7 +2753,10 @@ if ('serviceWorker' in navigator) {
 
     <div style="display:flex;flex-direction:column;gap:8px;">
       <button id="fr-btn-ordem" onclick="_foraRotaToggleOrdem()" style="background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.35);border-radius:11px;padding:12px;color:#38BDF8;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">➤ Ver rota com prioridade</button>
-      <button onclick="_foraRotaWhatsApp()" style="display:flex;align-items:center;justify-content:center;gap:7px;background:#25D366;border:none;border-radius:11px;padding:12px;color:#fff;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">💬 Enviar via WhatsApp</button>
+      <button onclick="_foraRotaWhatsApp()" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;border:none;border-radius:11px;padding:12px;color:#fff;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">
+        <span style="width:22px;height:22px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg></span>
+        Enviar via WhatsApp
+      </button>
     </div>
   </div>
 </div>
@@ -3222,7 +3265,7 @@ if ('serviceWorker' in navigator) {
 
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:8px 6px;margin-bottom:16px;margin-top:10px;">
       <button onclick="navMesDespesas(-1)" style="background:none;border:none;color:var(--texto2);font-size:22px;cursor:pointer;padding:2px 12px;line-height:1;">‹</button>
-      <span id="desp-mes-label" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--texto);"></span>
+      <span id="desp-mes-label" style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;color:var(--texto);"></span>
       <button onclick="navMesDespesas(1)" style="background:none;border:none;color:var(--texto2);font-size:22px;cursor:pointer;padding:2px 12px;line-height:1;">›</button>
     </div>
 
@@ -5242,16 +5285,28 @@ function _cardHotelGps(r, idx) {
           <div style="display:flex;gap:5px;margin-top:2px;">
             <a href="${navWaze}" target="_blank" style="${btnStyle}flex:1;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);color:#38BDF8;text-decoration:none;display:block;">🚗 Waze</a>
             <a href="${navMaps}" target="_blank" style="${btnStyle}flex:1;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);color:#FBBF24;text-decoration:none;display:block;">🗺️ G.Maps</a>
-            <button onclick='salvarHotelDaGps(${JSON.stringify({nome:r.nome,cidade:r.cidade,end:r.end,lat:String(r.elLat),lng:String(r.elLng),stars:r.stars}).replace(/'/g,"\\'")})' style="${btnStyle}flex:1;background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.2);color:var(--verde);">💾 Salvar hotel</button>
+            <button onclick='salvarHotelDaGps(${idx})' style="${btnStyle}flex:1;background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.2);color:var(--verde);">💾 Salvar hotel</button>
           </div>
         </div>`;
 }
 
-function salvarHotelDaGps(dados) {
+// Recebe o índice em window._hotelBuscaResultados, não os dados prontos: o
+// telefone às vezes só chega DEPOIS do card renderizado (_buscarTelHotel busca
+// no cache/Google Places em segundo plano). Buscar pelo índice na hora do clique
+// pega o telefone se ele já tiver chegado — era por isso que "Salvar hotel"
+// sempre nascia sem telefone, mesmo quando o card já mostrava 📞 na tela.
+function salvarHotelDaGps(idx) {
+  const r = window._hotelBuscaResultados?.[idx];
+  if (!r) return;
+  const tel = (r.tels || [])[0] || '';
   abrirCadHotel({
-    id: '', nome: dados.nome, cidade: dados.cidade,
-    endereco: dados.end, lat: dados.lat, lng: dados.lng,
-    estrelas: dados.stars || 0
+    id: '', nome: r.nome, cidade: r.cidade,
+    endereco: r.end, lat: r.elLat, lng: r.elLng,
+    estrelas: r.stars || 0,
+    // Mesmo critério já usado no resto do app (ex.: linha ~4509): número achado
+    // sem saber se é fixo ou celular vira sugestão nos dois campos, e o rep
+    // corrige se for o caso — melhor um WhatsApp a confirmar do que nenhum.
+    telefone: tel, whatsapp: tel
   });
 }
 
@@ -12035,6 +12090,57 @@ function _abrirClienteDaSemanaManual(clienteId) {
 }
 
 // ===== DETALHE =====
+// Detecta cliente vindo de importação em massa (planilha ou lista de CNPJ — os
+// dois únicos fluxos que geram 'c_imp_'/'c_cnpj_' como prefixo do id, ver
+// _linhasParaClientes e _enriquecerCnpjs) cujo nome ainda é idêntico ao da loja.
+// É o sintoma de que a planilha não tinha uma coluna própria pra quem compra —
+// só a razão social/nome fantasia, repetida nos dois campos. Cadastro manual
+// (prefixo 'c_' + timestamp, sem '_imp'/'_cnpj') nunca dispara isso: ali o rep
+// já digitou o nome de próprio punho.
+function _precisaPerguntarComprador(cliente) {
+  if (!cliente || cliente._compradorPerguntado) return false;
+  if (!/^c_(imp|cnpj)_/.test(cliente.id || '')) return false;
+  const nome = (cliente.nome || '').trim().toUpperCase();
+  const loja = (cliente.loja || '').trim().toUpperCase();
+  return !!nome && nome === loja;
+}
+
+function _renderBannerComprador(cliente) {
+  const banner = document.getElementById('comprador-banner');
+  if (!banner) return;
+  if (!_precisaPerguntarComprador(cliente)) { banner.style.display = 'none'; return; }
+  document.getElementById('comprador-banner-loja').textContent = cliente.loja;
+  document.getElementById('comprador-banner-input').value = '';
+  banner.style.display = 'block';
+}
+
+// Marca como já perguntado (salvando ou pulando) — é o que faz o banner aparecer
+// só "a primeira vez": sem essa marca, ele voltaria a cada abertura do cliente e
+// viraria irritação em vez de ajuda numa carteira de 100-200 clientes.
+function _fecharBannerComprador(clienteId, novoNome) {
+  const clientes = getClientes();
+  const cliente = clientes.find(c => c.id === clienteId);
+  if (!cliente) return;
+  if (novoNome) cliente.nome = novoNome;
+  cliente._compradorPerguntado = true;
+  cliente._mod = Date.now();
+  salvarClientes(clientes);
+  document.getElementById('comprador-banner').style.display = 'none';
+  if (novoNome) document.getElementById('det-nome').textContent = novoNome;
+}
+
+function salvarNomeComprador() {
+  const input = document.getElementById('comprador-banner-input');
+  const nome = input.value.trim();
+  if (!nome) { input.focus(); return; }
+  _fecharBannerComprador(clienteAtualId, nome.toUpperCase());
+  toast('✅ Nome do comprador salvo');
+}
+
+function dispensarBannerComprador() {
+  _fecharBannerComprador(clienteAtualId, null);
+}
+
 function abrirDetalhe(clienteId, telaOrigem) {
   clienteAtualId = clienteId;
   telaAnteriorDetalhe = telaOrigem || 'clientes';
@@ -12078,6 +12184,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
   if (!cliente) return;
 
   document.getElementById('det-nome').textContent = cliente.nome;
+  _renderBannerComprador(cliente);
   // Botão "Cutucar" personalizado + subtítulo que gira a cada abertura
   const _cutN = document.getElementById('cutucar-nome');
   if (_cutN) _cutN.textContent = 'Interagir com ' + (_primeiroNomeCap(cliente.nome) || 'o cliente');
@@ -14952,15 +15059,72 @@ function _dotClasseTend(pct) {
   return 'dot-vermelho-meta';
 }
 
+// Única régua de cor pro semáforo de metas — usada aqui e em renderizarRelatorios().
+// Existiu uma segunda régua (_dotClasseTend, com corte em 100/80 em vez de 90/60)
+// que ficou órfã no código faz tempo: função nunca chamada, sobrevivendo só como
+// CSS morto. Esta função existe pra nunca mais haver duas réguas por engano.
+function _corSemaforoMeta(ratio, metaBatida) {
+  if (metaBatida || ratio >= 0.9) return { cor: 'verde',    corHex: '#00D68F' };
+  if (ratio >= 0.6)               return { cor: 'amarelo',  corHex: '#F59E0B' };
+  return                                 { cor: 'vermelho', corHex: '#EF4444' };
+}
+
+// Farol de marcas do dashboard: substituiu o card roxo que somava todas as metas
+// numa média só. Uma marca a 41% e outra a 112% viravam "88%" — número que não
+// dizia pra qual marca olhar. Aqui cada marca aparece com sua própria cor, pior
+// primeiro, pra bater o olho no que precisa de atenção sem entrar em "Minhas
+// Análises" pra descobrir.
 function atualizarSemaforoDash() {
-  // Alimenta o número do quadrante "Meta & Real + Análises": % realizado médio das metas
-  const el = document.getElementById('num-metas');
-  if (!el) return;
+  const cont = document.getElementById('farol-marcas');
+  if (!cont) return;
   const metas = getMetasConfig();
-  if (!metas.length) { el.textContent = '—'; return; }
-  const pcts = metas.map(m => { const real = calcularRealMarca(m); return m.valor > 0 ? (real / m.valor) * 100 : 0; });
-  const media = Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length);
-  el.textContent = media > 999 ? '999+' : media + '%';
+  if (!metas.length) { cont.innerHTML = ''; return; }
+
+  const itens = metas.map(m => {
+    const real   = calcularRealMarca(m);
+    const { inicio, fim } = _periodoMeta(m);
+    const agora  = new Date();
+    const diasTotal    = Math.max(1, Math.round((fim - inicio) / 86400000));
+    const diasPassados = Math.max(1, Math.min(Math.round((agora - inicio) / 86400000), diasTotal));
+    const pctPeriodo = Math.min(100, Math.round((diasPassados / diasTotal) * 100));
+    const pctReal    = m.valor > 0 ? Math.round((real / m.valor) * 100) : 0;
+    const metaBatida = (m.valor - real) <= 0;
+    const ratio      = pctPeriodo > 0 ? pctReal / pctPeriodo : 1;
+    const { cor }    = _corSemaforoMeta(ratio, metaBatida);
+    return { id: m.id, marca: m.marca, pctReal, cor };
+  });
+
+  // Pior primeiro: o chip visível sem rolar é o que mais precisa de atenção.
+  const ordemCor = { vermelho: 0, amarelo: 1, verde: 2 };
+  itens.sort((a, b) => (ordemCor[a.cor] - ordemCor[b.cor]) || (a.pctReal - b.pctReal));
+
+  const chips = itens.map(it => `
+    <div class="farol-chip" onclick="abrirRelatorioMarca('${it.id}')">
+      <span class="farol-dot ${it.cor}"></span>
+      <span class="farol-info">
+        <span class="farol-marca">${esc(it.marca)}</span>
+        <span class="farol-pct ${it.cor}">${it.pctReal > 999 ? '999+' : it.pctReal}%</span>
+      </span>
+    </div>`).join('');
+
+  cont.innerHTML = `
+    <div class="farol-label"><span>Farol de marcas</span></div>
+    <div class="farol-carrossel">${chips}</div>`;
+}
+
+// Abre "Minhas Análises" já na aba Metas e rola direto até o card da marca
+// tocada no farol — sem isso, o farol só resolveria "estou bem?" e deixaria
+// "o que eu faço agora?" pro rep catar rolando a lista inteira de novo.
+function abrirRelatorioMarca(metaId) {
+  abrirRelatorios();
+  setTimeout(() => {
+    const card = document.getElementById('rel-card-' + metaId);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.style.transition = 'box-shadow .2s';
+    card.style.boxShadow = '0 0 0 2px var(--roxo)';
+    setTimeout(() => { card.style.boxShadow = ''; }, 900);
+  }, 150);
 }
 
 let _relAbaAtiva = 'metas';
@@ -16882,20 +17046,9 @@ function renderizarRelatorios() {
     // Status semáforo baseado em pct real vs pct do período
     const metaBatida = falta <= 0;
     const ratio = pctPeriodo > 0 ? pctReal / pctPeriodo : 1;
-    let cor, corHex, statusLabel, statusBg;
-    if (metaBatida || ratio >= 0.9) {
-      cor = 'verde'; corHex = '#00D68F';
-      statusLabel = metaBatida ? 'Meta batida ✓' : 'No ritmo';
-      statusBg = 'rgba(0,214,143,.04)';
-    } else if (ratio >= 0.6) {
-      cor = 'amarelo'; corHex = '#F59E0B';
-      statusLabel = 'Atenção';
-      statusBg = 'rgba(245,158,11,.04)';
-    } else {
-      cor = 'vermelho'; corHex = '#EF4444';
-      statusLabel = 'Crítico';
-      statusBg = 'rgba(239,68,68,.04)';
-    }
+    const { cor, corHex } = _corSemaforoMeta(ratio, metaBatida);
+    const statusLabel = cor === 'verde' ? (metaBatida ? 'Meta batida ✓' : 'No ritmo') : cor === 'amarelo' ? 'Atenção' : 'Crítico';
+    const statusBg     = cor === 'verde' ? 'rgba(0,214,143,.04)' : cor === 'amarelo' ? 'rgba(245,158,11,.04)' : 'rgba(239,68,68,.04)';
 
     // Número real formatado
     const realTxt = (meta.sku === 'reais' || meta.sku === 'faturamento')
@@ -18820,6 +18973,27 @@ function calcularComissaoMes() {
   return total;
 }
 
+// Projeta o fechamento do mês pelo ritmo de gasto nos dias úteis já passados —
+// mesma lógica de "precisa de ~X/dia" já usada nas metas (linha ~6262), aplicada
+// ao lado da despesa. Só faz sentido no mês CORRENTE: mês passado já fechou (o
+// total real é o dado, não uma estimativa) e mês futuro não tem gasto pra puxar
+// uma média. Amostra de 1 dia útil já entra no cálculo — é ruído mesmo, mas fica
+// claro pelo rótulo "no ritmo atual" que é extrapolação, não promessa.
+function _tendenciaDespesasMes(totalGeral) {
+  const mesReal = new Date().toISOString().slice(0,7);
+  if (_despMesAtual !== mesReal || totalGeral <= 0) return null;
+  const [y, m] = _despMesAtual.split('-').map(Number);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const inicioMes = new Date(y, m - 1, 1);
+  const fimMes = new Date(y, m, 0); // dia 0 do mês seguinte = último dia deste mês
+  const diasUteisPassados = _diasUteisRestantes(inicioMes, hoje);  // inclui hoje
+  const diasUteisTotais   = _diasUteisRestantes(inicioMes, fimMes);
+  const restantes = diasUteisTotais - diasUteisPassados;
+  if (diasUteisPassados <= 0 || restantes <= 0) return null; // sem base, ou mês já sem dia útil pela frente
+  const projecao = (totalGeral / diasUteisPassados) * diasUteisTotais;
+  return { projecao, restantes };
+}
+
 function abrirDespesas() {
   _despMesAtual = new Date().toISOString().slice(0,7);
   renderizarDespesas();
@@ -18860,6 +19034,13 @@ function renderizarDespesas() {
         <span style="font-size:14px;font-weight:700;color:${cat.cor};">R$ ${fmtValorDesp(totais[k])}</span>
       </div>`).join('');
 
+  const tendencia = _tendenciaDespesasMes(totalGeral);
+  const tendenciaHTML = tendencia ? `
+    <div style="margin-top:10px;background:rgba(255,192,67,.07);border:1px solid rgba(255,192,67,.25);border-radius:10px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <span style="font-size:11.5px;color:var(--texto2);line-height:1.35;">📈 No ritmo atual, tendência de fechar em<br><span style="font-size:10px;color:var(--texto3);">${tendencia.restantes} ${tendencia.restantes === 1 ? 'dia útil restante' : 'dias úteis restantes'}</span></span>
+      <span style="font-size:17px;font-weight:800;color:var(--amarelo);font-family:'DM Sans',sans-serif;letter-spacing:-.3px;white-space:nowrap;">R$ ${fmtValorDesp(tendencia.projecao)}</span>
+    </div>` : '';
+
   const comissaoHTML = comissao > 0 ? `
     <div class="desp-resumo-row">
       <span style="font-size:13px;color:var(--texto2);">💵 Comissão estimada</span>
@@ -18878,6 +19059,7 @@ function renderizarDespesas() {
          <span style="font-size:13px;font-weight:700;color:var(--texto);">Total despesas</span>
          <span style="font-size:24px;font-weight:800;color:var(--vermelho);font-family:'DM Sans',sans-serif;letter-spacing:-0.5px;line-height:1;">− R$ ${fmtValorDesp(totalGeral)}</span>
        </div>
+       ${tendenciaHTML}
        ${comissaoHTML}`;
 
   // --- Lista ---

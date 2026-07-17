@@ -508,6 +508,24 @@ if ('serviceWorker' in navigator) {
   .estrada-spinner { display:inline-block; animation:spinEmoji 1s linear infinite; }
   .estrada-buscando-txt { animation:pulsaTexto 1.2s ease-in-out infinite; }
   .estrada-btn-ativo { background:rgba(251,191,36,.35) !important; border-color:#FBBF24 !important; color:#FBBF24 !important; }
+  /* Carrossel de cidades do "Na estrada". A cidade é o controle e o raio é só o
+     mecanismo atrás dela: por isso ele é passo (um toque), nunca arrasto — dedo
+     fino com uma mão só, dentro do carro, não funciona. */
+  .estrada-geo-label { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; }
+  .estrada-geo-label span { font-size:10px; font-weight:700; letter-spacing:.9px; text-transform:uppercase; color:var(--texto3); font-family:'DM Sans',sans-serif; }
+  .estrada-carrossel { display:flex; gap:7px; overflow-x:auto; padding:2px 0 10px; margin-bottom:4px; scroll-snap-type:x proximity; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .estrada-carrossel::-webkit-scrollbar { height:0; }
+  .estrada-chip { flex-shrink:0; scroll-snap-align:start; background:var(--bg3); border:1px solid var(--borda); border-radius:11px; padding:7px 11px; color:var(--texto2); font-family:'DM Sans',sans-serif; cursor:pointer; text-align:left; line-height:1.25; transition:background .16s,border-color .16s; }
+  .estrada-chip-nome { display:block; font-size:12.5px; font-weight:700; color:var(--texto); white-space:nowrap; }
+  .estrada-chip-meta { display:block; font-size:10.5px; font-weight:500; color:var(--texto3); white-space:nowrap; margin-top:1px; font-variant-numeric:tabular-nums; }
+  .estrada-chip.ativo { background:rgba(0,214,143,.13); border-color:rgba(0,214,143,.5); }
+  .estrada-chip.ativo .estrada-chip-nome { color:var(--verde); }
+  .estrada-chip.ativo .estrada-chip-meta { color:rgba(0,214,143,.75); }
+  .estrada-chip-raio { background:rgba(255,192,67,.08); border:1px dashed rgba(255,192,67,.45); }
+  .estrada-chip-raio .estrada-chip-nome { color:var(--amarelo); }
+  .estrada-chip-raio .estrada-chip-meta { color:rgba(255,192,67,.7); }
+  .estrada-chip-novo { animation:estradaChipEntra .34s cubic-bezier(.2,.8,.3,1) backwards; }
+  @keyframes estradaChipEntra { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:none; } }
   @keyframes amberGlow {
     0%,100% { text-shadow:0 0 0px rgba(255,192,67,0); color:#FFC043; }
     50%      { text-shadow:0 0 14px rgba(255,192,67,.9), 0 0 28px rgba(255,192,67,.4); color:#FFD97A; }
@@ -2892,6 +2910,10 @@ if ('serviceWorker' in navigator) {
       <button class="rota-periodo-btn" data-estrada="estacionar" onclick="trocarAbaEstrada('estacionar')">🅿️ Estacionar</button>
     </div>
 
+    <!-- Fica ABAIXO das abas de propósito: "Criciúma · 2" só significa alguma coisa
+         depois de saber se são 2 hotéis ou 2 postos. Categoria escopa, cidade filtra. -->
+    <div id="estrada-cidades"></div>
+
     <div id="estrada-lista"></div>
 
     <!-- Busca ao vivo: postos e estacionamentos -->
@@ -4252,6 +4274,7 @@ async function buscarProximosAoVivo(tipo, raioParam) {
 
 function abrirNaEstrada() {
   abaEstrada = 'hoteis';
+  resetarFiltroEstrada();
   document.getElementById('estrada-busca').value = '';
   document.getElementById('hotel-busca-cidade').value = '';
   document.getElementById('hotel-busca-nome').value = '';
@@ -4281,8 +4304,9 @@ function atualizarAbaEstrada() {
 }
 function trocarAbaEstrada(t) {
   abaEstrada = t;
+  resetarFiltroEstrada();
   atualizarAbaEstrada();
-  if (t === 'estacionar') { buscarProximosAoVivo('parking'); return; }
+  if (t === 'estacionar') { document.getElementById('estrada-cidades').innerHTML = ''; buscarProximosAoVivo('parking'); return; }
   renderizarEstrada();
 }
 
@@ -4484,12 +4508,131 @@ function abrirCadHotelPreenchido(dados) {
   }
 }
 
-function renderizarEstrada() {
+// ===== CIDADES POR DISTÂNCIA (carrossel do "Na estrada") =====
+// Ninguém na estrada decide "vou abrir 73 km"; decide "hoje eu durmo em Tubarão".
+// Então a cidade é o controle e o raio é o mecanismo: arrastar o carrossel para a
+// direita já É aumentar o raio, com a cidade no lugar do número.
+const ANEIS_ESTRADA = [60, 150, 300];
+let cidadeSelEstrada = null;
+let anelEstrada = 0;
+let _cidadesEstradaAnteriores = new Set();
+window._posEstrada = null;
+
+function _kmEstrada(i) {
+  if (!window._posEstrada || !i.lat || !i.lng) return null;
+  const la = parseFloat(i.lat), ln = parseFloat(i.lng);
+  if (!isFinite(la) || !isFinite(ln)) return null;
+  return _distKm(window._posEstrada.lat, window._posEstrada.lng, la, ln);
+}
+
+function _itensEstrada() {
   const log = getLogistica();
   const termo = (document.getElementById('estrada-busca').value || '').toLowerCase().trim();
-  const cont = document.getElementById('estrada-lista');
   let itens = abaEstrada === 'hoteis' ? log.hoteis : log.postos;
   if (termo) itens = itens.filter(i => (i.nome || '').toLowerCase().includes(termo) || (i.cidade || '').toLowerCase().includes(termo));
+  return itens;
+}
+
+// Agrupa por cidade. Sem GPS, ou com lugares antigos salvos sem lat/lng, o
+// carrossel continua servindo — perde a distância e o raio, vira agrupamento.
+// Cidade sem distância conhecida nunca some no filtro de raio, senão ficaria
+// inalcançável.
+function _cidadesEstrada(itens) {
+  const mapa = new Map();
+  for (const i of itens) {
+    const nome = (i.cidade || '').trim();
+    if (!nome) continue;
+    const km = _kmEstrada(i);
+    const c = mapa.get(nome) || { cidade: nome, km: null, n: 0 };
+    if (km !== null) c.km = (c.km === null) ? km : Math.min(c.km, km);
+    c.n++;
+    mapa.set(nome, c);
+  }
+  return [...mapa.values()].sort((a, b) => {
+    if (a.km === null && b.km === null) return a.cidade.localeCompare(b.cidade, 'pt-BR');
+    if (a.km === null) return 1;
+    if (b.km === null) return -1;
+    return a.km - b.km;
+  });
+}
+
+const _temRaioEstrada = cidades => cidades.some(c => c.km !== null);
+const _dentroDoAnel   = km => km === null || km <= ANEIS_ESTRADA[anelEstrada];
+
+function _filtrarPorCidadeERaio(base) {
+  let itens = base;
+  if (_temRaioEstrada(_cidadesEstrada(base))) itens = itens.filter(i => _dentroDoAnel(_kmEstrada(i)));
+  if (cidadeSelEstrada) itens = itens.filter(i => (i.cidade || '').trim() === cidadeSelEstrada);
+  return itens;
+}
+
+function _renderCarrosselCidades(base) {
+  const cont = document.getElementById('estrada-cidades');
+  if (!cont) return;
+  const todas   = _cidadesEstrada(base);
+  const temRaio = _temRaioEstrada(todas);
+  const visiveis = temRaio ? todas.filter(c => _dentroDoAnel(c.km)) : todas;
+  // Com uma cidade só o carrossel é mobília: não nasce.
+  if (visiveis.length < 2) { cont.innerHTML = ''; _cidadesEstradaAnteriores = new Set(); return; }
+  const atual = (window._cidadeAtualEstrada || '').toLowerCase();
+  const chips = visiveis.map(c => {
+    const aqui  = atual && c.cidade.toLowerCase().includes(atual) ? '📍 ' : '';
+    const novo  = _cidadesEstradaAnteriores.size && !_cidadesEstradaAnteriores.has(c.cidade) ? ' estrada-chip-novo' : '';
+    const ativo = cidadeSelEstrada === c.cidade ? ' ativo' : '';
+    const meta  = c.km === null ? String(c.n) : `${c.km < 3 ? 'aqui' : Math.round(c.km) + ' km'} · ${c.n}`;
+    return `<button class="estrada-chip${ativo}${novo}" data-cidade="${esc(c.cidade)}" onclick="selecionarCidadeEstrada(this.dataset.cidade)">
+      <span class="estrada-chip-nome">${aqui}${esc(c.cidade)}</span>
+      <span class="estrada-chip-meta">${meta}</span></button>`;
+  }).join('');
+  const podeAmpliar = temRaio && anelEstrada < ANEIS_ESTRADA.length - 1
+    && todas.some(c => c.km !== null && c.km > ANEIS_ESTRADA[anelEstrada]);
+  const chipRaio = podeAmpliar
+    ? `<button class="estrada-chip estrada-chip-raio" onclick="ampliarRaioEstrada()">
+        <span class="estrada-chip-nome">Ampliar raio →</span>
+        <span class="estrada-chip-meta">até ${ANEIS_ESTRADA[anelEstrada + 1]} km</span></button>`
+    : '';
+  const total = visiveis.reduce((s, c) => s + c.n, 0);
+  cont.innerHTML = `
+    <div class="estrada-geo-label">
+      <span>${temRaio ? 'Cidades por distância' : 'Cidades'}</span>
+      <span>${total} ${abaEstrada === 'hoteis' ? 'lugares' : 'postos'}${temRaio ? ' · até ' + ANEIS_ESTRADA[anelEstrada] + ' km' : ''}</span>
+    </div>
+    <div class="estrada-carrossel" id="estrada-carrossel">
+      <button class="estrada-chip${cidadeSelEstrada === null ? ' ativo' : ''}" onclick="selecionarCidadeEstrada(null)">
+        <span class="estrada-chip-nome">Todas</span>
+        <span class="estrada-chip-meta">${visiveis.length} cidades</span>
+      </button>
+      ${chips}${chipRaio}
+    </div>`;
+  _cidadesEstradaAnteriores = new Set(visiveis.map(c => c.cidade));
+}
+
+function selecionarCidadeEstrada(cidade) {
+  cidadeSelEstrada = (cidade && cidade === cidadeSelEstrada) ? null : (cidade || null);
+  renderizarEstrada();
+}
+
+function ampliarRaioEstrada() {
+  if (anelEstrada >= ANEIS_ESTRADA.length - 1) return;
+  anelEstrada++;
+  renderizarEstrada();
+  // As cidades novas entram pela direita: é onde fica "mais longe".
+  const c = document.getElementById('estrada-carrossel');
+  if (c) c.scrollTo({ left: c.scrollWidth, behavior: 'smooth' });
+}
+
+function resetarFiltroEstrada() {
+  cidadeSelEstrada = null;
+  anelEstrada = 0;
+  _cidadesEstradaAnteriores = new Set();
+}
+
+function renderizarEstrada() {
+  const cont = document.getElementById('estrada-lista');
+  const base = _itensEstrada();
+  _renderCarrosselCidades(base);
+  const nadaSalvo = base.length === 0;
+  let itens = _filtrarPorCidadeERaio(base);
   if (abaEstrada === 'postos') {
     // Sempre mostra o botão de busca ao vivo no topo
     const btnStyle = `flex:1;border-radius:10px;padding:10px 6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:rgba(251,191,36,.1);border:1.5px solid rgba(251,191,36,.35);color:#FBBF24;`;
@@ -4498,26 +4641,46 @@ function renderizarEstrada() {
       <button id="btn-posto-50k" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('estrada-btn-ativo'));this.classList.add('estrada-btn-ativo');buscarProximosAoVivo('fuel',50000)" style="${btnStyle}">🛣️ Na estrada<br><span style="font-size:10px;opacity:.7;">até 50 km</span></button>
     </div>`;
     if (itens.length === 0) {
-      cont.innerHTML = btnBusca + `<div class="empty-state" style="padding:20px 16px;"><div class="empty-icon">⛽</div><div class="empty-titulo">Nenhum posto salvo</div><div class="empty-desc">Busque ao vivo ou toque em "+ Adicionar posto".</div></div>`;
+      cont.innerHTML = btnBusca + (nadaSalvo
+        ? `<div class="empty-state" style="padding:20px 16px;"><div class="empty-icon">⛽</div><div class="empty-titulo">Nenhum posto salvo</div><div class="empty-desc">Busque ao vivo ou toque em "+ Adicionar posto".</div></div>`
+        : `<div class="empty-state" style="padding:20px 16px;"><div class="empty-icon">⛽</div><div class="empty-titulo">Nenhum posto ${cidadeSelEstrada ? 'em ' + esc(cidadeSelEstrada) : 'nesse raio'}</div><div class="empty-desc">Toque em outra cidade ou amplie o raio.</div></div>`);
       return;
     }
-    cont.innerHTML = btnBusca + itens.map(_cardPosto).join('');
+    cont.innerHTML = btnBusca + _ordenarEstrada(itens).map(_cardPosto).join('');
     return;
   }
   if (itens.length === 0) {
-    const v = { e:'🛏️', t:'Nenhum hotel ainda', d:'Toque em "Adicionar hotel" para montar sua lista.' };
+    const v = nadaSalvo
+      ? { e:'🛏️', t:'Nenhum hotel ainda', d:'Toque em "Adicionar hotel" para montar sua lista.' }
+      : { e:'🛏️', t:`Nenhum hotel ${cidadeSelEstrada ? 'em ' + esc(cidadeSelEstrada) : 'nesse raio'}`, d:'Toque em outra cidade ou amplie o raio.' };
     cont.innerHTML = `<div class="empty-state" style="padding:28px 16px;"><div class="empty-icon">${v.e}</div><div class="empty-titulo">${v.t}</div><div class="empty-desc">${v.d}</div></div>`;
     return;
   }
-  if (abaEstrada === 'hoteis' && window._cidadeAtualEstrada) {
+  cont.innerHTML = _ordenarEstrada(itens).map(abaEstrada === 'hoteis' ? _cardHotel : _cardPosto).join('');
+}
+
+// Com GPS, a ordem é a distância real. Sem GPS, cai no comportamento antigo:
+// os da cidade atual primeiro (que é só o que dava para saber sem coordenada).
+function _ordenarEstrada(itens) {
+  const temKm = itens.some(i => _kmEstrada(i) !== null);
+  if (temKm) {
+    return [...itens].sort((a, b) => {
+      const ka = _kmEstrada(a), kb = _kmEstrada(b);
+      if (ka === null && kb === null) return 0;
+      if (ka === null) return 1;
+      if (kb === null) return -1;
+      return ka - kb;
+    });
+  }
+  if (window._cidadeAtualEstrada) {
     const c = window._cidadeAtualEstrada.toLowerCase();
-    itens = [...itens].sort((a, b) => {
+    return [...itens].sort((a, b) => {
       const aM = (a.cidade || '').toLowerCase().includes(c) ? 1 : 0;
       const bM = (b.cidade || '').toLowerCase().includes(c) ? 1 : 0;
       return bM - aM;
     });
   }
-  cont.innerHTML = (abaEstrada === 'hoteis' ? itens.map(_cardHotel) : itens.map(_cardPosto)).join('');
+  return itens;
 }
 
 function _cardHotel(h) {
@@ -5183,6 +5346,10 @@ function detectarCidadeHoteis() {
   navigator.geolocation.getCurrentPosition(async pos => {
     try {
       const { latitude: lat, longitude: lng } = pos.coords;
+      // A posição é o que liga distância e raio no carrossel de cidades. Sem ela
+      // o carrossel ainda agrupa, só não ordena por km.
+      window._posEstrada = { lat, lng };
+      renderizarEstrada();
       const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=pt-BR`);
       const data = await resp.json();
       const a = data.address || {};

@@ -718,7 +718,19 @@ if ('serviceWorker' in navigator) {
      num chip do farol e cair num card lá embaixo escondia até o botão de fechar.
      Margem negativa cancela o padding do .modal-box pra ficar rente às bordas
      quando gruda; o padding interno devolve o respiro visual de antes. */
-  .rel-header-sticky { position:sticky; top:0; z-index:5; background:var(--bg2); margin:-24px -20px 0; padding:24px 20px 16px; border-radius:20px 20px 0 0; }
+  /* #modal-relatorios .modal-box não tem padding próprio (ver abaixo) — só assim
+     dá pra deixar o cabeçalho rente ao topo do scroll SEM roubar o espaço que o
+     conteúdo de baixo precisa. Testei com margem negativa cancelando o padding
+     do box: um único valor de margin-top não consegue "colar" o cabeçalho no
+     topo E preservar o respiro abaixo dele ao mesmo tempo — as duas coisas
+     competem pela mesma propriedade. Sem padding no box, esse conflito some.
+     translateZ(0) força uma camada de composição própria: bug conhecido do
+     iOS/WebKit deixa conteúdo rolando vazar por cima de sticky+overflow+
+     border-radius sem isso. */
+  .rel-header-sticky { position:sticky; top:0; z-index:5; background:var(--bg2); padding:24px 20px 16px; border-radius:20px 20px 0 0; -webkit-transform:translateZ(0); transform:translateZ(0); will-change:transform; }
+  /* Restaura o respiro nas laterais/embaixo que o .modal-box costumava dar —
+     agora fica só no conteúdo que rola, não no cabeçalho fixo. */
+  .rel-conteudo-scroll { padding:0 20px 24px; }
   .rel-header-sticky.rolou { border-bottom:1px solid var(--borda); box-shadow:0 8px 12px -8px rgba(0,0,0,.4); }
   /* scrollIntoView (abrirRelatorioMarca, farol de marcas) não sabe que o cabeçalho
      ficou fixo por cima do conteúdo — sem isso, o card podia parar centralizado
@@ -2772,7 +2784,7 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <div class="modal-overlay" id="modal-relatorios">
-  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:24px;">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding:0;">
     <div class="rel-header-sticky" id="rel-header-sticky">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div class="modal-titulo" style="margin-bottom:0;">📊 Minhas Análises</div>
@@ -2788,19 +2800,21 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
 
-    <!-- ABA METAS -->
-    <div id="rel-aba-metas">
-      <div id="rel-lista"></div>
+    <div class="rel-conteudo-scroll">
+      <!-- ABA METAS -->
+      <div id="rel-aba-metas">
+        <div id="rel-lista"></div>
+      </div>
+
+      <!-- ABA VENDAS -->
+      <div id="rel-aba-vendas" style="display:none;"></div>
+
+      <!-- ABA COMPARATIVO -->
+      <div id="rel-aba-comparativo" style="display:none;"></div>
+
+      <!-- ABA AÇÕES -->
+      <div id="rel-aba-acoes" style="display:none;"></div>
     </div>
-
-    <!-- ABA VENDAS -->
-    <div id="rel-aba-vendas" style="display:none;"></div>
-
-    <!-- ABA COMPARATIVO -->
-    <div id="rel-aba-comparativo" style="display:none;"></div>
-
-    <!-- ABA AÇÕES -->
-    <div id="rel-aba-acoes" style="display:none;"></div>
 
   </div>
 </div>
@@ -15791,6 +15805,12 @@ function trocarAbaRelatorio(aba) {
   if (aba === 'vendas')      renderRelVendas();
   if (aba === 'comparativo') renderRelComparativo();
   if (aba === 'acoes')       renderRelAcoes();
+  // Trocar de aba não zera a rolagem sozinho: se o rep chegou em Metas pelo
+  // farol (rolado lá embaixo até o card da marca) e depois toca em Vendas, a
+  // aba nova nascia na MESMA posição de rolagem antiga — os chips de período
+  // (Hoje/7 dias/Este mês) nasciam escondidos atrás do cabeçalho fixo.
+  const box = document.querySelector('#modal-relatorios .modal-box');
+  if (box) box.scrollTop = 0;
 }
 
 // Coleta todas as vendas num intervalo (desde/ate em Date; null = sem limite)

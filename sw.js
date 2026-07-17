@@ -4,7 +4,7 @@
 //
 // IMPORTANTE: ao publicar uma versão nova do app, troque o número do CACHE
 // abaixo (ex: -v3, -v4). Isso descarta o cache antigo e força a atualização.
-const CACHE = 'carteira-viva-v19';
+const CACHE = 'carteira-viva-v20';
 
 // App shell + libs essenciais — pré-cacheadas na instalação.
 // O rep abre o app offline mesmo na primeira vez após instalado.

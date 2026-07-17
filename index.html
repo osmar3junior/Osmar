@@ -1217,7 +1217,11 @@ if ('serviceWorker' in navigator) {
 <div class="tela" id="tela-detalhe">
   <div class="header">
     <div class="header-logo" onclick="irPara('dashboard')" style="cursor:pointer;"><div class="header-logo-icon"><svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="5" y="22" width="5" height="9" rx="1.5" fill="white" opacity=".8"/><rect x="13" y="16" width="5" height="15" rx="1.5" fill="white" opacity=".9"/><rect x="21" y="10" width="5" height="21" rx="1.5" fill="white"/><path d="M28 5L31 5L31 8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 11L31 5" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg></div></div>
-    <div style="display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <!-- Só aparece quando o rep chegou aqui clicando no nome do cliente dentro
+           do Gestor IA. Roxo (--roxo) porque é a cor daquele ambiente: o botão se
+           explica pela cor antes de ser lido. -->
+      <button class="header-btn" id="btn-voltar-gestor" onclick="voltarAoGestorIA()" style="display:none;padding:8px 10px;font-size:12px;background:linear-gradient(180deg,#A78BFA,#7C3AED);color:#fff;border:none;box-shadow:0 4px 0 #5B21B6,0 6px 10px rgba(0,0,0,.35);">← Gestor IA</button>
       <button class="header-btn" id="btn-voltar-detalhe" onclick="irPara('clientes')" style="padding:8px 10px;font-size:12px;background:linear-gradient(180deg,#F97316,#C2410C);color:#fff;border:none;box-shadow:0 4px 0 #7C2D12,0 6px 10px rgba(0,0,0,.35);">← Voltar</button>
     </div>
   </div>
@@ -4747,10 +4751,10 @@ function _cardHotel(h) {
           <span style="font-size:10px;color:var(--texto3);white-space:nowrap;">📅</span>
           ${ultimaHosp}
         </div>
-        ${tel && !wpp ? `<div style="font-size:10px;color:var(--verde);margin-top:4px;line-height:1.4;">💬 WhatsApp não cadastrado — ligue direto no 📞 ou toque em ✏️ e cadastre o número para gerar a mensagem pronta.</div>` : ''}
+        ${tel && !wpp ? `<div style="font-size:10px;color:var(--verde);margin-top:4px;line-height:1.3;white-space:nowrap;">💬 Sem WhatsApp — ✏️ cadastre</div>` : ''}
         ${notifBanner}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(2,36px);gap:4px;flex-shrink:0;">
+      <div style="display:flex;gap:4px;flex-shrink:0;">
         <button onclick="rotaLog('hot','${h.id}')" style="${btnStyle}background:#33CCFF;color:#000;">➤</button>
         <button onclick="registrarPernoite('${h.id}')" title="Registrar pernoite" style="${btnStyle}background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);color:var(--verde);">🌙</button>
         <button onclick="editarLog('hot','${h.id}')" style="${btnStyle}background:var(--bg2);border:1px solid var(--borda);color:var(--texto2);">✏️</button>
@@ -12044,8 +12048,18 @@ function abrirDetalhe(clienteId, telaOrigem) {
   det.style.display = 'flex';
   det.classList.add('ativa');
 
+  // O roxo só existe quando ele veio do Gestor IA — em qualquer outro caminho
+  // seria um botão que leva a um lugar onde o rep nunca esteve.
+  const _btnGestor = document.getElementById('btn-voltar-gestor');
+  if (_btnGestor) _btnGestor.style.display = (telaAnteriorDetalhe === 'gestor-ia') ? 'block' : 'none';
+
   document.getElementById('btn-voltar-detalhe').onclick = () => {
-    if (telaAnteriorDetalhe === 'filtrada') {
+    if (telaAnteriorDetalhe === 'gestor-ia') {
+      // 'gestor-ia' não é tela: sem este caso o irPara não acharia 'tela-gestor-ia'
+      // e o botão laranja não faria absolutamente nada. O laranja mantém o que já
+      // fazia (leva pra lista); quem volta pro Gestor IA é o roxo.
+      irPara('clientes');
+    } else if (telaAnteriorDetalhe === 'filtrada') {
       document.querySelectorAll('.tela').forEach(t => { t.classList.remove('ativa'); t.style.display = 'none'; });
       const f = document.getElementById('tela-filtrada');
       f.style.display = 'flex';
@@ -13226,7 +13240,11 @@ async function confirmarExcluirCliente() {
   if (cl) { cl._del = true; cl._mod = Date.now(); }
   salvarClientes(raw);
   fecharModal('modal-editar-cliente');
-  irPara(telaAnteriorDetalhe === 'oportunidades' ? 'dashboard' : telaAnteriorDetalhe); // 'oportunidades' não é tela
+  // 'oportunidades' e 'gestor-ia' são origens, não telas: sem traduzir, o irPara
+  // não acha o elemento, sai calado e o rep fica parado na tela do cliente que
+  // acabou de excluir.
+  const _origem = telaAnteriorDetalhe;
+  irPara(_origem === 'oportunidades' ? 'dashboard' : _origem === 'gestor-ia' ? 'clientes' : _origem);
   toast('Cliente excluído');
 }
 
@@ -15487,10 +15505,25 @@ function _linkificarClientesIA(texto) {
   });
 }
 
+// O Gestor IA é um modal, não uma tela: ele abre por cima de onde o rep estava.
+// Guardar essa tela é o que permite devolver o rep exatamente ao mesmo lugar.
+let _telaSobGestorIA = 'dashboard';
+
 // Fecha o modal do Gestor IA e abre o card do cliente clicado no texto da análise.
 function _abrirClienteDoGestorIA(clienteId) {
+  const ativa = document.querySelector('.tela.ativa');
+  _telaSobGestorIA = ativa ? ativa.id.replace('tela-', '') : 'dashboard';
   fecharModal('modal-gerente');
-  setTimeout(() => abrirDetalhe(clienteId, 'clientes'), 150);
+  // 'gestor-ia' não é tela — é só a marca da origem, p/ o detalhe saber que deve
+  // oferecer a volta. Antes daqui passava 'clientes' e a origem se perdia.
+  setTimeout(() => abrirDetalhe(clienteId, 'gestor-ia'), 150);
+}
+
+// Volta pro Gestor IA: restaura a tela que estava embaixo do modal e reabre.
+// Não custa tokens — abrirGerenteVirtual reusa o cache de 24h da análise.
+function voltarAoGestorIA() {
+  irPara(_telaSobGestorIA || 'dashboard');
+  setTimeout(abrirGerenteVirtual, 150);
 }
 
 function _exibirAnaliseGerente(analise, doCache) {

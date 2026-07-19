@@ -12010,8 +12010,8 @@ function abrirFiltrado(tipo) {
         let urgTag = '';
         if (ehHoje && mM && pv.max > 0) {
           const r = mM.meta / pv.max;
-          if (r >= 1.5) urgTag = `<span style="background:rgba(239,68,68,.25);color:#FCA5A5;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">🔴 Difícil recuperar</span>`;
-          else if (r >= 1.0) urgTag = `<span style="background:rgba(251,191,36,.15);color:#FDE047;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">⚠️ Acima do histórico</span>`;
+          if (r >= 1.5) urgTag = `<span style="background:rgba(239,68,68,.25);color:#FCA5A5;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">🔴 Desafiador</span>`;
+          else if (r >= 1.0) urgTag = `<span style="background:rgba(251,191,36,.15);color:#FDE047;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">💪 Vai para cima que dá</span>`;
         }
         return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:3px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${metaSpan}${urgTag}${potSpan?`<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potSpan}`:''}</div>`;
       }).join('');
@@ -12183,9 +12183,9 @@ function renderizarClientes(filtro = '') {
               if (ehHoje && _mCliente && _pv.max > 0) {
                 const ratio = _mCliente.meta / _pv.max;
                 if (ratio >= 1.5)
-                  urgenciaTag = `<span style="background:rgba(239,68,68,.25);color:#FCA5A5;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">🔴 Difícil recuperar</span>`;
+                  urgenciaTag = `<span style="background:rgba(239,68,68,.25);color:#FCA5A5;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">🔴 Desafiador</span>`;
                 else if (ratio >= 1.0)
-                  urgenciaTag = `<span style="background:rgba(251,191,36,.15);color:#FDE047;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">⚠️ Acima do histórico</span>`;
+                  urgenciaTag = `<span style="background:rgba(251,191,36,.15);color:#FDE047;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;">💪 Vai para cima que dá</span>`;
               }
               return `<div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:2px;min-width:0;"><span style="color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;margin-right:2px;flex-shrink:0;">${marca}</span>${focoTag}${metaCompact}${urgenciaTag}${potCompact ? `<span style="color:rgba(255,255,255,.15);flex-shrink:0;">|</span>${potCompact}` : ''}</div>`;
               });

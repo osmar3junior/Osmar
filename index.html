@@ -1294,7 +1294,10 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="detalhe-acoes">
-      <button class="btn-acao btn-visita" style="width:100%;" onclick="abrirModalContato('visita')">📍 Resultado da visita ou contato</button>
+      <button class="btn-acao btn-visita" style="width:100%;flex-direction:column;gap:2px;padding:11px 8px;" onclick="abrirModalContato('visita')">
+        <span style="display:flex;align-items:center;gap:6px;">📍 Resultado da visita ou contato</span>
+        <span style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,.78);font-family:'DM Sans',sans-serif;">toque também para reprogramar</span>
+      </button>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button onclick="abrirModalEditarCliente()" style="flex:1;background:rgba(124,142,240,.1);border:1.5px solid rgba(124,142,240,.4);border-radius:11px;padding:11px 8px;display:flex;align-items:center;justify-content:center;gap:6px;color:#9DACF5;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;">✏️ Editar cliente</button>
         <button id="btn-rota-detalhe" onclick="irRotaClienteAtual()" style="display:none;flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.35);border-radius:11px;padding:11px 8px;align-items:center;justify-content:center;gap:5px;color:#38BDF8;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;">➤ Rota</button>
@@ -12404,7 +12407,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
   _ptag.innerHTML = cliente.tipo === 'prospect' ? `<span class="prospect-tag" style="margin-bottom:6px;display:inline-flex;">🔭 EM PROSPECÇÃO</span>` : '';
   // Botão de visita: muda texto para prospectos
   const btnVisita = document.querySelector('.btn-acao.btn-visita');
-  if (btnVisita) btnVisita.textContent = cliente.tipo === 'prospect' ? '📍 Resultado da visita ou contato' : '📍 Resultado da visita ou contato';
+  if (btnVisita) btnVisita.innerHTML = `<span style="display:flex;align-items:center;gap:6px;">📍 Resultado da visita ou contato</span><span style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,.78);font-family:'DM Sans',sans-serif;">toque também para reprogramar</span>`;
   // Endereço do check-in
   let endEl = document.getElementById('det-endereco-tag');
   if (!endEl) {

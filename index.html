@@ -6378,6 +6378,9 @@ function abrirNotificacoes() {
   const clientes = getClientesAtivos();
   const urgentes = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; });
   const semana   = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d > 0 && d <= 7; });
+  // Cliente que já está com visita atrasada/prevista esta semana — usado pra avisar,
+  // nos alertas de recompra por marca, que a mesma parada já resolve as duas coisas.
+  const clientesParaVisitar = new Set([...urgentes, ...semana].map(c => c.id));
   const esq      = clientes.filter(c => {
     const cfg = getConfig();
     const ref = c.historico && c.historico.length > 0 ? new Date(c.historico[0].data) : new Date(c.criadoEm);
@@ -6451,30 +6454,45 @@ function abrirNotificacoes() {
   const vencidas = alertasMarca.filter(a => a.status === 'vencida');
   const vencendo = alertasMarca.filter(a => a.status === 'vencendo');
 
+  // Divisor de grupo-pai — só aparece se o grupo tiver algo dentro, pra não
+  // deixar um título "Produtos para repor" sozinho sem nenhuma linha embaixo.
+  const secaoPai = titulo =>
+    `<div style="font-size:9px;font-weight:800;color:var(--texto3);text-transform:uppercase;letter-spacing:1.2px;margin:14px 0 6px;padding-top:12px;border-top:1px solid var(--borda);">${titulo}</div>`;
+
+  if (vencidas.length || vencendo.length) {
+    html += secaoPai('📦 Produtos para repor');
+  }
+
   if (vencidas.length) {
     html += `<div style="font-size:10px;font-weight:700;color:#EF4444;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">🔴 Marcas vencidas</div>`;
     vencidas.forEach(a => {
+      const _jaTemVisita = clientesParaVisitar.has(a.clienteId) ? ' · ✨ visita já prevista — aproveite' : '';
       html += linhaAlerta('🏷️','rgba(239,68,68,.4)','rgba(239,68,68,.08)',
         `${a.marca} — ${a.clienteNome}`,
-        `${a.clienteLoja}${a.clienteCidade?' · '+a.clienteCidade:''} · vencida há ${Math.abs(a.diasRestantes)} dia${Math.abs(a.diasRestantes)>1?'s':''}`,
+        `${a.clienteLoja}${a.clienteCidade?' · '+a.clienteCidade:''} · vencida há ${Math.abs(a.diasRestantes)} dia${Math.abs(a.diasRestantes)>1?'s':''}${_jaTemVisita}`,
         `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${a.clienteId}','clientes'),200)`
       );
     });
   }
 
   if (vencendo.length) {
-    html += `<div style="font-size:10px;font-weight:700;color:#F59E0B;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">📅 Dia da visita chegando</div>`;
+    html += `<div style="font-size:10px;font-weight:700;color:#F59E0B;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">📦 Recompra chegando</div>`;
     vencendo.forEach(a => {
+      const _jaTemVisita = clientesParaVisitar.has(a.clienteId) ? ' · ✨ visita já prevista — aproveite' : '';
       html += linhaAlerta('🏷️','rgba(245,158,11,.4)','rgba(245,158,11,.07)',
         `${a.marca} — ${a.clienteNome}`,
-        `${a.clienteLoja}${a.clienteCidade?' · '+a.clienteCidade:''} · vence em ${a.diasRestantes} dia${a.diasRestantes>1?'s':''}`,
+        `${a.clienteLoja}${a.clienteCidade?' · '+a.clienteCidade:''} · recompra prevista em ${a.diasRestantes} dia${a.diasRestantes>1?'s':''}${_jaTemVisita}`,
         `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${a.clienteId}','clientes'),200)`
       );
     });
   }
 
+  if (urgentes.length || semana.length) {
+    html += secaoPai('👤 Clientes para visitar');
+  }
+
   if (urgentes.length) {
-    html += `<div style="font-size:10px;font-weight:700;color:#FF4D6A;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🔴 Retomar hoje</div>`;
+    html += `<div style="font-size:10px;font-weight:700;color:#FF4D6A;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🔴 Visita atrasada</div>`;
     html += linhaAlerta('👤','rgba(255,77,106,.4)','rgba(255,77,106,.07)',
       `${urgentes.length} cliente${urgentes.length>1?'s':''} esperando contato`,
       'Toque para ver a lista',
@@ -6483,7 +6501,7 @@ function abrirNotificacoes() {
   }
 
   if (semana.length) {
-    html += `<div style="font-size:10px;font-weight:700;color:#F59E0B;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🟡 Esta semana</div>`;
+    html += `<div style="font-size:10px;font-weight:700;color:#F59E0B;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">🟡 Visita esta semana</div>`;
     html += linhaAlerta('📅','rgba(245,158,11,.4)','rgba(245,158,11,.07)',
       `${semana.length} cliente${semana.length>1?'s':''} nos próximos 7 dias`,
       'Toque para ver a lista',

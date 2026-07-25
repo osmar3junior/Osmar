@@ -4335,16 +4335,22 @@ async function buscarProximosAoVivo(tipo, raioParam) {
       _renderMapaEstrada(tipo, lat, lng, resultados, naEstrada);
 
       const icon = tipo === 'fuel' ? '⛽' : '🅿️';
-      listaDiv.innerHTML = resultados.map(r => {
+      listaDiv.innerHTML = resultados.map((r, i) => {
         const distTxt = r.dist < 1 ? Math.round(r.dist*1000)+'m' : r.dist.toFixed(1)+'km';
         const navUrl  = `https://waze.com/ul?ll=${r.elLat},${r.elLng}&navigate=yes`;
         const gmUrl   = `https://www.google.com/maps/dir/?api=1&destination=${r.elLat},${r.elLng}`;
         const gratuito = r.gratis ? `<span style="background:rgba(0,214,143,.12);color:var(--verde);border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;">Grátis</span>` : '';
+        // OSM não tem addr:street pra todo lugar (dado colaborativo, comum faltar em
+        // estacionamento informal). Pro 1º resultado (o que o rep mais usa), reserva o
+        // espaço da linha e busca a rua via reverse geocoding depois — ver bloco abaixo.
+        const linhaEnd = r.end
+          ? `<div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:2px;">${esc(r.end)}</div>`
+          : (i === 0 ? `<div id="park-end-0" style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:2px;display:none;"></div>` : '');
         return `<div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
             <div style="flex:1;min-width:0;">
               <div style="font-size:13px;font-weight:700;color:var(--texto);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${icon} ${esc(r.nome)}</div>
-              ${r.end?`<div style="font-size:11px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-top:2px;">${esc(r.end)}</div>`:''}
+              ${linhaEnd}
               <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
                 <span style="font-size:11px;font-weight:700;color:var(--texto2);font-family:'DM Sans',sans-serif;">${distTxt}</span>
                 ${gratuito}
@@ -4357,6 +4363,22 @@ async function buscarProximosAoVivo(tipo, raioParam) {
           </div>
         </div>`;
       }).join('');
+
+      // Fallback de rua só pro mais perto — Nominatim tem limite de 1 req/s, então não
+      // dá pra fazer isso pra cada item da lista, só pro que o rep realmente vai usar.
+      if (resultados.length && !resultados[0].end) {
+        const rTop = resultados[0];
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${rTop.elLat}&lon=${rTop.elLng}&format=json&addressdetails=1&accept-language=pt-BR`)
+          .then(resp => resp.json())
+          .then(data => {
+            const a = data.address || {};
+            const rua = [a.road, a.house_number].filter(Boolean).join(', ');
+            if (!rua) return;
+            const elEnd = document.getElementById('park-end-0');
+            if (elEnd) { elEnd.textContent = rua; elEnd.style.display = 'block'; }
+          })
+          .catch(() => { /* silencioso — a linha só some se não achar */ });
+      }
 
     } catch(e) {
       loadDiv.style.display = 'none';

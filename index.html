@@ -2642,6 +2642,22 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- MODAL REPROGRAMAR ALERTA DE MARCA -->
+<div class="modal-overlay" id="modal-reprogramar-marca">
+  <div class="modal-box">
+    <div class="modal-titulo">🕐 Reprogramar aviso</div>
+    <div class="modal-sub">Some da lista por quanto tempo? Vale pra todas as marcas vencidas desse cliente.</div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="prospect-data-btn" onclick="_confirmarReprogramarMarca(7)">7 dias</button>
+      <button class="prospect-data-btn" onclick="_confirmarReprogramarMarca(15)">15 dias</button>
+      <button class="prospect-data-btn" onclick="_confirmarReprogramarMarca(30)">30 dias</button>
+    </div>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="btn-secundario" onclick="fecharModal('modal-reprogramar-marca')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL OPORTUNIDADES AGORA -->
 <div class="modal-overlay" id="modal-oportunidades">
   <div class="modal-box" style="max-height:85vh;overflow-y:auto;">
@@ -6396,7 +6412,12 @@ async function sair() {
 }
 
 function abrirNotificacoes() {
-  const alertasMarca = calcularAlertasMarcas();
+  const alertasMarca = calcularAlertasMarcas().filter(a => {
+    const snooze = _alertaMarcaSnooze(a.clienteId);
+    if (!snooze) return true;
+    // Furou a soneca: essa marca só passou a vencer DEPOIS que o rep reprogramou.
+    return new Date(a.proximaCompra).getTime() > new Date(snooze.desde).getTime();
+  });
   const clientes = getClientesAtivos();
   const urgentes = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; });
   const semana   = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d > 0 && d <= 7; });
@@ -6434,6 +6455,20 @@ function abrirNotificacoes() {
         <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${sub}</div>
       </div>
       <span style="color:var(--texto3);font-size:16px;align-self:center;">›</span>
+    </div>`;
+
+  // Igual à linhaAlerta, mas com um botão cinza pra reprogramar (adia TODAS as
+  // marcas vencidas/vencendo desse cliente de uma vez — é a mesma visita).
+  const linhaAlertaMarca = (icone, cor, bg, titulo, sub, onclick, clienteId) =>
+    `<div style="display:flex;align-items:center;gap:8px;background:${bg};border:1px solid ${cor};border-radius:12px;padding:12px;margin-bottom:8px;">
+      <div onclick="${onclick}" style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0;cursor:pointer;">
+        <span style="font-size:20px;flex-shrink:0;">${icone}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);">${titulo}</div>
+          <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${sub}</div>
+        </div>
+      </div>
+      <button onclick="event.stopPropagation();_abrirReprogramarMarca('${clienteId}')" title="Reprogramar" style="flex-shrink:0;background:var(--bg3);border:1px solid var(--borda);border-radius:7px;width:26px;height:26px;color:var(--texto2);font-size:13px;cursor:pointer;">🕐</button>
     </div>`;
 
   let html = '';
@@ -6489,10 +6524,11 @@ function abrirNotificacoes() {
     html += `<div style="font-size:10px;font-weight:700;color:#EF4444;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">🔴 Marcas vencidas</div>`;
     vencidas.forEach(a => {
       const _jaTemVisita = clientesParaVisitar.has(a.clienteId) ? ' · ✨ visita já prevista — aproveite' : '';
-      html += linhaAlerta('🏷️','rgba(239,68,68,.4)','rgba(239,68,68,.08)',
+      html += linhaAlertaMarca('🏷️','rgba(239,68,68,.4)','rgba(239,68,68,.08)',
         `${a.marca} — ${a.clienteNome}`,
         `${a.clienteLoja}${a.clienteCidade?' · '+a.clienteCidade:''} · vencida há ${Math.abs(a.diasRestantes)} dia${Math.abs(a.diasRestantes)>1?'s':''}${_jaTemVisita}`,
-        `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${a.clienteId}','clientes'),200)`
+        `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${a.clienteId}','clientes'),200)`,
+        a.clienteId
       );
     });
   }
@@ -6501,10 +6537,11 @@ function abrirNotificacoes() {
     html += `<div style="font-size:10px;font-weight:700;color:#F59E0B;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 8px;">📦 Recompra chegando</div>`;
     vencendo.forEach(a => {
       const _jaTemVisita = clientesParaVisitar.has(a.clienteId) ? ' · ✨ visita já prevista — aproveite' : '';
-      html += linhaAlerta('🏷️','rgba(245,158,11,.4)','rgba(245,158,11,.07)',
+      html += linhaAlertaMarca('🏷️','rgba(245,158,11,.4)','rgba(245,158,11,.07)',
         `${a.marca} — ${a.clienteNome}`,
         `${a.clienteLoja}${a.clienteCidade?' · '+a.clienteCidade:''} · recompra prevista em ${a.diasRestantes} dia${a.diasRestantes>1?'s':''}${_jaTemVisita}`,
-        `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${a.clienteId}','clientes'),200)`
+        `fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${a.clienteId}','clientes'),200)`,
+        a.clienteId
       );
     });
   }
@@ -6776,7 +6813,11 @@ function _prospeccaoPertoPendentes() {
     const c = mapCli[id];
     const p = pendentes[id];
     const idadeDias = (agora - new Date(p.visto).getTime()) / 86400000;
-    const aindaVale = c && !c.statusArquivo && c.tipo === 'prospect' && idadeDias <= _PROSPECT_PERTO_VALIDADE_DIAS;
+    // Reconfere a data de retorno a cada leitura — se o rep reprogramou pra fora
+    // da janela (ex.: 30 dias), o aviso não deve sobreviver só porque já foi visto perto.
+    const diff = c ? getDiffDiasCliente(c) : null;
+    const retornoNaJanela = diff === null || diff <= 5;
+    const aindaVale = c && !c.statusArquivo && c.tipo === 'prospect' && retornoNaJanela && idadeDias <= _PROSPECT_PERTO_VALIDADE_DIAS;
     if (!aindaVale) { delete pendentes[id]; mudou = true; return; }
     validos.push({ c, dist: p.dist, visto: p.visto });
   });
@@ -6806,7 +6847,7 @@ function _renderizarCardProspeccaoPerto(lat, lng) {
       : `📍 ${fmtKm(x.dist)} · visto ${quando}`;
     return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid rgba(167,139,250,.2);">
       <div onclick="fecharModal('modal-notificacoes');setTimeout(()=>abrirDetalhe('${x.c.id}','clientes'),200)" style="flex:1;min-width:0;cursor:pointer;">
-        <div style="font-size:12px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(x.c.nome)}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(x.c.nome)}${x.c.loja ? ' — ' + esc(x.c.loja) : ''}</div>
         <div style="font-size:10.5px;color:#A78BFA;">${qd} · ${linhaDist}</div>
       </div>
       <button onclick="event.stopPropagation();_descartarProspeccaoPerto('${x.c.id}')" title="Já vi / não é agora" style="flex-shrink:0;background:var(--bg3);border:1px solid var(--borda);border-radius:7px;width:24px;height:24px;color:var(--texto2);font-size:12px;cursor:pointer;">✕</button>
@@ -6830,6 +6871,40 @@ function _descartarProspeccaoPerto(id) {
   delete pendentes[id];
   setData('cv_prospect_perto_pendente', pendentes);
   _renderizarCardProspeccaoPerto();
+}
+
+// ===== REPROGRAMAR ALERTA DE MARCA VENCIDA =====
+// Alerta de marca não tem data própria (é calculado na hora a partir do ciclo
+// ideal), então "reprogramar" aqui é uma soneca por CLIENTE: some da lista de
+// notificações por N dias — todas as marcas vencidas/vencendo desse cliente
+// juntas, já que na prática é a mesma visita que resolve todas.
+// Guarda também "desde" (quando a soneca foi criada): se uma marca NOVA vencer
+// depois disso, ela fura a soneca e aparece mesmo assim — é motivo novo pra
+// visita, o rep pode querer antecipar.
+let _reprogramarMarcaClienteId = null;
+
+function _alertaMarcaSnooze(clienteId) {
+  const snoozes = getData('cv_alerta_marca_snooze') || {};
+  const s = snoozes[clienteId];
+  if (!s) return null;
+  if (new Date(s.ate).getTime() <= Date.now()) { delete snoozes[clienteId]; setData('cv_alerta_marca_snooze', snoozes); return null; }
+  return s;
+}
+
+function _abrirReprogramarMarca(clienteId) {
+  _reprogramarMarcaClienteId = clienteId;
+  document.getElementById('modal-reprogramar-marca').classList.add('aberto');
+}
+
+function _confirmarReprogramarMarca(dias) {
+  if (!_reprogramarMarcaClienteId) return;
+  const snoozes = getData('cv_alerta_marca_snooze') || {};
+  const agora = new Date();
+  snoozes[_reprogramarMarcaClienteId] = { desde: agora.toISOString(), ate: new Date(agora.getTime() + dias * 86400000).toISOString() };
+  setData('cv_alerta_marca_snooze', snoozes);
+  _reprogramarMarcaClienteId = null;
+  fecharModal('modal-reprogramar-marca');
+  abrirNotificacoes();
 }
 
 // Ao abrir o sino, dá mais uma chance de achar prospecção perto AGORA (o GPS é

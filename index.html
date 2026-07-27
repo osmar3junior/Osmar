@@ -25,6 +25,13 @@
 <meta name="twitter:title" content="Carteira Viva — o app do representante comercial">
 <meta name="twitter:description" content="Sua carteira organizada, a rota do dia e a hora certa de vender. Feito para o representante na estrada.">
 
+<!-- PWA: manifest e ícones como arquivos estáticos reais (não data: URL) — o
+     Chrome/Android e ferramentas como o PWABuilder precisam buscar isso via
+     URL de verdade para oferecer instalação completa, não só atalho. -->
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-512.png">
+
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700;800&display=swap" rel="stylesheet">
@@ -78,97 +85,6 @@
 </script>
 
 <script>
-(function() {
-  function gerarIcone(size) {
-    const canvas = document.createElement('canvas');
-    canvas.width = size; canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    const r = size * 0.22;
-    const grad = ctx.createLinearGradient(0, 0, size, size);
-    grad.addColorStop(0, '#00E896');
-    grad.addColorStop(1, '#00A367');
-    ctx.beginPath();
-    ctx.moveTo(r,0); ctx.lineTo(size-r,0);
-    ctx.quadraticCurveTo(size,0,size,r);
-    ctx.lineTo(size,size-r);
-    ctx.quadraticCurveTo(size,size,size-r,size);
-    ctx.lineTo(r,size);
-    ctx.quadraticCurveTo(0,size,0,size-r);
-    ctx.lineTo(0,r);
-    ctx.quadraticCurveTo(0,0,r,0);
-    ctx.fillStyle = grad; ctx.fill();
-
-    const shine = ctx.createLinearGradient(0,0,0,size*0.5);
-    shine.addColorStop(0,'rgba(255,255,255,0.18)');
-    shine.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle = shine;
-    ctx.beginPath();
-    ctx.moveTo(r,0); ctx.lineTo(size-r,0);
-    ctx.quadraticCurveTo(size,0,size,r);
-    ctx.lineTo(size,size*0.5); ctx.lineTo(0,size*0.5);
-    ctx.lineTo(0,r); ctx.quadraticCurveTo(0,0,r,0);
-    ctx.fill();
-
-    const p=size*0.14, w=size-p*2, h=size-p*2;
-    const bw=w*0.13, gap=w*0.06, baseY=size-p*1.1;
-    ctx.fillStyle='rgba(255,255,255,0.85)';
-    ctx.beginPath(); ctx.roundRect(p,baseY-h*0.32,bw,h*0.32,2); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.92)';
-    ctx.beginPath(); ctx.roundRect(p+bw+gap,baseY-h*0.5,bw,h*0.5,2); ctx.fill();
-    ctx.fillStyle='white';
-    const b3x=p+(bw+gap)*2, b3h=h*0.68;
-    ctx.beginPath(); ctx.roundRect(b3x,baseY-b3h,bw,b3h,2); ctx.fill();
-
-    const ax=b3x+bw*0.5, ay=baseY-b3h-size*0.04;
-    const ex=ax+size*0.18, ey=ay-size*0.18;
-    ctx.strokeStyle='white'; ctx.lineWidth=size*0.055;
-    ctx.lineCap='round'; ctx.lineJoin='round';
-    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ex,ey); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(ex-size*0.13,ey); ctx.lineTo(ex,ey); ctx.lineTo(ex,ey+size*0.13); ctx.stroke();
-    return canvas.toDataURL('image/png');
-  }
-
-  window.addEventListener('DOMContentLoaded', function() {
-    const icon = gerarIcone(512);
-    const icon192 = gerarIcone(192);
-
-    // Favicon
-    const fav = document.createElement('link');
-    fav.rel = 'icon'; fav.type = 'image/png'; fav.href = icon192;
-    document.head.appendChild(fav);
-
-    // Apple touch icon
-    const apple = document.createElement('link');
-    apple.rel = 'apple-touch-icon'; apple.href = icon;
-    document.head.appendChild(apple);
-
-    // Manifest inline via data URL
-    const manifest = JSON.stringify({
-      name: 'Carteira Viva',
-      short_name: 'Carteira Viva',
-      description: 'O assistente de vendas do representante — na rua ou no escritório.',
-      start_url: './',
-      scope: './',
-      display: 'standalone',
-      background_color: '#0A0E14',
-      theme_color: '#00D68F',
-      orientation: 'portrait-primary',
-      icons: [
-        { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any' },
-        { src: icon, sizes: '512x512', type: 'image/png', purpose: 'any' },
-        { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-        { src: icon, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
-      ]
-    });
-    const mlink = document.createElement('link');
-    mlink.rel = 'manifest';
-    mlink.href = 'data:application/manifest+json,' + encodeURIComponent(manifest);
-    document.head.appendChild(mlink);
-  });
-})();
-</script>
-
-<script>
 // ===== SERVICE WORKER (offline na estrada) =====
 // Registra o sw.js, que cacheia o app + libs para abrir mesmo sem internet.
 if ('serviceWorker' in navigator) {
@@ -189,6 +105,71 @@ if ('serviceWorker' in navigator) {
       .catch(function(e) { console.log('[SW] registro falhou:', e); });
   });
 }
+</script>
+<script>
+// ===== INSTALAR APP (banner "📲 Instale o Carteira Viva") =====
+// Chrome/Android disparam beforeinstallprompt quando o app cumpre os critérios
+// de instalação (manifest real + sw + https) — a gente guarda o evento e mostra
+// nosso próprio botão em vez de depender do rep achar isso no menu do navegador.
+let _deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+  _checarInstallBanner();
+});
+
+// iOS Safari não dispara beforeinstallprompt (não existe prompt programático lá)
+// — só dá pra orientar o passo manual (Compartilhar → Adicionar à Tela de Início).
+function _iosSemPrompt() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+
+function _appJaInstalado() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function _checarInstallBanner() {
+  const banner = document.getElementById('install-banner');
+  if (!banner || _appJaInstalado()) return;
+  if (localStorage.getItem('cv_install_banner_oculto') === '1') return;
+  const escondidoAte = parseInt(localStorage.getItem('cv_install_banner_ate') || '0', 10);
+  if (Date.now() < escondidoAte) return;
+
+  const btn = document.getElementById('install-banner-btn');
+  if (_iosSemPrompt()) {
+    document.getElementById('install-banner-sub').textContent = 'Toque em Compartilhar (□↑) e depois em "Adicionar à Tela de Início".';
+    btn.textContent = 'Como instalar';
+    btn.onclick = function() { alert('No Safari:\n\n1. Toque no ícone de Compartilhar (□↑) na barra do navegador\n2. Toque em "Adicionar à Tela de Início"\n3. Toque em "Adicionar"'); };
+    banner.style.display = 'flex';
+  } else if (_deferredInstallPrompt) {
+    document.getElementById('install-banner-sub').textContent = 'Acesso rápido, direto da tela inicial — sem navegador.';
+    btn.textContent = 'Instalar';
+    btn.onclick = _instalarApp;
+    banner.style.display = 'flex';
+  }
+}
+
+async function _instalarApp() {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  const { outcome } = await _deferredInstallPrompt.userChoice;
+  _deferredInstallPrompt = null;
+  document.getElementById('install-banner').style.display = 'none';
+  if (outcome === 'accepted') localStorage.setItem('cv_install_banner_oculto', '1');
+}
+
+function _dispensarInstallBanner() {
+  document.getElementById('install-banner').style.display = 'none';
+  localStorage.setItem('cv_install_banner_ate', String(Date.now() + 7 * 86400000));
+}
+
+window.addEventListener('appinstalled', function() {
+  _deferredInstallPrompt = null;
+  const b = document.getElementById('install-banner');
+  if (b) b.style.display = 'none';
+  localStorage.setItem('cv_install_banner_oculto', '1');
+});
 </script>
 <style>
   :root {
@@ -987,6 +968,21 @@ if ('serviceWorker' in navigator) {
       <div style="font-size:10.5px;color:var(--texto2);margin-top:1px;">Você está usando o Pro completo</div>
     </div>
     <button onclick="_assinarAgora()" style="flex-shrink:0;background:var(--verde);border:none;border-radius:9px;padding:9px 14px;color:#04110B;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">⭐ Assinar agora</button>
+  </div>
+  <!-- Banner "instalar app" — só aparece se o navegador oferece instalação (Android/desktop)
+       ou é Safari iOS sem instrução própria; some sozinho se já está instalado. -->
+  <div id="install-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(0,214,143,.08),rgba(0,214,143,.03));border:1px solid rgba(0,214,143,.3);border-radius:12px;padding:10px 14px;margin:10px 20px 0;">
+    <div style="min-width:0;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;flex-shrink:0;">📲</span>
+      <div style="min-width:0;">
+        <div style="font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:700;color:var(--texto);">Instale o Carteira Viva</div>
+        <div id="install-banner-sub" style="font-size:10.5px;color:var(--texto2);margin-top:1px;">Acesso rápido, direto da tela inicial — sem navegador.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button id="install-banner-btn" style="background:var(--verde);border:none;border-radius:9px;padding:9px 14px;color:#04110B;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">Instalar</button>
+      <button onclick="_dispensarInstallBanner()" title="Agora não" style="background:var(--bg3);border:1px solid var(--borda);border-radius:9px;width:32px;color:var(--texto2);cursor:pointer;">✕</button>
+    </div>
   </div>
   <div class="dash-content">
     <div class="saudacao">
@@ -6332,6 +6328,7 @@ async function fazerLogin() {
     setTimeout(_licencaCarregar, 2500); // espera a sessão da nuvem firmar para checar a assinatura
     setTimeout(_checarOnboarding, 2500); // espera o pull da nuvem antes de decidir mostrar o assistente
     setTimeout(_checarPlanoMes, 4000);   // no 1º acesso do mês, convida a planejar (não empilha sobre o onboarding)
+    setTimeout(_checarInstallBanner, 4500); // convite pra instalar o app, se ainda não instalado
   } else {
     // Cache foi limpo — tenta recuperar pelo Supabase
     toast('🔄 Recuperando dados da nuvem...');
@@ -20011,6 +20008,7 @@ function ajustarAlturaListaMotivos() {
     setTimeout(_prefetchMunicipios, 3000); // deixa os nomes das cidades prontos p/ o "Na estrada"
     setTimeout(_checarOnboarding, 2500); // mostra o assistente se ainda não foi concluído
     setTimeout(_checarPlanoMes, 4000);   // no 1º acesso do mês, convida a planejar o mês novo
+    setTimeout(_checarInstallBanner, 4500); // convite pra instalar o app, se ainda não instalado
     setTimeout(verificarEnderecosPendentes, 3000);
     setTimeout(solicitarPermissaoNotificacao, 2000);
     setTimeout(verificarENotificarEsquecidos, 5000);

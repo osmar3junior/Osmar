@@ -2059,10 +2059,17 @@ window.addEventListener('appinstalled', function() {
     <div id="msg-momento-wrap" style="display:none;margin-bottom:6px;">
       <div style="font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--verde);margin-bottom:7px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">🎯 Pelo momento do cliente <span id="msg-momento-tag" style="font-size:10px;font-weight:800;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.35);color:var(--verde);border-radius:999px;padding:2px 8px;text-transform:none;letter-spacing:0;"></span></div>
       <div id="msg-momento-chips" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch;"></div>
+      <div id="msg-gatilho-wrap" style="display:none;margin:2px 0 8px;">
+        <div style="font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--texto3);margin-bottom:6px;">Qual gatilho você quer usar?</div>
+        <div id="msg-gatilho-chips" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch;"></div>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;margin:6px 0 4px;font-size:9.5px;font-weight:800;color:var(--texto3);text-transform:uppercase;letter-spacing:.7px;"><span style="flex:1;height:1px;background:var(--borda);"></span>ou escolha outro assunto<span style="flex:1;height:1px;background:var(--borda);"></span></div>
     </div>
     <div id="msg-cats" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;-webkit-overflow-scrolling:touch;"></div>
-    <div id="msg-preview" style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px;font-size:13.5px;color:var(--texto);line-height:1.6;white-space:pre-wrap;font-family:'DM Sans',sans-serif;min-height:110px;margin-bottom:10px;"></div>
+    <div id="msg-preview" style="background:var(--bg3);border:1px solid var(--borda);border-radius:14px;padding:14px;font-size:13.5px;color:var(--texto);line-height:1.6;font-family:'DM Sans',sans-serif;min-height:110px;margin-bottom:10px;">
+      <div id="msg-preview-tag" style="display:none;font-size:10px;font-weight:800;color:#04231A;background:var(--verde);border-radius:999px;padding:3px 9px;margin-bottom:8px;"></div>
+      <div id="msg-preview-texto" style="white-space:pre-wrap;"></div>
+    </div>
     <button onclick="_msgSortear()" style="width:100%;background:var(--bg3);border:1px dashed var(--borda);border-radius:11px;padding:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;">🎲 Quero outra versão</button>
     <div style="display:flex;gap:8px;">
       <button onclick="_msgCopiar()" style="flex:1;background:var(--bg3);border:1px solid var(--borda);border-radius:11px;padding:13px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📋 Copiar</button>
@@ -7423,6 +7430,7 @@ const MSG_LIB = {
   ]}
 };
 let _msgCliId = null, _msgCat = 'agendar', _msgUltimaIdx = {};
+let _msgModo = 'lib', _msgGatilhoMsgs = [], _msgGatilhoLabels = [], _msgGatilhoIdx = 0;
 
 // Andar 1 do hub: último status do cliente → atalhos de mensagem certos pra ESSE momento.
 // Cada atalho aponta para uma categoria da biblioteca (reuso total do MSG_LIB).
@@ -7453,14 +7461,65 @@ function _msgRenderMomento(c) {
   const dias = Math.floor((Date.now() - new Date(ult.data)) / 86400000);
   const diasTxt = dias <= 0 ? 'hoje' : dias === 1 ? 'ontem' : `há ${dias}d`;
   document.getElementById('msg-momento-tag').textContent = `${base} · ${diasTxt}`;
-  document.getElementById('msg-momento-chips').innerHTML = atalhos.map(([label, cat]) =>
-    `<button onclick="_msgTrocarCat('${cat}')" style="flex-shrink:0;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.4);color:var(--verde);">${label}</button>`
+  document.getElementById('msg-momento-chips').innerHTML = atalhos.map(([label]) =>
+    `<button onclick="_msgAbrirGatilhos()" style="flex-shrink:0;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.4);color:var(--verde);">${label}</button>`
   ).join('');
   wrap.style.display = 'block';
+  _msgPrepararGatilhos(c);
+}
+
+// Gatilhos: reaproveita a cadência calculada pro motivo atual do cliente (mesma
+// fonte do acordeão "Mensagens sugeridas" do card) — não é um menu à parte,
+// é o detalhamento do chip de momento que o rep acabou de tocar.
+function _msgPrepararGatilhos(c) {
+  const ult = c && c.historico && c.historico[0];
+  const proxima = ult && calcularProximaAcao(ult);
+  const wrapG = document.getElementById('msg-gatilho-wrap');
+  if (!proxima || !proxima.gatilhos || !proxima.gatilhos.length) {
+    _msgGatilhoMsgs = [];
+    _msgGatilhoLabels = [];
+    if (wrapG) wrapG.style.display = 'none';
+    return;
+  }
+  const nome = _primeiroNomeCap(c.nome) || 'cliente';
+  _msgGatilhoMsgs = proxima.getMsgs(nome);
+  _msgGatilhoLabels = proxima.gatilhos;
+}
+
+function _msgAbrirGatilhos() {
+  if (!_msgGatilhoMsgs.length) return;
+  _msgModo = 'gatilho';
+  _msgGatilhoIdx = 0;
+  document.getElementById('msg-gatilho-wrap').style.display = 'block';
+  _msgRenderGatilhoChips();
+  _msgRenderCats();
+  _msgMostrarGatilho();
+}
+
+function _msgRenderGatilhoChips() {
+  document.getElementById('msg-gatilho-chips').innerHTML = _msgGatilhoLabels.map((label, i) =>
+    `<button onclick="_msgEscolherGatilho(${i})" style="flex-shrink:0;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;${i === _msgGatilhoIdx ? 'background:var(--verde);border:1px solid var(--verde);color:#04231A;' : 'background:var(--bg3);border:1px solid var(--borda);color:var(--texto2);'}">${label}</button>`
+  ).join('');
+}
+
+function _msgEscolherGatilho(i) {
+  _msgGatilhoIdx = i;
+  _msgRenderGatilhoChips();
+  _msgMostrarGatilho();
+}
+
+function _msgMostrarGatilho() {
+  const tag = document.getElementById('msg-preview-tag');
+  tag.textContent = _msgGatilhoLabels[_msgGatilhoIdx];
+  tag.style.display = 'inline-block';
+  document.getElementById('msg-preview-texto').textContent = _msgGatilhoMsgs[_msgGatilhoIdx];
 }
 
 function abrirMensagens(clienteId, categoria, msgInicial) {
   _msgCliId = clienteId;
+  _msgModo = 'lib';
+  _msgGatilhoIdx = 0;
+  document.getElementById('msg-gatilho-wrap').style.display = 'none';
   _msgCat = MSG_LIB[categoria] ? categoria : 'agendar';
   const c = getClientes().find(x => x.id === clienteId);
   document.getElementById('msg-sem-tel').style.display = (c && (c.telefone || c.wpp)) ? 'none' : 'block';
@@ -7470,33 +7529,47 @@ function abrirMensagens(clienteId, categoria, msgInicial) {
   _msgRenderCats();
   // Mensagem contextual (ex.: gatilho com cidade/semana/marcas) entra como 1ª sugestão;
   // o 🎲 sorteia as variações da biblioteca a partir daí.
-  if (msgInicial) document.getElementById('msg-preview').textContent = msgInicial;
+  document.getElementById('msg-preview-tag').style.display = 'none';
+  if (msgInicial) document.getElementById('msg-preview-texto').textContent = msgInicial;
   else _msgSortear();
   document.getElementById('modal-mensagens').classList.add('aberto');
 }
 function _msgRenderCats() {
   document.getElementById('msg-cats').innerHTML = Object.entries(MSG_LIB).map(([k, v]) =>
-    `<button onclick="_msgTrocarCat('${k}')" style="flex-shrink:0;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;${k === _msgCat ? 'background:rgba(0,214,143,.14);border:1px solid rgba(0,214,143,.5);color:var(--verde);' : 'background:var(--bg3);border:1px solid var(--borda);color:var(--texto2);'}">${v.emoji} ${v.titulo}</button>`
+    `<button onclick="_msgTrocarCat('${k}')" style="flex-shrink:0;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;${_msgModo === 'lib' && k === _msgCat ? 'background:rgba(0,214,143,.14);border:1px solid rgba(0,214,143,.5);color:var(--verde);' : 'background:var(--bg3);border:1px solid var(--borda);color:var(--texto2);'}">${v.emoji} ${v.titulo}</button>`
   ).join('');
 }
-function _msgTrocarCat(cat) { _msgCat = cat; _msgRenderCats(); _msgSortear(); }
+function _msgTrocarCat(cat) {
+  _msgModo = 'lib';
+  _msgCat = cat;
+  document.getElementById('msg-gatilho-wrap').style.display = 'none';
+  _msgRenderCats();
+  _msgSortear();
+}
 function _msgSortear() {
+  if (_msgModo === 'gatilho') {
+    _msgGatilhoIdx = (_msgGatilhoIdx + 1) % _msgGatilhoMsgs.length;
+    _msgRenderGatilhoChips();
+    _msgMostrarGatilho();
+    return;
+  }
   const c = getClientes().find(x => x.id === _msgCliId);
   const nome = _primeiroNomeCap(c ? c.nome : '') || 'cliente';
   const vars = MSG_LIB[_msgCat].vars;
   let i = Math.floor(Math.random() * vars.length);
   if (vars.length > 1 && i === _msgUltimaIdx[_msgCat]) i = (i + 1) % vars.length; // não repete a última
   _msgUltimaIdx[_msgCat] = i;
-  document.getElementById('msg-preview').textContent = vars[i](nome);
+  document.getElementById('msg-preview-tag').style.display = 'none';
+  document.getElementById('msg-preview-texto').textContent = vars[i](nome);
 }
 function _msgAbrirWpp() {
   const c = getClientes().find(x => x.id === _msgCliId);
   const tel = ((c && (c.telefone || c.wpp)) || '').replace(/\D/g, '');
-  const msg = encodeURIComponent(document.getElementById('msg-preview').textContent);
+  const msg = encodeURIComponent(document.getElementById('msg-preview-texto').textContent);
   window.open(tel ? `https://wa.me/55${tel}?text=${msg}` : `https://wa.me/?text=${msg}`, '_blank');
 }
 function _msgCopiar() {
-  const msg = document.getElementById('msg-preview').textContent;
+  const msg = document.getElementById('msg-preview-texto').textContent;
   navigator.clipboard.writeText(msg).then(() => toast('Mensagem copiada!')).catch(() => toast('Não consegui copiar'));
 }
 

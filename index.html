@@ -1583,6 +1583,9 @@ window.addEventListener('appinstalled', function() {
         <button onclick="verClienteMapa()" style="width:100%;margin-top:10px;background:linear-gradient(135deg,#00D68F,#00B377);border:none;border-radius:12px;padding:13px;color:#000;font-size:14px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">
           Ver perfil completo →
         </button>
+        <button onclick="_excluirClienteMapa()" style="width:100%;margin-top:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:10px;color:#F87171;font-size:12.5px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          🗑 Excluir cliente
+        </button>
       </div>
     </div>
   </div>
@@ -7990,6 +7993,19 @@ function navegarParaCliente() {
   const end = clienteMapaAtual.endereco;
   fecharBottomSheet();
   setTimeout(() => abrirRotaCliente(encodeURIComponent(end)), 200);
+}
+
+async function _excluirClienteMapa() {
+  if (!clienteMapaAtual?.id) return;
+  if (!(await confirmarModal('Excluir este cliente e todo o histórico? Essa ação não pode ser desfeita.', {textoOk:'Excluir'}))) return;
+  // Tombstone: marca como excluído (não remove) para a exclusão propagar entre aparelhos.
+  const raw = getClientesRaw();
+  const cl = raw.find(c => c.id === clienteMapaAtual.id);
+  if (cl) { cl._del = true; cl._mod = Date.now(); }
+  salvarClientes(raw);
+  fecharBottomSheet();
+  renderizarMapa();
+  toast('Cliente excluído');
 }
 
 function verClienteMapa() {

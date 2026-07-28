@@ -386,7 +386,7 @@ window.addEventListener('appinstalled', function() {
   .config-secao.cfg-dirty .cfg-aviso-dirty { display:block; }
   .selo-auto { position:absolute; top:0; right:0; display:inline-flex; align-items:center; gap:4px; background:var(--bg3); border:1px solid var(--borda); border-radius:999px; padding:5px 10px; color:var(--texto3); font-size:10px; font-weight:700; white-space:nowrap; font-family:'DM Sans',sans-serif; transition:border-color .25s,background .25s,color .25s; }
   .selo-auto.flash { border-color:rgba(0,214,143,.45); background:rgba(0,214,143,.1); color:var(--verde); }
-  .cfg-indice { display:flex; gap:7px; overflow-x:auto; padding:2px 2px 12px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .cfg-indice { display:flex; gap:7px; overflow-x:auto; padding:12px 20px 12px; margin:0 -20px; -webkit-overflow-scrolling:touch; scrollbar-width:none; position:sticky; top:0; z-index:90; background:var(--bg); border-bottom:1px solid var(--borda); }
   .cfg-indice::-webkit-scrollbar { display:none; }
   .idx-chip { flex-shrink:0; display:inline-flex; align-items:center; gap:6px; background:var(--bg3); border:1px solid var(--borda); border-radius:999px; padding:8px 13px; font-size:12px; font-weight:700; color:var(--texto2); white-space:nowrap; cursor:pointer; font-family:'DM Sans',sans-serif; }
   .idx-chip.ativo { background:rgba(0,214,143,.12); border-color:rgba(0,214,143,.45); color:var(--verde); }
@@ -6995,13 +6995,48 @@ function _abrirReprogramarMarca(clienteId) {
 
 function _confirmarReprogramarMarca(dias) {
   if (!_reprogramarMarcaClienteId) return;
+  const clienteId = _reprogramarMarcaClienteId;
   const snoozes = getData('cv_alerta_marca_snooze') || {};
   const agora = new Date();
-  snoozes[_reprogramarMarcaClienteId] = { desde: agora.toISOString(), ate: new Date(agora.getTime() + dias * 86400000).toISOString() };
+  snoozes[clienteId] = { desde: agora.toISOString(), ate: new Date(agora.getTime() + dias * 86400000).toISOString() };
   setData('cv_alerta_marca_snooze', snoozes);
   _reprogramarMarcaClienteId = null;
   fecharModal('modal-reprogramar-marca');
-  abrirNotificacoes();
+  // Reprograma pode ter sido aberto do sino OU do card piscando na tela do
+  // cliente — atualiza só quem estiver de fato na tela pra não abrir um por cima do outro.
+  if (document.getElementById('modal-notificacoes')?.classList.contains('aberto')) abrirNotificacoes();
+  _atualizarAlertaMarcaDetalhe(clienteId);
+}
+
+// Card(s) de marca vencida/vencendo na tela do cliente — clicável quando
+// vencida (pisca) pra reprogramar com a mesma soneca 7/15/30d do sino.
+function _atualizarAlertaMarcaDetalhe(clienteId) {
+  let alertaMarcaEl = document.getElementById('det-alerta-marca');
+  if (!alertaMarcaEl) {
+    const loja = document.getElementById('det-loja');
+    if (!loja) return;
+    alertaMarcaEl = document.createElement('div');
+    alertaMarcaEl.id = 'det-alerta-marca';
+    loja.after(alertaMarcaEl);
+  }
+  const alertasMarcaCliente = calcularAlertasMarcas().filter(a => a.clienteId === clienteId);
+  if (alertasMarcaCliente.length) {
+    alertaMarcaEl.style.display = 'block';
+    alertaMarcaEl.innerHTML = alertasMarcaCliente.map(a => {
+      const cor   = a.status === 'vencida' ? '#EF4444' : '#F59E0B';
+      const bg    = a.status === 'vencida' ? 'rgba(239,68,68,.1)' : 'rgba(245,158,11,.1)';
+      const borda = a.status === 'vencida' ? 'rgba(239,68,68,.4)' : 'rgba(245,158,11,.4)';
+      const txt   = a.status === 'vencida'
+        ? `Vencida há ${Math.abs(a.diasRestantes)} dia${Math.abs(a.diasRestantes)>1?'s':''}`
+        : `Vence em ${a.diasRestantes} dia${a.diasRestantes>1?'s':''}`;
+      const proxFmt = a.proximaCompra.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+      const clicavel = a.status === 'vencida';
+      return `<div class="${clicavel?'meta-hoje-pisca':''}" ${clicavel?`onclick="_abrirReprogramarMarca('${clienteId}')" title="Reprogramar aviso"`:''} style="display:inline-flex;align-items:center;gap:6px;background:${bg};border:1px solid ${borda};border-radius:8px;padding:4px 10px;margin:2px 4px 2px 0;${clicavel?'cursor:pointer;':''}"><span style="font-size:11px;font-weight:700;color:${cor};">🏷️ ${a.marca} — ${txt} · retorno ~${proxFmt}${clicavel?' · 🕐':''}</span></div>`;
+    }).join('');
+  } else {
+    alertaMarcaEl.style.display = 'none';
+    alertaMarcaEl.innerHTML = '';
+  }
 }
 
 // ===== ACOMPANHAMENTO DE EQUIPE =====
@@ -12974,29 +13009,7 @@ function abrirDetalhe(clienteId, telaOrigem) {
   segEl.textContent = getSegLabel(cliente.segmento);
 
   // Alertas de marca vencida
-  let alertaMarcaEl = document.getElementById('det-alerta-marca');
-  if (!alertaMarcaEl) {
-    alertaMarcaEl = document.createElement('div');
-    alertaMarcaEl.id = 'det-alerta-marca';
-    document.getElementById('det-loja').after(alertaMarcaEl);
-  }
-  const alertasMarcaCliente = calcularAlertasMarcas().filter(a => a.clienteId === clienteId);
-  if (alertasMarcaCliente.length) {
-    alertaMarcaEl.style.display = 'block';
-    alertaMarcaEl.innerHTML = alertasMarcaCliente.map(a => {
-      const cor   = a.status === 'vencida' ? '#EF4444' : '#F59E0B';
-      const bg    = a.status === 'vencida' ? 'rgba(239,68,68,.1)' : 'rgba(245,158,11,.1)';
-      const borda = a.status === 'vencida' ? 'rgba(239,68,68,.4)' : 'rgba(245,158,11,.4)';
-      const txt   = a.status === 'vencida'
-        ? `Vencida há ${Math.abs(a.diasRestantes)} dia${Math.abs(a.diasRestantes)>1?'s':''}`
-        : `Vence em ${a.diasRestantes} dia${a.diasRestantes>1?'s':''}`;
-      const proxFmt = a.proximaCompra.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-      return `<div class="${a.status==='vencida'?'meta-hoje-pisca':''}" style="display:inline-flex;align-items:center;gap:6px;background:${bg};border:1px solid ${borda};border-radius:8px;padding:4px 10px;margin:2px 4px 2px 0;"><span style="font-size:11px;font-weight:700;color:${cor};">🏷️ ${a.marca} — ${txt} · retorno ~${proxFmt}</span></div>`;
-    }).join('');
-  } else {
-    alertaMarcaEl.style.display = 'none';
-    alertaMarcaEl.innerHTML = '';
-  }
+  _atualizarAlertaMarcaDetalhe(clienteId);
 
   // E-mail do cliente
   let emailDetEl = document.getElementById('det-email-cliente');

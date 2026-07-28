@@ -753,15 +753,6 @@ window.addEventListener('appinstalled', function() {
   .rota-periodo-btn { flex:1; background:transparent; border:none; border-radius:9px; padding:9px 4px; color:var(--texto2); font-family:'Syne',sans-serif; font-size:11.5px; font-weight:700; cursor:pointer; transition:background .15s,color .15s; white-space:nowrap; }
   .rota-periodo-btn.ativo { background:var(--verde); color:#04231A; box-shadow:0 2px 8px var(--verde-glow); }
 
-  /* BLOCOS DE MENSAGEM */
-  .msg-bloco { background:var(--bg3); border:1px solid var(--borda); border-radius:12px; padding:14px; margin-bottom:10px; }
-  .msg-gatilho { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--verde); margin-bottom:8px; }
-  .msg-texto { font-size:13px; color:var(--texto2); line-height:1.6; font-style:italic; margin-bottom:10px; }
-  .msg-copy-btn { background:var(--bg2); border:1px solid var(--borda); border-radius:8px; padding:7px 14px; color:var(--texto); font-size:12px; font-weight:600; cursor:pointer; font-family:'Syne',sans-serif; display:inline-flex; align-items:center; gap:5px; transition:border-color .2s,background .2s; }
-  .msg-copy-btn:active { border-color:var(--verde); background:rgba(0,200,150,.05); color:var(--verde); }
-  .msg-wa-btn { background:#25D366 !important; border-color:#25D366 !important; color:#fff !important; font-weight:700; }
-  .msg-wa-btn:active { opacity:.85; }
-
   .nav-item.checkin-btn { color: var(--verde); }
   .nav-item.checkin-btn .nav-item-icon { font-size:22px; }
 
@@ -1045,9 +1036,9 @@ window.addEventListener('appinstalled', function() {
         <div class="resumo-link">Quem te ajuda a bater a meta →</div>
       </div>
       <div class="resumo-card laranja" onclick="abrirDespesas()">
-        <div class="resumo-topo"><span class="resumo-card-icone">🧾</span><span class="resumo-label">Despesas da rota</span></div>
+        <div class="resumo-topo"><span class="resumo-card-icone">🧾</span><span class="resumo-label">Gastos da rota</span></div>
         <div class="resumo-numero" id="num-despesas" style="font-size:22px;">—</div>
-        <div class="resumo-link">Lançar agora →</div>
+        <div class="resumo-link">Ver comissão e líquido →</div>
       </div>
     </div>
 
@@ -1453,17 +1444,8 @@ window.addEventListener('appinstalled', function() {
         ></textarea>
       </div>
 
-      <!-- BLOCO 2: MENSAGENS COM GATILHOS - ACORDEÃO -->
-      <div style="background:var(--bg2);border:1px solid var(--borda);border-radius:14px;overflow:hidden;margin-bottom:20px;">
-        <button onclick="toggleMensagens()" style="width:100%;background:none;border:none;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:'DM Sans',sans-serif;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:16px;">💬</span>
-            <span style="font-size:13px;font-weight:700;color:var(--texto);text-transform:uppercase;letter-spacing:.5px;">Mensagens sugeridas</span>
-          </div>
-          <span id="msgs-seta" style="color:var(--verde);font-size:18px;transition:transform .3s;">›</span>
-        </button>
-        <div id="det-msgs-container" style="display:none;padding:0 16px 16px;border-top:1px solid var(--borda);padding-top:14px;"></div>
-      </div>
+      <!-- Acordeão "Mensagens sugeridas" removido: as mensagens com gatilho agora
+           vivem no modal "Interagir com o cliente" (botão .btn-cutucar). -->
     </div>
     <div id="det-esquecido-box" style="display:none">
       <div class="proxima-acao" style="border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.05)">
@@ -7474,17 +7456,18 @@ function _msgRenderMomento(c) {
   const diasTxt = dias <= 0 ? 'hoje' : dias === 1 ? 'ontem' : `há ${dias}d`;
   document.getElementById('msg-momento-tag').textContent = `${base} · ${diasTxt}`;
   const momentoChipsEl = document.getElementById('msg-momento-chips');
-  momentoChipsEl.innerHTML = atalhos.map(([label]) =>
-    `<button onclick="_msgAbrirGatilhos()" style="flex-shrink:0;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.4);color:var(--verde);">${label}</button>`
+  momentoChipsEl.innerHTML = atalhos.map(([label, cat]) =>
+    `<button onclick="_msgTrocarCat('${cat}')" style="flex-shrink:0;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.4);color:var(--verde);">${label}</button>`
   ).join('');
   momentoChipsEl.scrollLeft = 0;
   wrap.style.display = 'block';
   _msgPrepararGatilhos(c);
+  _msgRevelarGatilhos();
 }
 
 // Gatilhos: reaproveita a cadência calculada pro motivo atual do cliente (mesma
-// fonte do acordeão "Mensagens sugeridas" do card) — não é um menu à parte,
-// é o detalhamento do chip de momento que o rep acabou de tocar.
+// fonte do acordeão "Mensagens sugeridas" do card) — seguem o momento do cliente,
+// não são uma biblioteca à parte.
 function _msgPrepararGatilhos(c) {
   const ult = c && c.historico && c.historico[0];
   const proxima = ult && calcularProximaAcao(ult);
@@ -7500,16 +7483,15 @@ function _msgPrepararGatilhos(c) {
   _msgGatilhoLabels = proxima.gatilhos;
 }
 
-function _msgAbrirGatilhos() {
-  if (!_msgGatilhoMsgs.length) return;
-  _msgModo = 'gatilho';
-  _msgGatilhoIdx = 0;
-  document.getElementById('msg-gatilho-wrap').style.display = 'block';
+// O carrossel de gatilhos fica SEMPRE visível quando o cliente tem momento —
+// é o 2º dos 3 blocos do modal, não um menu escondido atrás de um toque.
+function _msgRevelarGatilhos() {
+  const wrapG = document.getElementById('msg-gatilho-wrap');
+  if (!wrapG) return;
+  if (!_msgGatilhoMsgs.length) { wrapG.style.display = 'none'; return; }
+  wrapG.style.display = 'block';
   _msgRenderGatilhoChips();
-  _msgRenderCats();
   document.getElementById('msg-gatilho-chips').scrollLeft = 0;
-  document.getElementById('msg-cats').scrollLeft = 0;
-  _msgMostrarGatilho();
 }
 
 function _msgRenderGatilhoChips() {
@@ -7519,8 +7501,10 @@ function _msgRenderGatilhoChips() {
 }
 
 function _msgEscolherGatilho(i) {
+  _msgModo = 'gatilho';
   _msgGatilhoIdx = i;
   _msgRenderGatilhoChips();
+  _msgRenderCats();
   _msgMostrarGatilho();
 }
 
@@ -7534,7 +7518,9 @@ function _msgMostrarGatilho() {
 function abrirMensagens(clienteId, categoria, msgInicial) {
   _msgCliId = clienteId;
   _msgModo = 'lib';
-  _msgGatilhoIdx = 0;
+  _msgGatilhoIdx = -1;
+  _msgGatilhoMsgs = [];
+  _msgGatilhoLabels = [];
   document.getElementById('msg-gatilho-wrap').style.display = 'none';
   _msgCat = MSG_LIB[categoria] ? categoria : 'agendar';
   const c = getClientes().find(x => x.id === clienteId);
@@ -7559,7 +7545,8 @@ function _msgRenderCats() {
 function _msgTrocarCat(cat) {
   _msgModo = 'lib';
   _msgCat = cat;
-  document.getElementById('msg-gatilho-wrap').style.display = 'none';
+  _msgGatilhoIdx = -1; // nenhum gatilho selecionado — o carrossel continua na tela
+  _msgRenderGatilhoChips();
   _msgRenderCats();
   _msgSortear();
 }
@@ -13194,34 +13181,6 @@ function abrirDetalhe(clienteId, telaOrigem) {
         if (!temCustom) {
           document.getElementById('det-proxima-data').textContent = getUrgenciaLabel(proxima.diffDias) + (proxima.diffDias <= 0 ? ' · era ' + formatarData(proxima.data) : '');
         }
-        const primeiroNome = _primeiroNomeCap(cliente.nome);
-        const msgs = proxima.getMsgs(primeiroNome);
-        const gatilhos = proxima.gatilhos;
-        const nums = ['','','','',''];
-        const tel = cliente.telefone ? cliente.telefone.replace(/\D/g,'') : '';
-        const temTel = tel.length >= 10;
-        document.getElementById('det-msgs-container').innerHTML = msgs.map((msg, i) => {
-          const msgEscapada = msg.replace(/'/g,"\\'").replace(/\n/g,' ');
-          const waLink = temTel ? `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}` : '';
-          const waBtnAtivo = temTel
-            ? `<a href="${waLink}" target="_blank" class="msg-copy-btn msg-wa-btn" style="text-decoration:none;background:#25D366;border-color:#25D366;color:#fff;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                WhatsApp
-               </a>`
-            : `<button class="msg-copy-btn" disabled style="opacity:.35;cursor:not-allowed;" title="Cadastre o número do cliente">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                Sem número
-               </button>`;
-          return `
-            <div class="msg-bloco">
-              <div class="msg-gatilho">${gatilhos[i]}</div>
-              <div class="msg-texto">${msg}</div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="msg-copy-btn" onclick="copiarTexto('${msgEscapada}')">📋 Copiar</button>
-                ${waBtnAtivo}
-              </div>
-            </div>`;
-        }).join('');
       }
     }
   } else {
@@ -13407,14 +13366,6 @@ function abrirWhatsAppDireto() {
   const tel = cliente.telefone.replace(/\D/g,'');
   window.open(`https://wa.me/55${tel}`, '_blank');
   fecharModal('modal-menu-zap');
-}
-
-function toggleMensagens() {
-  const container = document.getElementById('det-msgs-container');
-  const seta = document.getElementById('msgs-seta');
-  const aberto = container.style.display !== 'none';
-  container.style.display = aberto ? 'none' : 'block';
-  seta.style.transform = aberto ? 'rotate(0deg)' : 'rotate(90deg)';
 }
 
 // Abre o calendário nativo a partir do chip

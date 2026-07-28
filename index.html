@@ -197,6 +197,10 @@ window.addEventListener('appinstalled', function() {
   }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
+  /* Chips deslizantes (mensagens prontas) — some a barra de rolagem nativa */
+  #msg-momento-chips, #msg-gatilho-chips, #msg-cats { scrollbar-width:none; -ms-overflow-style:none; }
+  #msg-momento-chips::-webkit-scrollbar, #msg-gatilho-chips::-webkit-scrollbar, #msg-cats::-webkit-scrollbar { display:none; height:0; }
+
   /* DRAG AND DROP MOTIVOS */
   .motivo-item { touch-action:pan-y; }
   .motivo-item.drag-over { border-color:var(--verde) !important; background:rgba(0,214,143,.08) !important; }
@@ -7469,9 +7473,11 @@ function _msgRenderMomento(c) {
   const dias = Math.floor((Date.now() - new Date(ult.data)) / 86400000);
   const diasTxt = dias <= 0 ? 'hoje' : dias === 1 ? 'ontem' : `há ${dias}d`;
   document.getElementById('msg-momento-tag').textContent = `${base} · ${diasTxt}`;
-  document.getElementById('msg-momento-chips').innerHTML = atalhos.map(([label]) =>
+  const momentoChipsEl = document.getElementById('msg-momento-chips');
+  momentoChipsEl.innerHTML = atalhos.map(([label]) =>
     `<button onclick="_msgAbrirGatilhos()" style="flex-shrink:0;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.4);color:var(--verde);">${label}</button>`
   ).join('');
+  momentoChipsEl.scrollLeft = 0;
   wrap.style.display = 'block';
   _msgPrepararGatilhos(c);
 }
@@ -7501,6 +7507,8 @@ function _msgAbrirGatilhos() {
   document.getElementById('msg-gatilho-wrap').style.display = 'block';
   _msgRenderGatilhoChips();
   _msgRenderCats();
+  document.getElementById('msg-gatilho-chips').scrollLeft = 0;
+  document.getElementById('msg-cats').scrollLeft = 0;
   _msgMostrarGatilho();
 }
 
@@ -7535,6 +7543,7 @@ function abrirMensagens(clienteId, categoria, msgInicial) {
   if (!categoria && !msgInicial) _msgRenderMomento(c);
   else document.getElementById('msg-momento-wrap').style.display = 'none';
   _msgRenderCats();
+  document.getElementById('msg-cats').scrollLeft = 0;
   // Mensagem contextual (ex.: gatilho com cidade/semana/marcas) entra como 1ª sugestão;
   // o 🎲 sorteia as variações da biblioteca a partir daí.
   document.getElementById('msg-preview-tag').style.display = 'none';

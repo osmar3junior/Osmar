@@ -88,6 +88,14 @@
 // ===== SERVICE WORKER (offline na estrada) =====
 // Registra o sw.js, que cacheia o app + libs para abrir mesmo sem internet.
 if ('serviceWorker' in navigator) {
+  // Quando o SW novo assume o controle, recarrega a página sozinho — sem isso,
+  // a aba já aberta ficava rodando o JS antigo até o rep fechar/reabrir 2x.
+  var _swRecarregando = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (_swRecarregando) return;
+    _swRecarregando = true;
+    window.location.reload();
+  });
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
       .then(function(reg) {

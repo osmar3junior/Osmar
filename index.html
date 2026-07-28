@@ -347,6 +347,16 @@ window.addEventListener('appinstalled', function() {
   .detalhe-header { background:var(--bg2); border-bottom:1px solid var(--borda); padding:20px; }
   .btn-voltar { background:none; border:none; color:var(--verde); font-size:14px; cursor:pointer; padding:0; margin-bottom:16px; font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:6px; }
   .detalhe-nome { font-size:22px; font-weight:700; letter-spacing:.3px; line-height:1.25; margin-bottom:4px; }
+  /* Nome + ações de cadastro na mesma linha: "Editar" colado no nome e "Rota" na
+     ponta direita. Deixa os 3 botões comerciais (visita, interagir, quem por perto)
+     juntos e sem interrupção logo abaixo. */
+  .detalhe-topo { display:flex; align-items:flex-start; gap:7px; margin-bottom:4px; }
+  /* Teto de 3 linhas: com os botões ao lado a coluna do nome fica estreita, e um
+     nome de 5 palavras empurrava os botões comerciais pra fora da primeira tela. */
+  .detalhe-topo .detalhe-nome { flex:1; min-width:0; margin-bottom:0; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+  .det-mini-btn { flex-shrink:0; display:inline-flex; align-items:center; gap:5px; border-radius:10px; padding:7px 10px; font-size:12px; font-weight:700; font-family:'DM Sans',sans-serif; line-height:1; cursor:pointer; white-space:nowrap; margin-top:2px; }
+  .det-mini-editar { background:rgba(124,142,240,.1); border:1.5px solid rgba(124,142,240,.4); color:#9DACF5; }
+  .det-mini-rota { background:rgba(56,189,248,.1); border:1.5px solid rgba(56,189,248,.35); color:#38BDF8; }
   .detalhe-loja { font-size:14px; color:var(--texto2); margin-bottom:14px; }
   .detalhe-acoes { display:flex; flex-direction:column; }
   .btn-acao { flex:1; border-radius:12px; padding:14px 8px; font-size:13px; font-weight:700; cursor:pointer; border:none; font-family:'Syne',sans-serif; display:flex; align-items:center; justify-content:center; gap:6px; transition:transform .1s, box-shadow .1s; }
@@ -1376,7 +1386,11 @@ window.addEventListener('appinstalled', function() {
     </div>
   </div>
   <div class="detalhe-header">
-    <div class="detalhe-nome" id="det-nome">-</div>
+    <div class="detalhe-topo">
+      <div class="detalhe-nome" id="det-nome">-</div>
+      <button class="det-mini-btn det-mini-editar" onclick="abrirModalEditarCliente()">✏️ Editar</button>
+      <button class="det-mini-btn det-mini-rota" id="btn-rota-detalhe" onclick="irRotaClienteAtual()" style="display:none;">➤ Rota</button>
+    </div>
     <div class="detalhe-loja" id="det-loja">-</div>
 
     <!-- Só aparece na 1ª vez que o rep abre um cliente vindo de importação em massa
@@ -1400,10 +1414,6 @@ window.addEventListener('appinstalled', function() {
         <span style="display:flex;align-items:center;gap:6px;">📍 Resultado da visita ou contato</span>
         <span style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,.78);font-family:'DM Sans',sans-serif;">toque também para reprogramar</span>
       </button>
-      <div style="display:flex;gap:8px;margin-top:8px;">
-        <button onclick="abrirModalEditarCliente()" style="flex:1;background:rgba(124,142,240,.1);border:1.5px solid rgba(124,142,240,.4);border-radius:11px;padding:11px 8px;display:flex;align-items:center;justify-content:center;gap:6px;color:#9DACF5;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;">✏️ Editar cliente</button>
-        <button id="btn-rota-detalhe" onclick="irRotaClienteAtual()" style="display:none;flex:1;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.35);border-radius:11px;padding:11px 8px;align-items:center;justify-content:center;gap:5px;color:#38BDF8;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;">➤ Rota</button>
-      </div>
       <button class="btn-cutucar" onclick="abrirMensagens(clienteAtualId)">
         <span class="cut-ic"><svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="#fff" stroke-width="1.4"/><g transform="translate(5.4,5.4) scale(0.55)"><path fill="#fff" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></g></svg></span>
         <span style="min-width:0;">

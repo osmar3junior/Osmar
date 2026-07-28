@@ -398,10 +398,22 @@ window.addEventListener('appinstalled', function() {
   .config-secao.cfg-dirty .cfg-aviso-dirty { display:block; }
   .selo-auto { position:absolute; top:0; right:0; display:inline-flex; align-items:center; gap:4px; background:var(--bg3); border:1px solid var(--borda); border-radius:999px; padding:5px 10px; color:var(--texto3); font-size:10px; font-weight:700; white-space:nowrap; font-family:'DM Sans',sans-serif; transition:border-color .25s,background .25s,color .25s; }
   .selo-auto.flash { border-color:rgba(0,214,143,.45); background:rgba(0,214,143,.1); color:var(--verde); }
-  .cfg-indice { display:flex; gap:7px; overflow-x:auto; padding:12px 20px 12px; margin:0 -20px; -webkit-overflow-scrolling:touch; scrollbar-width:none; position:sticky; top:0; z-index:90; background:var(--bg); border-bottom:1px solid var(--borda); }
-  .cfg-indice::-webkit-scrollbar { display:none; }
-  .idx-chip { flex-shrink:0; display:inline-flex; align-items:center; gap:6px; background:var(--bg3); border:1px solid var(--borda); border-radius:999px; padding:8px 13px; font-size:12px; font-weight:700; color:var(--texto2); white-space:nowrap; cursor:pointer; font-family:'DM Sans',sans-serif; }
+  /* Índice de grupos: 2 andares de 3 — todos os grupos visíveis de uma vez,
+     sem rolagem lateral (com 6 chips a linha única transbordava e escondia o 1º). */
+  .cfg-indice { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; padding:10px 20px; margin:0 -20px; position:sticky; top:0; z-index:90; background:var(--bg); border-bottom:1px solid var(--borda); }
+  .idx-chip { display:inline-flex; align-items:center; justify-content:center; gap:5px; background:var(--bg3); border:1px solid var(--borda); border-radius:999px; padding:8px 6px; font-size:11.5px; font-weight:700; color:var(--texto2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; font-family:'DM Sans',sans-serif; }
   .idx-chip.ativo { background:rgba(0,214,143,.12); border-color:rgba(0,214,143,.45); color:var(--verde); }
+  /* Entrada em cascata ao abrir Configurações: mostra que a barra é navegável.
+     Roda uma vez por abertura da tela — nada de pulso infinito. */
+  @keyframes cfgChipEntra { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  .cfg-indice.animar .idx-chip { animation:cfgChipEntra .28s ease-out backwards; }
+  .cfg-indice.animar .idx-chip:nth-child(1) { animation-delay:0s; }
+  .cfg-indice.animar .idx-chip:nth-child(2) { animation-delay:.04s; }
+  .cfg-indice.animar .idx-chip:nth-child(3) { animation-delay:.08s; }
+  .cfg-indice.animar .idx-chip:nth-child(4) { animation-delay:.12s; }
+  .cfg-indice.animar .idx-chip:nth-child(5) { animation-delay:.16s; }
+  .cfg-indice.animar .idx-chip:nth-child(6) { animation-delay:.2s; }
+  @media (prefers-reduced-motion: reduce) { .cfg-indice.animar .idx-chip { animation:none; } }
   .grupo-cap { display:flex; align-items:center; gap:8px; margin:18px 2px 12px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--texto3); font-family:'DM Sans',sans-serif; }
   .grupo-cap .grupo-linha { flex:1; height:1px; background:var(--borda); }
   /* Marca da oportunidade: respira devagar p/ lembrar o rep qual marca vender (sutil, sem poluir) */
@@ -14286,7 +14298,8 @@ const _CFGV2_GRUPOS = [
   { id:'vendas',  label:'🏷️ Vendas',  secoes:['Unidades de venda','Suas representações','Metas por marca','Margem de segurança'] },
   { id:'rotina',  label:'🗓️ Rotina',  secoes:['Prazos por motivo','Clientes esquecidos','Meu dia de visitas'] },
   { id:'avisos',  label:'🔔 Avisos',  secoes:['Gatilho de antecipação','Acompanhamento de entregas'] },
-  { id:'sistema', label:'🔧 Sistema', secoes:['Senha de acesso','Importar base','Gestor IA','Acompanhamento de equipe','outros segmentos','Meu plano','boas-vindas'] }
+  { id:'equipe',  label:'👥 Equipe',  secoes:['Acompanhamento de equipe','Quem acompanha meus resultados'] },
+  { id:'sistema', label:'🔧 Sistema', secoes:['Senha de acesso','Importar base','Gestor IA','outros segmentos','Meu plano','boas-vindas'] }
 ];
 const _CFGV2_CHECK = ['Prazos por motivo','Clientes esquecidos','Seu nome','E-mail para relatórios','Seu WhatsApp'];
 const _CFGV2_AUTO  = ['Unidades de venda','Suas representações','Meu dia de visitas','Metas por marca','Margem de segurança','Gatilho de antecipação','Acompanhamento de entregas','Acompanhamento de equipe','boas-vindas','outros segmentos'];
@@ -14390,8 +14403,19 @@ function _cfgIrGrupo(id, chip) {
   if (alvo) alvo.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
+// Reinicia a cascata a cada abertura de Configurações (tirar/recolocar a classe
+// com um reflow no meio força o navegador a rodar a animação de novo).
+function _cfgAnimarIndice() {
+  const idx = document.querySelector('#tela-config .cfg-indice');
+  if (!idx) return;
+  idx.classList.remove('animar');
+  void idx.offsetWidth;
+  idx.classList.add('animar');
+}
+
 function carregarConfig() {
   _cfgV2Init(); // organiza a tela em grupos + injeta checks/selos (1ª vez)
+  _cfgAnimarIndice(); // cascata de entrada dos chips — sinaliza que a barra é navegável
   _limparOrfaos(); // some com metas/vendas de marcas já removidas de "Suas representações"
   const cfg = getConfig();
   Object.keys(MOTIVOS_BASE).forEach(k => {

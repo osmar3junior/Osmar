@@ -984,6 +984,14 @@ window.addEventListener('appinstalled', function() {
       <button onclick="_dispensarInstallBanner()" title="Agora não" style="background:var(--bg3);border:1px solid var(--borda);border-radius:9px;width:32px;color:var(--texto2);cursor:pointer;">✕</button>
     </div>
   </div>
+  <!-- Convite de "Acompanhamento de equipe" pendente (alguém quer te acompanhar) -->
+  <div id="equipe-convite-banner" onclick="_equipeAbrirConviteDoBanner()" style="display:none;align-items:center;gap:10px;background:rgba(129,140,248,.08);border:1px solid rgba(129,140,248,.35);border-radius:12px;padding:11px 12px;margin:10px 20px 0;cursor:pointer;">
+    <span style="width:32px;height:32px;border-radius:50%;background:rgba(129,140,248,.18);color:#A78BFA;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">👥</span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:12.5px;font-weight:700;color:var(--texto);"><span id="equipe-convite-nome"></span> quer acompanhar seus resultados</div>
+      <div style="font-size:10.5px;color:var(--texto2);margin-top:1px;">Toque pra escolher quais marcas liberar</div>
+    </div>
+  </div>
   <div class="dash-content">
     <div class="saudacao">
       <span class="saudacao-sub">Bom dia,</span>
@@ -1132,6 +1140,19 @@ window.addEventListener('appinstalled', function() {
       <div style="color:#7C3AED;font-size:20px;">›</div>
     </button>
 
+    <!-- BOTÃO ACOMPANHAMENTO DE EQUIPE — só aparece com o toggle ligado em
+         Configurações ou se já tem pelo menos 1 rep vinculado (_equipeAtualizarDashboard) -->
+    <button id="btn-equipe" onclick="abrirEquipe()" style="display:none;width:100%;background:linear-gradient(135deg,#181c3a,#232a5c);border:1.5px solid rgba(129,140,248,.45);border-radius:14px;padding:16px;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(129,140,248,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">👥</div>
+        <div style="text-align:left;">
+          <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--texto);">Acompanhamento Equipe</div>
+          <div style="font-size:11px;color:#A78BFA;">Meta, vendas e clientes do seu time</div>
+        </div>
+      </div>
+      <div style="color:#818CF8;font-size:20px;">›</div>
+    </button>
+
     <!-- BLOCO ARQUIVO (fechados / inadimplentes) -->
     <div style="background:linear-gradient(135deg,#1c1714,#262019);border:1.5px solid rgba(140,140,150,.22);border-radius:14px;padding:16px;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
@@ -1173,6 +1194,67 @@ window.addEventListener('appinstalled', function() {
     <button class="nav-item checkin-btn" onclick="abrirModalNovoCliente()"><span class="nav-item-icon">📍</span><span class="nav-item-label" style="font-size:10px;">Add Cliente</span></button>
     <button class="nav-item" onclick="irPara('mapa')"><span class="nav-item-icon">🗺️</span><span class="nav-item-label">Mapa</span></button>
     <button class="nav-item" onclick="irPara('config')"><span class="nav-item-icon">⚙️</span><span class="nav-item-label">Config</span></button>
+  </div>
+</div>
+
+<!-- ACOMPANHAMENTO DE EQUIPE -->
+<div class="tela" id="tela-equipe">
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+      <button onclick="irPara('dashboard')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:9px;width:30px;height:30px;color:var(--texto2);cursor:pointer;flex-shrink:0;">←</button>
+      <div style="min-width:0;">
+        <div style="font-size:15px;font-weight:700;color:var(--texto);">Acompanhamento equipe</div>
+        <div id="equipe-subtitulo" style="font-size:11px;color:var(--texto2);"></div>
+      </div>
+    </div>
+    <button onclick="document.getElementById('equipe-convidar-email').value='';document.getElementById('modal-equipe-convidar').classList.add('aberto')" title="Convidar representante" style="background:rgba(129,140,248,.15);border:1px solid #818CF8;border-radius:9px;width:30px;height:30px;color:#A78BFA;cursor:pointer;flex-shrink:0;font-size:16px;">+</button>
+  </div>
+  <div class="dash-content">
+    <div id="equipe-pendentes"></div>
+    <div style="display:flex;gap:6px;margin-bottom:11px;">
+      <button class="equipe-ord-btn" data-ord="pior" onclick="_equipeOrdenar('pior')" style="flex:1;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);border-radius:9px;padding:7px 4px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Pior resultado</button>
+      <button class="equipe-ord-btn" data-ord="nome" onclick="_equipeOrdenar('nome')" style="flex:1;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);border-radius:9px;padding:7px 4px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Nome</button>
+      <button class="equipe-ord-btn" data-ord="semcontato" onclick="_equipeOrdenar('semcontato')" style="flex:1;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);border-radius:9px;padding:7px 4px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Sem contato</button>
+    </div>
+    <div id="equipe-lista"></div>
+  </div>
+</div>
+
+<!-- MODAL CONVIDAR REPRESENTANTE -->
+<div class="modal-overlay" id="modal-equipe-convidar">
+  <div class="modal-box">
+    <div class="modal-titulo">Convidar representante</div>
+    <div class="modal-sub">Ele decide depois quais marcas libera pra você — você não escolhe isso agora.</div>
+    <input type="email" class="campo-input" id="equipe-convidar-email" placeholder="e-mail do representante">
+    <div class="modal-btns">
+      <button class="btn-secundario" onclick="fecharModal('modal-equipe-convidar')">Cancelar</button>
+      <button class="btn-primario" style="flex:2;" onclick="_equipeConvidarClick()">Enviar convite</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL APROVAR CONVITE DE GERENTE -->
+<div class="modal-overlay" id="modal-equipe-aprovar" style="z-index:210;">
+  <div class="modal-box">
+    <div class="modal-titulo">👥 Convite de acompanhamento</div>
+    <div class="modal-sub"><span id="equipe-aprovar-gerente"></span> quer acompanhar seus resultados. Escolha quais marcas liberar — ele vê meta, vendas, clientes e visitas dessas marcas.</div>
+    <div id="equipe-aprovar-marcas"></div>
+    <div class="modal-btns">
+      <button class="btn-secundario" onclick="_equipeRecusarConvite()">Recusar</button>
+      <button class="btn-primario" style="flex:2;" onclick="_equipeConfirmarAprovacao()">Aprovar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL QUEM ME ACOMPANHA -->
+<div class="modal-overlay" id="modal-equipe-quem-acompanha">
+  <div class="modal-box">
+    <div class="modal-titulo">Quem acompanha meus resultados</div>
+    <div class="modal-sub">Revogue uma marca a qualquer momento — não afeta as outras liberadas pro mesmo gerente.</div>
+    <div id="equipe-quem-acompanha-lista"></div>
+    <div class="modal-btns">
+      <button class="btn-secundario" style="flex:1;" onclick="fecharModal('modal-equipe-quem-acompanha')">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -1862,6 +1944,24 @@ window.addEventListener('appinstalled', function() {
       <input type="text" class="campo-input" id="cfg-groq-key" placeholder="gsk_..." style="margin-top:8px;font-family:monospace;font-size:13px;letter-spacing:.5px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <button onclick="salvarConfig();testarChaveGroq()" style="width:100%;margin-top:8px;background:rgba(124,58,237,.12);border:1.5px solid rgba(124,58,237,.4);border-radius:10px;padding:11px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔎 Salvar e testar chave</button>
       <div style="font-size:11px;color:var(--texto3);margin-top:8px;line-height:1.5;">🔒 Sua chave fica só no seu aparelho. É gratuita e leva 3 minutos para obter. <span onclick="abrirComoAtivarApi()" style="color:#A78BFA;cursor:pointer;font-weight:600;">Como criar sua chave Groq →</span></div>
+    </div>
+
+    <div class="config-secao" id="secao-equipe" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(79,70,229,.03));border:1px solid rgba(129,140,248,.28);border-radius:16px;padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div class="config-secao-titulo" style="margin-bottom:0;">👥 Acompanhamento de equipe</div>
+        <label style="position:relative;display:inline-block;width:40px;height:23px;flex-shrink:0;">
+          <input type="checkbox" id="cfg-equipe-ativa" onchange="_equipeToggle(this.checked)" style="opacity:0;width:0;height:0;">
+          <span id="cfg-equipe-toggle-visual" style="position:absolute;inset:0;background:var(--borda);border-radius:999px;transition:background .15s;"></span>
+        </label>
+      </div>
+      <div class="config-secao-sub" style="margin-top:9px;">Ative pra convidar representantes e acompanhar meta, vendas e clientes das marcas que eles liberarem pra você.</div>
+      <button onclick="abrirEquipe()" style="width:100%;margin-top:12px;background:rgba(129,140,248,.15);border:1.5px solid rgba(129,140,248,.45);border-radius:10px;padding:11px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Abrir Acompanhamento Equipe →</button>
+    </div>
+
+    <div class="config-secao" style="background:var(--bg2);border:1px solid var(--borda);border-radius:16px;padding:16px;">
+      <div class="config-secao-titulo">👁️ Quem acompanha meus resultados</div>
+      <div class="config-secao-sub">Veja quem tem acesso às suas marcas e revogue quando quiser.</div>
+      <button onclick="abrirQuemMeAcompanha()" style="width:100%;margin-top:8px;background:var(--bg3);border:1.5px solid var(--borda);border-radius:10px;padding:11px;color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Ver e gerenciar →</button>
     </div>
 
     <div class="config-secao" id="secao-outros-segmentos">
@@ -6904,6 +7004,303 @@ function _confirmarReprogramarMarca(dias) {
   abrirNotificacoes();
 }
 
+// ===== ACOMPANHAMENTO DE EQUIPE =====
+// Vínculo gerente<->rep<->marca na tabela equipe_vinculos (ver
+// supabase/equipe-vinculos.sql). Convenção: marca='' é a linha "âncora" do
+// convite em si (status pendente/aprovado/recusado); marca!='' são as
+// liberações reais, criadas só quando o rep aprova, sempre já 'aprovado'
+// (não existe pendência por marca, só no convite). O gerente NUNCA digita
+// nome de marca — quem escolhe é sempre o rep, na própria lista de marcas.
+function _equipeMeuEmail() { return (usuarioAtual?.email || '').trim().toLowerCase(); }
+
+// Pra interpolar dentro de onclick="...('${x}')" com segurança: escapa aspas
+// simples/barra pro literal JS não quebrar, DEPOIS escapa pra HTML (esc())
+// pra sobreviver dentro do atributo — nessa ordem, senão o navegador desfaz
+// o &#39; de volta pra aspa antes do JS rodar e quebra a string mesmo assim.
+function _escOnclickArg(s) { return esc(String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")); }
+
+function _equipeAtiva() { return !!getConfig().equipeAtiva; }
+
+async function _equipeToggle(ligar) {
+  const cfg = getConfig();
+  cfg.equipeAtiva = ligar;
+  salvarConfigData(cfg);
+  const visual = document.getElementById('cfg-equipe-toggle-visual');
+  if (visual) visual.style.background = ligar ? '#00D68F' : 'var(--borda)';
+  _equipeAtualizarDashboard();
+}
+
+async function _equipeConvidar(emailDigitado) {
+  const email = (emailDigitado || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) { alert('Digite um e-mail válido.'); return false; }
+  if (email === _equipeMeuEmail()) { alert('Você não pode se convidar.'); return false; }
+  const { error } = await _sb.from('equipe_vinculos').upsert({
+    gerente_email: _equipeMeuEmail(), rep_email: email, marca: '',
+    status: 'pendente', convidado_por: 'gerente', criado_em: new Date().toISOString(), respondido_em: null,
+  }, { onConflict: 'gerente_email,rep_email,marca' });
+  if (error) { alert('Não foi possível enviar o convite: ' + error.message); return false; }
+  return true;
+}
+
+async function _equipeConvidarClick() {
+  const email = document.getElementById('equipe-convidar-email').value;
+  const ok = await _equipeConvidar(email);
+  if (!ok) return;
+  fecharModal('modal-equipe-convidar');
+  if (document.getElementById('tela-equipe')?.classList.contains('ativa')) abrirEquipe();
+}
+
+async function _equipeConvitesEnviadosPendentes() {
+  const { data } = await _sb.from('equipe_vinculos').select('rep_email,criado_em')
+    .eq('gerente_email', _equipeMeuEmail()).eq('marca', '').eq('status', 'pendente');
+  return data || [];
+}
+
+async function _equipeConvitesRecebidos() {
+  const { data } = await _sb.from('equipe_vinculos').select('gerente_email,criado_em')
+    .eq('rep_email', _equipeMeuEmail()).eq('marca', '').eq('status', 'pendente');
+  return data || [];
+}
+
+async function _equipeSouGerente() {
+  const { count } = await _sb.from('equipe_vinculos').select('id', { count: 'exact', head: true })
+    .eq('gerente_email', _equipeMeuEmail()).eq('marca', '').eq('status', 'aprovado');
+  return (count || 0) > 0;
+}
+
+let _equipeAprovarGerenteAtual = null;
+
+async function _equipeAbrirAprovacao(gerenteEmail) {
+  _equipeAprovarGerenteAtual = gerenteEmail;
+  document.getElementById('equipe-aprovar-gerente').textContent = gerenteEmail;
+  const cfg = getConfig();
+  const marcas = (cfg.marcas || []);
+  const grid = document.getElementById('equipe-aprovar-marcas');
+  if (!marcas.length) {
+    grid.innerHTML = `<div style="font-size:12px;color:var(--texto2);">Você ainda não cadastrou marcas em Configurações.</div>`;
+  } else {
+    grid.innerHTML = marcas.map(m => `
+      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+        <span style="font-size:13px;font-weight:700;color:var(--texto);">${esc(m)}</span>
+        <label style="position:relative;display:inline-block;width:40px;height:23px;flex-shrink:0;">
+          <input type="checkbox" class="equipe-marca-check" value="${esc(m)}" style="opacity:0;width:0;height:0;">
+          <span class="equipe-toggle-visual" style="position:absolute;inset:0;background:var(--borda);border-radius:999px;transition:background .15s;"></span>
+        </label>
+      </div>`).join('');
+    grid.querySelectorAll('.equipe-marca-check').forEach(chk => {
+      chk.addEventListener('change', () => {
+        const visual = chk.nextElementSibling;
+        visual.style.background = chk.checked ? '#00D68F' : 'var(--borda)';
+      });
+    });
+  }
+  document.getElementById('modal-equipe-aprovar').classList.add('aberto');
+}
+
+async function _equipeConfirmarAprovacao() {
+  const marcasSelecionadas = [...document.querySelectorAll('.equipe-marca-check:checked')].map(c => c.value);
+  if (!marcasSelecionadas.length) { alert('Escolha pelo menos uma marca pra liberar (ou toque em Recusar).'); return; }
+  const gerenteEmail = _equipeAprovarGerenteAtual;
+  const agora = new Date().toISOString();
+  const linhas = marcasSelecionadas.map(marca => ({
+    gerente_email: gerenteEmail, rep_email: _equipeMeuEmail(), marca,
+    status: 'aprovado', convidado_por: 'rep', criado_em: agora, respondido_em: agora,
+  }));
+  const { error: e1 } = await _sb.from('equipe_vinculos').upsert(linhas, { onConflict: 'gerente_email,rep_email,marca' });
+  const { error: e2 } = await _sb.from('equipe_vinculos').update({ status: 'aprovado', respondido_em: agora })
+    .eq('gerente_email', gerenteEmail).eq('rep_email', _equipeMeuEmail()).eq('marca', '');
+  if (e1 || e2) { alert('Não foi possível confirmar. Tente de novo.'); return; }
+  fecharModal('modal-equipe-aprovar');
+  _equipeAtualizarDashboard();
+}
+
+async function _equipeRecusarConvite() {
+  if (!_equipeAprovarGerenteAtual) return;
+  await _sb.from('equipe_vinculos').update({ status: 'recusado', respondido_em: new Date().toISOString() })
+    .eq('gerente_email', _equipeAprovarGerenteAtual).eq('rep_email', _equipeMeuEmail()).eq('marca', '');
+  fecharModal('modal-equipe-aprovar');
+  _equipeAtualizarDashboard();
+}
+
+async function _equipeQuemMeAcompanha() {
+  const { data } = await _sb.from('equipe_vinculos').select('gerente_email,marca')
+    .eq('rep_email', _equipeMeuEmail()).eq('status', 'aprovado').neq('marca', '');
+  const porGerente = {};
+  (data || []).forEach(v => { (porGerente[v.gerente_email] = porGerente[v.gerente_email] || []).push(v.marca); });
+  return porGerente;
+}
+
+async function abrirQuemMeAcompanha() {
+  const porGerente = await _equipeQuemMeAcompanha();
+  const cont = document.getElementById('equipe-quem-acompanha-lista');
+  const gerentes = Object.keys(porGerente);
+  if (!gerentes.length) {
+    cont.innerHTML = `<div style="font-size:12.5px;color:var(--texto2);text-align:center;padding:20px 0;">Ninguém está acompanhando seus resultados ainda.</div>`;
+  } else {
+    cont.innerHTML = gerentes.map(g => `
+      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:13px;margin-bottom:9px;">
+        <div style="font-size:12.5px;font-weight:700;color:var(--texto);margin-bottom:8px;">${esc(g)}</div>
+        ${porGerente[g].map(m => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;">
+            <span style="font-size:12px;color:var(--texto2);">${esc(m)}</span>
+            <button onclick="_equipeRevogarClick('${_escOnclickArg(g)}','${_escOnclickArg(m)}')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:8px;padding:5px 10px;color:#F87171;font-family:'DM Sans',sans-serif;font-size:10.5px;font-weight:700;cursor:pointer;">Revogar</button>
+          </div>`).join('')}
+      </div>`).join('');
+  }
+  document.getElementById('modal-equipe-quem-acompanha').classList.add('aberto');
+}
+
+async function _equipeRevogarClick(gerenteEmail, marca) {
+  if (!confirm(`Revogar o acesso de ${gerenteEmail} à marca ${marca}?`)) return;
+  await _sb.from('equipe_vinculos').update({ status: 'revogado', respondido_em: new Date().toISOString() })
+    .eq('gerente_email', gerenteEmail).eq('rep_email', _equipeMeuEmail()).eq('marca', marca);
+  abrirQuemMeAcompanha();
+}
+
+// Checa convite pendente (banner no dashboard) e se o botão "Acompanhamento
+// Equipe" deve aparecer — toggle ligado OU já tem pelo menos 1 rep vinculado.
+async function _equipeAtualizarDashboard() {
+  if (!usuarioAtual) return;
+  const btn = document.getElementById('btn-equipe');
+  const banner = document.getElementById('equipe-convite-banner');
+  if (btn) btn.style.display = (_equipeAtiva() || await _equipeSouGerente()) ? 'flex' : 'none';
+  if (banner) {
+    const convites = await _equipeConvitesRecebidos();
+    if (convites.length) {
+      document.getElementById('equipe-convite-nome').textContent = convites[0].gerente_email;
+      banner.dataset.gerente = convites[0].gerente_email;
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+}
+
+function _equipeAbrirConviteDoBanner() {
+  const banner = document.getElementById('equipe-convite-banner');
+  if (banner?.dataset.gerente) _equipeAbrirAprovacao(banner.dataset.gerente);
+}
+
+let _equipeDadosCache = null;
+let _equipeOrdemAtual = 'pior';
+
+async function abrirEquipe() {
+  irPara('equipe');
+  const lista = document.getElementById('equipe-lista');
+  const pendCont = document.getElementById('equipe-pendentes');
+  lista.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--texto2);font-size:12.5px;">Carregando...</div>`;
+
+  const [pendentes, metricas] = await Promise.all([_equipeConvitesEnviadosPendentes(), _equipeChamarMetricas()]);
+
+  pendCont.innerHTML = pendentes.map(p => `
+    <div style="background:rgba(129,140,248,.06);border:1px solid rgba(129,140,248,.3);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span style="color:var(--roxo);font-size:14px;flex-shrink:0;">⏱</span>
+        <div style="min-width:0;">
+          <div style="font-size:12px;font-weight:700;color:var(--texto);">${esc(p.rep_email)}</div>
+          <div style="font-size:10px;color:var(--texto2);">convite pendente</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  if (metricas.error) {
+    lista.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--texto2);font-size:12.5px;">${esc(metricas.error)}</div>`;
+    return;
+  }
+
+  // "Linha" = uma marca de um rep (um rep com 2 marcas liberadas vira 2 linhas).
+  _equipeDadosCache = [];
+  (metricas.reps || []).forEach(rep => {
+    (rep.marcas || []).forEach(m => _equipeDadosCache.push({ repEmail: rep.repEmail, nomeRep: rep.nomeRep, ...m }));
+  });
+
+  document.getElementById('equipe-subtitulo').textContent = `${metricas.reps?.length || 0} representante${metricas.reps?.length === 1 ? '' : 's'}`;
+  _equipeOrdenar(_equipeOrdemAtual);
+}
+
+function _equipeOrdenar(criterio) {
+  _equipeOrdemAtual = criterio;
+  document.querySelectorAll('.equipe-ord-btn').forEach(b => {
+    const ativo = b.dataset.ord === criterio;
+    b.style.background = ativo ? 'rgba(129,140,248,.15)' : 'var(--bg3)';
+    b.style.borderColor = ativo ? '#818CF8' : 'var(--borda)';
+    b.style.color = ativo ? '#A78BFA' : 'var(--texto2)';
+  });
+  _equipeRenderLista();
+}
+
+function _equipeRenderLista() {
+  const linhas = [..._equipeDadosCache];
+  if (_equipeOrdemAtual === 'pior') linhas.sort((a, b) => (a.pct ?? 999) - (b.pct ?? 999));
+  else if (_equipeOrdemAtual === 'nome') linhas.sort((a, b) => (a.nomeRep || '').localeCompare(b.nomeRep || ''));
+  else if (_equipeOrdemAtual === 'semcontato') linhas.sort((a, b) => {
+    const piorA = Math.max(0, ...(a.clientes || []).map(c => c.semContatoDias || 0));
+    const piorB = Math.max(0, ...(b.clientes || []).map(c => c.semContatoDias || 0));
+    return piorB - piorA;
+  });
+
+  const cont = document.getElementById('equipe-lista');
+  if (!linhas.length) {
+    cont.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--texto2);font-size:12.5px;">Ninguém liberou uma marca pra você ainda. Convide um representante pra começar.</div>`;
+    return;
+  }
+  cont.innerHTML = linhas.map((l, i) => {
+    const pct = l.pct ?? 0;
+    const cor = pct >= 90 ? '#00D68F' : pct >= 50 ? '#FFC043' : '#FF4D6A';
+    const expandido = i === 0 && _equipeOrdemAtual === 'pior';
+    const iniciais = (l.nomeRep || l.repEmail).trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase();
+    const clientesHtml = (l.clientes || []).map(c => {
+      const semContatoTag = (c.semContatoDias != null && c.semContatoDias > 15)
+        ? `<span style="flex-shrink:0;background:rgba(255,77,106,.15);color:#FF8A9B;border-radius:6px;padding:1px 6px;font-size:9.5px;font-weight:700;">sem contato ${c.semContatoDias}d</span>` : '';
+      return `<div style="padding:7px 0;border-top:1px solid var(--borda);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+            <span style="font-size:12.5px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.nome)}${c.loja ? ' — ' + esc(c.loja) : ''}</span>
+            ${semContatoTag}
+          </div>
+          <span style="font-size:12.5px;font-weight:700;color:var(--texto);flex-shrink:0;">${c.valorPedido ? 'R$ ' + c.valorPedido.toLocaleString('pt-BR') : (c.qtd || 0) + ' un'}</span>
+        </div>
+        <div style="font-size:10.5px;color:var(--texto2);margin-top:2px;">${esc(c.cidade || '')}</div>
+        <div style="font-size:10.5px;color:var(--texto2);">${c.ultimaVisita ? 'Última visita ' + new Date(c.ultimaVisita).toLocaleDateString('pt-BR') : 'Sem visita registrada'}${c.proximoRetorno ? ' · retorno ' + (c.atrasado ? 'era ' : '') + new Date(c.proximoRetorno + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</div>
+      </div>`;
+    }).join('');
+    return `
+    <div style="background:${expandido ? 'rgba(99,102,241,.06)' : 'var(--bg3)'};border:1px solid ${expandido ? 'rgba(129,140,248,.4)' : 'var(--borda)'};border-radius:12px;padding:11px 12px;margin-bottom:8px;">
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(129,140,248,.15);color:#A78BFA;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${esc(iniciais)}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--texto);">${esc(l.nomeRep || l.repEmail)}</div>
+          <div style="font-size:11px;color:var(--texto2);">${esc(l.marca)} · ${(l.real||0).toLocaleString('pt-BR')} / ${(l.meta||0).toLocaleString('pt-BR')} ${l.sku === 'reais' ? '' : (l.sku||'')}</div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:${cor};flex-shrink:0;">${pct}%</div>
+      </div>
+      <div style="height:4px;background:var(--borda);border-radius:2px;margin-top:9px;overflow:hidden;">
+        <div style="height:100%;width:${Math.min(100, pct)}%;background:${cor};border-radius:2px;"></div>
+      </div>
+      <div style="display:${expandido ? 'block' : 'none'};border-top:1px solid var(--borda);margin-top:11px;padding-top:6px;">
+        ${clientesHtml || '<div style="font-size:11px;color:var(--texto2);padding:8px 0;">Nenhum cliente cadastrado nesta marca.</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function _equipeChamarMetricas() {
+  const { data: sess } = await _sb.auth.getSession();
+  const tok = sess?.session?.access_token;
+  if (!tok) return { error: 'Sua sessão da nuvem expirou. Saia e entre de novo.' };
+  try {
+    const r = await fetch(_SB_URL + '/functions/v1/equipe-metricas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tok}`, 'apikey': _SB_KEY },
+    });
+    const j = await r.json();
+    if (!r.ok) return { error: j.error || 'Não foi possível carregar os resultados da equipe.' };
+    return j;
+  } catch (e) {
+    return { error: 'Sem conexão. Tente de novo.' };
+  }
+}
+
 // Ao abrir o sino, dá mais uma chance de achar prospecção perto AGORA (o GPS é
 // assíncrono — o card se atualiza sozinho quando a resposta chegar, via o patch
 // global acima), e passa a posição atual pro card mostrar a distância em tempo
@@ -8250,6 +8647,7 @@ function atualizarDashboard() {
   atualizarBadgeDespesas();
   atualizarBadgeProspectos();
   atualizarBannerColecao();
+  _equipeAtualizarDashboard();
   const clientes = getClientesAtivos();
   const cfg = getConfig();
   document.getElementById('num-total').textContent = clientes.length;
@@ -13818,10 +14216,10 @@ const _CFGV2_GRUPOS = [
   { id:'vendas',  label:'🏷️ Vendas',  secoes:['Unidades de venda','Suas representações','Metas por marca','Margem de segurança'] },
   { id:'rotina',  label:'🗓️ Rotina',  secoes:['Prazos por motivo','Clientes esquecidos','Meu dia de visitas'] },
   { id:'avisos',  label:'🔔 Avisos',  secoes:['Gatilho de antecipação','Acompanhamento de entregas'] },
-  { id:'sistema', label:'🔧 Sistema', secoes:['Senha de acesso','Importar base','Gestor IA','outros segmentos','Meu plano','boas-vindas'] }
+  { id:'sistema', label:'🔧 Sistema', secoes:['Senha de acesso','Importar base','Gestor IA','Acompanhamento de equipe','outros segmentos','Meu plano','boas-vindas'] }
 ];
 const _CFGV2_CHECK = ['Prazos por motivo','Clientes esquecidos','Seu nome','E-mail para relatórios','Seu WhatsApp'];
-const _CFGV2_AUTO  = ['Unidades de venda','Suas representações','Meu dia de visitas','Metas por marca','Margem de segurança','Gatilho de antecipação','Acompanhamento de entregas','boas-vindas','outros segmentos'];
+const _CFGV2_AUTO  = ['Unidades de venda','Suas representações','Meu dia de visitas','Metas por marca','Margem de segurança','Gatilho de antecipação','Acompanhamento de entregas','Acompanhamento de equipe','boas-vindas','outros segmentos'];
 
 function _cfgTituloDe(sec) {
   return (sec.querySelector('.config-secao-titulo')?.textContent || '').trim();
@@ -13931,6 +14329,8 @@ function carregarConfig() {
     if (el) el.value = cfg[k] || 30;
   });
   document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 50;
+  const _chkEquipe = document.getElementById('cfg-equipe-ativa');
+  if (_chkEquipe) { _chkEquipe.checked = !!cfg.equipeAtiva; document.getElementById('cfg-equipe-toggle-visual').style.background = cfg.equipeAtiva ? '#00D68F' : 'var(--borda)'; }
   document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
   const _nomeAtualRep = (usuarioAtual?.nome || '').trim();
   const _campoNomeRep = document.getElementById('cfg-nome-rep');

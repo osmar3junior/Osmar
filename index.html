@@ -832,6 +832,10 @@ window.addEventListener('appinstalled', function() {
   .tend-cinza { background:var(--bg3); color:var(--texto3); }
 
   /* ===== DESPESAS DA ROTA ===== */
+  /* Título de bloco: mesma ideia do índice da Config (rótulo + fio) — dá peso
+     ao "Resumo do mês"/"Comissão por marca" sem competir com os números. */
+  .desp-cap { display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1.1px; color:var(--texto2); font-family:'DM Sans',sans-serif; }
+  .desp-cap::after { content:''; flex:1; height:1px; background:var(--borda); }
   .desp-cat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
   .desp-cat-btn { background:var(--bg3); border:1.5px solid var(--borda); border-radius:14px; padding:16px 12px; cursor:pointer; text-align:center; transition:transform .15s; }
   .desp-cat-btn:active { transform:scale(.96); }
@@ -1962,10 +1966,9 @@ window.addEventListener('appinstalled', function() {
     <div class="config-secao" id="secao-equipe" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(79,70,229,.03));border:1px solid rgba(129,140,248,.28);border-radius:16px;padding:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <div class="config-secao-titulo" style="margin-bottom:0;">👥 Acompanhamento de equipe</div>
-        <label style="position:relative;display:inline-block;width:40px;height:23px;flex-shrink:0;">
-          <input type="checkbox" id="cfg-equipe-ativa" onchange="_equipeToggle(this.checked)" style="opacity:0;width:0;height:0;">
-          <span id="cfg-equipe-toggle-visual" style="position:absolute;inset:0;background:var(--borda);border-radius:999px;transition:background .15s;"></span>
-        </label>
+        <button id="cfg-equipe-toggle" onclick="_equipeToggle(this.dataset.ativo !== 'true')" style="width:48px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;background:#333;flex-shrink:0;">
+          <span id="cfg-equipe-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#888;transition:left .2s,background .2s;"></span>
+        </button>
       </div>
       <div class="config-secao-sub" style="margin-top:9px;">Ative pra convidar representantes e acompanhar meta, vendas e clientes das marcas que eles liberarem pra você.</div>
       <button onclick="abrirEquipe()" style="width:100%;margin-top:12px;background:rgba(129,140,248,.15);border:1.5px solid rgba(129,140,248,.45);border-radius:10px;padding:11px;color:#A78BFA;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Abrir Acompanhamento Equipe →</button>
@@ -7088,9 +7091,20 @@ async function _equipeToggle(ligar) {
   const cfg = getConfig();
   cfg.equipeAtiva = ligar;
   salvarConfigData(cfg);
-  const visual = document.getElementById('cfg-equipe-toggle-visual');
-  if (visual) visual.style.background = ligar ? '#00D68F' : 'var(--borda)';
+  _renderEquipeToggle(ligar);
   _equipeAtualizarDashboard();
+}
+
+// Mesmo visual dos outros toggles da config: a bolinha desliza pra direita
+// quando liga. Antes era um checkbox que só pintava o fundo de verde.
+function _renderEquipeToggle(ativo) {
+  const btn  = document.getElementById('cfg-equipe-toggle');
+  const knob = document.getElementById('cfg-equipe-knob');
+  if (!btn || !knob) return;
+  btn.dataset.ativo     = ativo ? 'true' : 'false';
+  btn.style.background  = ativo ? '#00D68F' : '#333';
+  knob.style.left       = ativo ? '25px' : '3px';
+  knob.style.background = ativo ? '#fff' : '#888';
 }
 
 async function _equipeConvidar(emailDigitado) {
@@ -14440,8 +14454,7 @@ function carregarConfig() {
     if (el) el.value = cfg[k] || 30;
   });
   document.getElementById('cfg-dias-esquecidos').value = cfg.dias_esquecidos || 50;
-  const _chkEquipe = document.getElementById('cfg-equipe-ativa');
-  if (_chkEquipe) { _chkEquipe.checked = !!cfg.equipeAtiva; document.getElementById('cfg-equipe-toggle-visual').style.background = cfg.equipeAtiva ? '#00D68F' : 'var(--borda)'; }
+  _renderEquipeToggle(!!cfg.equipeAtiva);
   document.getElementById('cfg-email-rep').value = cfg.emailRep || '';
   const _nomeAtualRep = (usuarioAtual?.nome || '').trim();
   const _campoNomeRep = document.getElementById('cfg-nome-rep');
@@ -19898,17 +19911,21 @@ function renderizarDespesas() {
   const maiorMarca = porMarca.reduce((max, x) => Math.max(max, x.valor), 0);
   const porMarcaHTML = porMarca.length ? `
     <div style="margin-top:10px;">
-      <div style="font-size:10px;color:var(--texto3);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-bottom:8px;">Comissão por marca</div>
-      ${porMarca.map(x => `
+      <div class="desp-cap">🏷️ Comissão por marca</div>
+      ${porMarca.map((x, i) => {
+        // Lista já vem ordenada do maior pro menor: a barra vai perdendo força
+        // conforme desce. Cria hierarquia e tira o "paredão verde" de barras iguais.
+        const forca = Math.max(.3, .8 - i * .13);
+        return `
         <div style="margin-bottom:8px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-            <span style="font-size:12px;color:var(--texto2);font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(x.marca)}</span>
-            <span style="font-size:12px;font-weight:700;color:var(--verde);font-family:'DM Sans',sans-serif;flex-shrink:0;margin-left:8px;">R$ ${fmtValorDesp(x.valor)}</span>
+            <span style="font-size:12px;color:${i === 0 ? 'var(--texto)' : 'var(--texto2)'};font-weight:${i === 0 ? '700' : '400'};font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(x.marca)}</span>
+            <span style="font-size:12px;font-weight:700;color:${i === 0 ? 'var(--verde)' : 'var(--texto2)'};font-family:'DM Sans',sans-serif;flex-shrink:0;margin-left:8px;">R$ ${fmtValorDesp(x.valor)}</span>
           </div>
-          <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${maiorMarca > 0 ? (x.valor / maiorMarca * 100) : 0}%;background:linear-gradient(90deg,var(--verde-escuro),var(--verde));border-radius:3px;"></div>
+          <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${maiorMarca > 0 ? (x.valor / maiorMarca * 100) : 0}%;background:rgba(0,214,143,${forca});border-radius:3px;"></div>
           </div>
-        </div>`).join('')}
+        </div>`; }).join('')}
     </div>` : '';
 
   const comissaoHTML = comissao > 0 ? `
@@ -19924,7 +19941,7 @@ function renderizarDespesas() {
 
   document.getElementById('desp-resumo-financeiro').innerHTML = totalGeral === 0 && comissao === 0
     ? `<div style="text-align:center;padding:8px 0;font-size:13px;color:var(--texto3);">Nenhuma despesa em ${labelFmt}</div>`
-    : `<div style="font-size:11px;color:var(--texto3);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:8px;">Resumo do mês</div>
+    : `<div class="desp-cap">📊 Resumo do mês</div>
        ${linhasCat}
        <div class="desp-resumo-row" style="border-top:1px solid var(--borda);margin-top:6px;padding-top:12px;">
          <span style="font-size:13px;font-weight:700;color:var(--texto);">Total despesas</span>

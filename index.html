@@ -7308,6 +7308,8 @@ async function abrirEquipe() {
     erroTopo = `Este aparelho está logado como ${emailLocal}, mas a conta da nuvem é ${emailNuvem}. Os resultados são buscados pela conta da nuvem. Saia e entre de novo com ${emailLocal} para os dois baterem.`;
   } else if (metricas.error) {
     erroTopo = metricas.error;
+  } else if (metricas._diag?.erroServico) {
+    erroTopo = `Os vínculos carregaram, mas os números dependem da chave de serviço do Supabase, que respondeu: ${metricas._diag.erroServico}`;
   } else if (vinculos.reps.length && !(metricas.reps || []).length) {
     erroTopo = `O servidor não encontrou nenhum vínculo para ${emailNuvem || emailLocal}, mas este aparelho está vendo ${vinculos.reps.length}. Puxe a tela de novo; se continuar, saia e entre no app.`;
   }
@@ -7334,6 +7336,7 @@ async function abrirEquipe() {
       ...base,
       semMarcas: true,
       semConta: !!met?.semConta,
+      servicoIndisponivel: !!met?.servicoIndisponivel,
       marcasLiberadas: v.marcas,
       metricaIndisponivel: !met && !!(metricas.error || v.marcas.length)
     });
@@ -7397,7 +7400,10 @@ function _equipeRenderLista() {
     if (l.semMarcas) {
       const liberadas = l.marcasLiberadas || [];
       let selo, seloBg, seloCor, aviso;
-      if (l.semConta) {
+      if (l.servicoIndisponivel) {
+        selo = 'servidor sem acesso'; seloBg = 'rgba(255,77,106,.15)'; seloCor = '#FF8A9B';
+        aviso = `O vínculo está certo${liberadas.length ? ` (${esc(liberadas.join(', '))})` : ''}, mas o servidor não conseguiu ler os dados dele. Veja o aviso no topo da tela.`;
+      } else if (l.semConta) {
         selo = 'e-mail não encontrado'; seloBg = 'rgba(255,77,106,.15)'; seloCor = '#FF8A9B';
         aviso = 'Não achamos uma conta com este e-mail. Confira se é o mesmo que ele usa pra entrar no app.';
       } else if (liberadas.length) {

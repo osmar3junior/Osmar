@@ -384,7 +384,11 @@ window.addEventListener('appinstalled', function() {
 
   /* CONFIGURAÇÕES */
   #tela-config { background:var(--bg); }
-  .config-content { padding:20px; flex:1; overflow-y:auto; padding-bottom:80px; }
+  /* Sem overflow aqui de propósito: quem rola é a página (html). Com
+     "overflow-y:auto" este bloco virava um contêiner de rolagem que NUNCA rolava
+     (altura = conteúdo), e prendia o position:sticky do índice dentro dele —
+     a barra não colava em lugar nenhum. */
+  .config-content { padding:20px; flex:1; padding-bottom:80px; }
   .config-secao { margin-bottom:28px; position:relative; }
   /* ===== CONFIG V2: check por seção + índice de grupos ===== */
   .config-secao.tem-check > .config-secao-titulo { padding-right:48px; }
@@ -6525,12 +6529,7 @@ async function sair() {
 }
 
 function abrirNotificacoes() {
-  const alertasMarca = calcularAlertasMarcas().filter(a => {
-    const snooze = _alertaMarcaSnooze(a.clienteId);
-    if (!snooze) return true;
-    // Furou a soneca: essa marca só passou a vencer DEPOIS que o rep reprogramou.
-    return new Date(a.proximaCompra).getTime() > new Date(snooze.desde).getTime();
-  });
+  const alertasMarca = _alertasMarcaVisiveis();
   const clientes = getClientesAtivos();
   const urgentes = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; });
   const semana   = clientes.filter(c => { const d = getDiffDiasCliente(c); return d !== null && d > 0 && d <= 7; });
@@ -7002,6 +7001,19 @@ function _alertaMarcaSnooze(clienteId) {
   if (!s) return null;
   if (new Date(s.ate).getTime() <= Date.now()) { delete snoozes[clienteId]; setData('cv_alerta_marca_snooze', snoozes); return null; }
   return s;
+}
+
+// Alertas de marca que o rep ainda NÃO silenciou. Fonte única da lista do sino e
+// do badge — antes cada um filtrava do seu jeito e o badge ignorava a soneca.
+// Fura a soneca só quem vence DEPOIS que ela termina: comparar com o INÍCIO da
+// soneca não silenciava nada em "Recompra chegando", porque esses alertas vencem
+// de 0 a 3 dias no FUTURO e portanto eram sempre > o instante da reprogramação.
+function _alertasMarcaVisiveis() {
+  return calcularAlertasMarcas().filter(a => {
+    const snooze = _alertaMarcaSnooze(a.clienteId);
+    if (!snooze) return true;
+    return new Date(a.proximaCompra).getTime() > new Date(snooze.ate).getTime();
+  });
 }
 
 function _abrirReprogramarMarca(clienteId) {
@@ -7590,7 +7602,7 @@ function _msgCopiar() {
 }
 
 function _atualizarBadgeNotif() {
-  const alertas = calcularAlertasMarcas();
+  const alertas = _alertasMarcaVisiveis();
   const urgentes = getClientesAtivos().filter(c => { const d = getDiffDiasCliente(c); return d !== null && d <= 0; });
   const gatilhos = calcularGatilhosAntecipacao().filter(g => g.urgencia === 'ultima');
   const atrasadas = _getMetasAtrasadas();
@@ -14408,6 +14420,11 @@ function _cfgIrGrupo(id, chip) {
 function _cfgAnimarIndice() {
   const idx = document.querySelector('#tela-config .cfg-indice');
   if (!idx) return;
+  // A barra cola logo ABAIXO do cabeçalho (que também é sticky, em top:0).
+  // Medido na hora porque a altura do cabeçalho muda com fonte/tela do aparelho.
+  const header = document.querySelector('#tela-config .header');
+  const h = header ? Math.round(header.getBoundingClientRect().height) : 0;
+  if (h) idx.style.top = h + 'px';
   idx.classList.remove('animar');
   void idx.offsetWidth;
   idx.classList.add('animar');

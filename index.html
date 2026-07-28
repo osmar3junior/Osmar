@@ -7295,9 +7295,22 @@ async function abrirEquipe() {
   // Edge Function. Antes a lista saía só do retorno da função: se ela falhasse ou
   // não achasse a conta do rep, o rep sumia da tela sem nenhuma pista. Agora a
   // função só ENRIQUECE com meta/real/clientes — quem aceitou nunca desaparece.
-  const erroTopo = vinculos.erro
-    ? `Não foi possível ler os vínculos: ${vinculos.erro}`
-    : (metricas.error || '');
+  // O app lê os vínculos com o e-mail da SESSÃO LOCAL; a função procura com o
+  // e-mail do TOKEN da nuvem. Divergindo, ela não acha nada e o rep sumia da tela
+  // sem erro nenhum. Aqui isso vira uma mensagem que diz o que fazer.
+  const emailLocal = _equipeMeuEmail();
+  const emailNuvem = (metricas._diag?.gerenteEmail || '').toLowerCase();
+  const contasDiferentes = !!emailNuvem && emailNuvem !== emailLocal;
+  let erroTopo = '';
+  if (vinculos.erro) {
+    erroTopo = `Não foi possível ler os vínculos: ${vinculos.erro}`;
+  } else if (contasDiferentes) {
+    erroTopo = `Este aparelho está logado como ${emailLocal}, mas a conta da nuvem é ${emailNuvem}. Os resultados são buscados pela conta da nuvem. Saia e entre de novo com ${emailLocal} para os dois baterem.`;
+  } else if (metricas.error) {
+    erroTopo = metricas.error;
+  } else if (vinculos.reps.length && !(metricas.reps || []).length) {
+    erroTopo = `O servidor não encontrou nenhum vínculo para ${emailNuvem || emailLocal}, mas este aparelho está vendo ${vinculos.reps.length}. Puxe a tela de novo; se continuar, saia e entre no app.`;
+  }
   document.getElementById('equipe-erro').innerHTML = erroTopo
     ? `<div style="background:rgba(255,192,67,.08);border:1px solid rgba(255,192,67,.35);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11.5px;color:#FFC043;line-height:1.45;">⚠️ ${esc(erroTopo)}</div>`
     : '';

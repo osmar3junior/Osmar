@@ -1233,6 +1233,7 @@ window.addEventListener('appinstalled', function() {
     <button onclick="document.getElementById('equipe-convidar-email').value='';document.getElementById('modal-equipe-convidar').classList.add('aberto')" title="Convidar representante" style="background:rgba(129,140,248,.15);border:1px solid #818CF8;border-radius:9px;width:30px;height:30px;color:#A78BFA;cursor:pointer;flex-shrink:0;font-size:16px;">+</button>
   </div>
   <div class="dash-content">
+    <div id="equipe-erro"></div>
     <div id="equipe-pendentes"></div>
     <div style="display:flex;gap:6px;margin-bottom:11px;">
       <button class="equipe-ord-btn" data-ord="pior" onclick="_equipeOrdenar('pior')" style="flex:1;border:1px solid var(--borda);background:var(--bg3);color:var(--texto2);border-radius:9px;padding:7px 4px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Pior resultado</button>
@@ -7183,11 +7184,19 @@ async function _equipeConfirmarAprovacao() {
     gerente_email: gerenteEmail, rep_email: _equipeMeuEmail(), marca,
     status: 'aprovado', convidado_por: 'rep', criado_em: agora, respondido_em: agora,
   }));
+  // ORDEM IMPORTA: grava as marcas ANTES de marcar o convite como aprovado. Se
+  // fosse o contrário (ou em paralelo) e a gravação das marcas falhasse, o convite
+  // já teria saído de "pendente" sem nenhuma marca — o rep sumia da tela do gerente
+  // e não havia como reenviar. Falhou aqui? O convite continua pendente e ele tenta de novo.
   const { error: e1 } = await _sb.from('equipe_vinculos').upsert(linhas, { onConflict: 'gerente_email,rep_email,marca' });
+  if (e1) { alert('Não foi possível liberar as marcas:\n\n' + e1.message); return; }
+
   const { error: e2 } = await _sb.from('equipe_vinculos').update({ status: 'aprovado', respondido_em: agora })
     .eq('gerente_email', gerenteEmail).eq('rep_email', _equipeMeuEmail()).eq('marca', '');
-  if (e1 || e2) { alert('Não foi possível confirmar. Tente de novo.'); return; }
+  if (e2) { alert('As marcas foram liberadas, mas não deu pra fechar o convite:\n\n' + e2.message); return; }
+
   fecharModal('modal-equipe-aprovar');
+  toast('✅ Pronto! ' + marcasSelecionadas.length + ' marca' + (marcasSelecionadas.length > 1 ? 's liberadas' : ' liberada'));
   _equipeAtualizarDashboard();
 }
 
@@ -7267,7 +7276,9 @@ async function abrirEquipe() {
   const pendCont = document.getElementById('equipe-pendentes');
   lista.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--texto2);font-size:12.5px;">Carregando...</div>`;
 
-  const [pendentes, metricas] = await Promise.all([_equipeConvitesEnviadosPendentes(), _equipeChamarMetricas()]);
+  const [pendentes, vinculos, metricas] = await Promise.all([
+    _equipeConvitesEnviadosPendentes(), _equipeVinculosAprovados(), _equipeChamarMetricas()
+  ]);
 
   pendCont.innerHTML = pendentes.map(p => `
     <div style="background:rgba(129,140,248,.06);border:1px solid rgba(129,140,248,.3);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -7280,26 +7291,61 @@ async function abrirEquipe() {
       </div>
     </div>`).join('');
 
-  if (metricas.error) {
-    lista.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--texto2);font-size:12.5px;">${esc(metricas.error)}</div>`;
-    return;
-  }
+  // Quem está na equipe vem da TABELA (que o gerente lê direto pela RLS), não da
+  // Edge Function. Antes a lista saía só do retorno da função: se ela falhasse ou
+  // não achasse a conta do rep, o rep sumia da tela sem nenhuma pista. Agora a
+  // função só ENRIQUECE com meta/real/clientes — quem aceitou nunca desaparece.
+  const erroTopo = vinculos.erro
+    ? `Não foi possível ler os vínculos: ${vinculos.erro}`
+    : (metricas.error || '');
+  document.getElementById('equipe-erro').innerHTML = erroTopo
+    ? `<div style="background:rgba(255,192,67,.08);border:1px solid rgba(255,192,67,.35);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11.5px;color:#FFC043;line-height:1.45;">⚠️ ${esc(erroTopo)}</div>`
+    : '';
 
-  // "Linha" = uma marca de um rep (um rep com 2 marcas liberadas vira 2 linhas).
-  // Rep sem nenhuma marca vira UMA linha mesmo assim: quem aceitou o convite tem
-  // que aparecer pro gerente: antes ele sumia e dava a sensação de nada ter acontecido.
+  const metricasPorEmail = new Map(
+    (metricas.reps || []).map(r => [String(r.repEmail || '').toLowerCase(), r])
+  );
+
   _equipeDadosCache = [];
-  (metricas.reps || []).forEach(rep => {
-    const base = { repEmail: rep.repEmail, nomeRep: rep.nomeRep };
-    if (!rep.marcas || !rep.marcas.length) {
-      _equipeDadosCache.push({ ...base, semMarcas: true, semConta: !!rep.semConta });
+  vinculos.reps.forEach(v => {
+    const met = metricasPorEmail.get(v.repEmail.toLowerCase());
+    const base = { repEmail: v.repEmail, nomeRep: met?.nomeRep || v.repEmail.split('@')[0] };
+    const comNumeros = met?.marcas || [];
+    if (comNumeros.length) {
+      comNumeros.forEach(m => _equipeDadosCache.push({ ...base, ...m }));
       return;
     }
-    rep.marcas.forEach(m => _equipeDadosCache.push({ ...base, ...m }));
+    // Vinculado, mas sem números: pode ser que ainda não liberou marca, que o
+    // e-mail não tem conta, ou que a função de métricas falhou agora.
+    _equipeDadosCache.push({
+      ...base,
+      semMarcas: true,
+      semConta: !!met?.semConta,
+      marcasLiberadas: v.marcas,
+      metricaIndisponivel: !met && !!(metricas.error || v.marcas.length)
+    });
   });
 
-  document.getElementById('equipe-subtitulo').textContent = `${metricas.reps?.length || 0} representante${metricas.reps?.length === 1 ? '' : 's'}`;
+  const n = vinculos.reps.length;
+  document.getElementById('equipe-subtitulo').textContent = `${n} representante${n === 1 ? '' : 's'}`;
   _equipeOrdenar(_equipeOrdemAtual);
+}
+
+// Roster autoritativo: lê equipe_vinculos direto (policy gerente_le_proprios_vinculos).
+// marca = '' é a âncora do convite, não conta como marca liberada.
+async function _equipeVinculosAprovados() {
+  const { data, error } = await _sb.from('equipe_vinculos')
+    .select('rep_email, marca')
+    .eq('gerente_email', _equipeMeuEmail())
+    .eq('status', 'aprovado');
+  if (error) return { erro: error.message, reps: [] };
+  const porRep = new Map();
+  (data || []).forEach(v => {
+    const marcas = porRep.get(v.rep_email) || [];
+    if (v.marca && v.marca.trim()) marcas.push(v.marca.trim());
+    porRep.set(v.rep_email, marcas);
+  });
+  return { erro: null, reps: [...porRep.entries()].map(([repEmail, marcas]) => ({ repEmail, marcas })) };
 }
 
 function _equipeOrdenar(criterio) {
@@ -7336,18 +7382,27 @@ function _equipeRenderLista() {
 
     // Rep vinculado que ainda não tem marca com resultado pra mostrar.
     if (l.semMarcas) {
-      const aviso = l.semConta
-        ? `Não achamos uma conta com este e-mail. Confira se é o mesmo e-mail que ele usa pra entrar no app.`
-        : `Aceitou o convite, mas ainda não liberou nenhuma marca. Peça pra ele abrir Configurações › Quem acompanha meus resultados.`;
+      const liberadas = l.marcasLiberadas || [];
+      let selo, seloBg, seloCor, aviso;
+      if (l.semConta) {
+        selo = 'e-mail não encontrado'; seloBg = 'rgba(255,77,106,.15)'; seloCor = '#FF8A9B';
+        aviso = 'Não achamos uma conta com este e-mail. Confira se é o mesmo que ele usa pra entrar no app.';
+      } else if (liberadas.length) {
+        selo = 'números indisponíveis'; seloBg = 'rgba(255,192,67,.15)'; seloCor = '#FFC043';
+        aviso = `Ele liberou ${esc(liberadas.join(', '))}, mas os resultados não carregaram agora. Saia e entre na tela de novo em instantes.`;
+      } else {
+        selo = 'sem marca liberada'; seloBg = 'rgba(255,192,67,.15)'; seloCor = '#FFC043';
+        aviso = 'Aceitou o convite, mas ainda não liberou nenhuma marca. Peça pra ele abrir Configurações › Quem acompanha meus resultados.';
+      }
       return `
       <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:11px 12px;margin-bottom:8px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="width:32px;height:32px;border-radius:50%;background:rgba(129,140,248,.15);color:#A78BFA;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${esc(iniciais)}</div>
           <div style="flex:1;min-width:0;">
             <div style="font-size:13px;font-weight:700;color:var(--texto);">${esc(l.nomeRep || l.repEmail)}</div>
-            <div style="font-size:11px;color:var(--texto2);">${esc(l.repEmail)}</div>
+            <div style="font-size:11px;color:var(--texto2);overflow:hidden;text-overflow:ellipsis;">${esc(l.repEmail)}</div>
           </div>
-          <span style="flex-shrink:0;background:${l.semConta ? 'rgba(255,77,106,.15)' : 'rgba(255,192,67,.15)'};color:${l.semConta ? '#FF8A9B' : '#FFC043'};border-radius:6px;padding:2px 7px;font-size:9.5px;font-weight:700;">${l.semConta ? 'e-mail não encontrado' : 'sem marca liberada'}</span>
+          <span style="flex-shrink:0;background:${seloBg};color:${seloCor};border-radius:6px;padding:2px 7px;font-size:9.5px;font-weight:700;">${selo}</span>
         </div>
         <div style="font-size:11px;color:var(--texto2);line-height:1.5;margin-top:9px;border-top:1px solid var(--borda);padding-top:9px;">${aviso}</div>
       </div>`;

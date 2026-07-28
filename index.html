@@ -7286,9 +7286,16 @@ async function abrirEquipe() {
   }
 
   // "Linha" = uma marca de um rep (um rep com 2 marcas liberadas vira 2 linhas).
+  // Rep sem nenhuma marca vira UMA linha mesmo assim: quem aceitou o convite tem
+  // que aparecer pro gerente: antes ele sumia e dava a sensação de nada ter acontecido.
   _equipeDadosCache = [];
   (metricas.reps || []).forEach(rep => {
-    (rep.marcas || []).forEach(m => _equipeDadosCache.push({ repEmail: rep.repEmail, nomeRep: rep.nomeRep, ...m }));
+    const base = { repEmail: rep.repEmail, nomeRep: rep.nomeRep };
+    if (!rep.marcas || !rep.marcas.length) {
+      _equipeDadosCache.push({ ...base, semMarcas: true, semConta: !!rep.semConta });
+      return;
+    }
+    rep.marcas.forEach(m => _equipeDadosCache.push({ ...base, ...m }));
   });
 
   document.getElementById('equipe-subtitulo').textContent = `${metricas.reps?.length || 0} representante${metricas.reps?.length === 1 ? '' : 's'}`;
@@ -7326,6 +7333,25 @@ function _equipeRenderLista() {
     const cor = pct >= 90 ? '#00D68F' : pct >= 50 ? '#FFC043' : '#FF4D6A';
     const expandido = i === 0 && _equipeOrdemAtual === 'pior';
     const iniciais = (l.nomeRep || l.repEmail).trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase();
+
+    // Rep vinculado que ainda não tem marca com resultado pra mostrar.
+    if (l.semMarcas) {
+      const aviso = l.semConta
+        ? `Não achamos uma conta com este e-mail. Confira se é o mesmo e-mail que ele usa pra entrar no app.`
+        : `Aceitou o convite, mas ainda não liberou nenhuma marca. Peça pra ele abrir Configurações › Quem acompanha meus resultados.`;
+      return `
+      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:12px;padding:11px 12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:rgba(129,140,248,.15);color:#A78BFA;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${esc(iniciais)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--texto);">${esc(l.nomeRep || l.repEmail)}</div>
+            <div style="font-size:11px;color:var(--texto2);">${esc(l.repEmail)}</div>
+          </div>
+          <span style="flex-shrink:0;background:${l.semConta ? 'rgba(255,77,106,.15)' : 'rgba(255,192,67,.15)'};color:${l.semConta ? '#FF8A9B' : '#FFC043'};border-radius:6px;padding:2px 7px;font-size:9.5px;font-weight:700;">${l.semConta ? 'e-mail não encontrado' : 'sem marca liberada'}</span>
+        </div>
+        <div style="font-size:11px;color:var(--texto2);line-height:1.5;margin-top:9px;border-top:1px solid var(--borda);padding-top:9px;">${aviso}</div>
+      </div>`;
+    }
     const clientesHtml = (l.clientes || []).map(c => {
       const semContatoTag = (c.semContatoDias != null && c.semContatoDias > 15)
         ? `<span style="flex-shrink:0;background:rgba(255,77,106,.15);color:#FF8A9B;border-radius:6px;padding:1px 6px;font-size:9.5px;font-weight:700;">sem contato ${c.semContatoDias}d</span>` : '';

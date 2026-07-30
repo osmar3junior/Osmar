@@ -16540,6 +16540,10 @@ function _coletarDadosRep() {
     const positiv = Math.round(taxa*100);
     const skuL = _skuLabel(meta.sku);
     const somenteVal = meta.sku==='reais'||meta.sku==='faturamento';
+    // fmtR sempre escreve "R$": usado numa meta em peças, saía "R$3.000 Peças".
+    // fmtM decide pela unidade da meta — dinheiro leva R$, quantidade leva o SKU.
+    const unid = somenteVal ? '' : ' ' + skuL;
+    const fmtM = v => somenteVal ? fmtR(v) : (Math.round(Number(v)||0).toLocaleString('pt-BR') + unid);
 
     // --- Temporalidade da meta (mês vs coleção, ritmo, projeção) ---
     const _DIA = 86400000;
@@ -16549,7 +16553,7 @@ function _coletarDadosRep() {
     const pctDecorrido = Math.round((diasCorridosPer/diasTotaisPer)*100);
     const projFinal = pctDecorrido>0 ? Math.round(real/(pctDecorrido/100)) : real;
     const projPct = meta.valor>0 ? Math.round((projFinal/meta.valor)*100) : 0;
-    const ritmoNec = (falta>0 && diasR>0) ? `${fmtR(Math.ceil(falta/diasR))} ${skuL}/dia útil` : (falta<=0 ? 'meta já batida' : 'sem dias úteis restantes no período');
+    const ritmoNec = (falta>0 && diasR>0) ? `${fmtM(Math.ceil(falta/diasR))}/dia útil` : (falta<=0 ? 'meta já batida' : 'sem dias úteis restantes no período');
 
     // Clientes com potencial que não compraram no mês
     const marcaNorm = meta.marca.trim().toLowerCase();
@@ -16574,24 +16578,57 @@ function _coletarDadosRep() {
       return vB>0 && vA < vB*0.7;
     }).slice(0,3).map(c=>`${c.nome}${c.cidade?' ('+c.cidade+')':''}`);
 
+    // Meta x capacidade da carteira — números JÁ FECHADOS pelo app. A IA não
+    // recalcula nada disso: modelo de linguagem erra conta, e o rep sabe a
+    // carteira dele de cor. Um número errado aqui queima a confiança em tudo.
+    const am = analisarMeta(meta);
+
+    // Espaço COMPROVADO em quem já compra: o cliente um dia fez um pedido maior
+    // que a média dele. Não é estimativa — é teto que ele mesmo já mostrou. Quando
+    // não sobra agenda pra abrir cliente novo, é daqui que sai o volume.
+    const espaco = ativos
+      .filter(c => (c.marcas||[]).some(m=>(m||'').trim().toLowerCase()===marcaNorm))
+      .map(c => {
+        const pv = calcularPotencialCliente(c)[meta.marca] || {};
+        const media = somenteVal ? (pv.avg||0) : (pv.avgQtd||0);
+        const teto  = somenteVal ? (pv.max||0) : (pv.maxQtd||0);
+        return { nome:c.nome, cidade:c.cidade||'', media, teto, folga: Math.max(0, teto-media) };
+      })
+      .filter(x => x.folga > 0)
+      .sort((a,b) => b.folga - a.folga);
+    const espacoTotal = espaco.reduce((s,x)=>s+x.folga,0);
+
     const status = falta<=0?'META BATIDA':pct>=90?'no ritmo':pct>=60?'atenção':'CRÍTICO';
     return {
       marca: meta.marca,
-      meta: `${fmtR(meta.valor)} ${skuL}`,
-      real: `${fmtR(real)} ${skuL}`,
+      meta: fmtM(meta.valor),
+      real: fmtM(real),
       pct: `${pct}%`,
       status,
-      falta: falta>0?`${fmtR(falta)} ${skuL}`:'0',
+      falta: falta>0?fmtM(falta):'0',
       tipoPeriodo: ehColecao ? 'coleção (por período)' : 'mês',
       periodo: _labelPeriodo(meta),
       periodoDecorrido: `${pctDecorrido}% decorrido (dia ${diasCorridosPer} de ${diasTotaisPer})`,
       diasUteis: diasR,
       ritmoNecessario: ritmoNec,
-      projecaoNoRitmoAtual: `${fmtR(projFinal)} ${skuL} (~${projPct}% da meta)`,
+      projecaoNoRitmoAtual: `${fmtM(projFinal)} (~${projPct}% da meta)`,
       foraDoRitmo: pct < (pctDecorrido - 5),
       positivacao: `${positiv}%`,
-      topPotencial: pot.map(p=>`${p.nome}${p.cidade?' ('+p.cidade+')':''}: ~${fmtR(p.potAvg)}`).join('; ')||'sem dados',
-      clientesEmQueda: queda.join(', ')||'nenhum'
+      topPotencial: pot.map(p=>`${p.nome}${p.cidade?' ('+p.cidade+')':''}: ~${fmtM(p.potAvg)}`).join('; ')||'sem dados',
+      clientesEmQueda: queda.join(', ')||'nenhum',
+
+      // --- Meta x carteira (calculado pelo app — usar como está) ---
+      carteiraComporta: `${fmtM(am.capacidade)} de ${am.prontos.length} cliente(s) com recompra prevista até o fim do período`,
+      lacunaAposCarteira: am.lacuna>0 ? fmtM(am.lacuna) : '0 (a carteira fecha sozinha)',
+      ticketMedioDaMarca: `${fmtM(am.ticketMedio)} por pedido`,
+      clientesNovosNecessarios: am.clientesNovos,
+      cabeNaAgenda: am.cabeNaAgenda
+        ? `sim — dá pra fazer ~${am.visitasPossiveis} visitas nos dias úteis restantes e o plano pede ${am.visitasNecessarias}`
+        : `NÃO — dá pra fazer só ~${am.visitasPossiveis} visitas e o plano pede ${am.visitasNecessarias}`,
+      espacoEmQuemJaCompra: espacoTotal>0 ? fmtM(espacoTotal) : '0',
+      topEspacoComprovado: espaco.slice(0,5).map(x=>`${x.nome}${x.cidade?' ('+x.cidade+')':''}: média ${fmtM(x.media)}, já comprou ${fmtM(x.teto)}, folga ${fmtM(x.folga)}`).join('; ')||'sem dados',
+      visitasDepoisDoFechamento: am.depoisDoFim.slice(0,5).map(x=>`${x.cliente.nome} (em ${x.dias}d)`).join('; ')||'nenhuma',
+      clientesSemVendaRegistrada: am.semHistorico
     };
   });
 
@@ -16800,6 +16837,17 @@ CONSCIÊNCIA DE TEMPO (campo "temporalidade" + campos de cada marca): AJUSTE seu
 - Se for MEIO do mês: corrija a rota. Compare "pct" (quanto já vendeu) com "periodoDecorrido" (quanto do tempo passou). Marcas com "foraDoRitmo":true estão atrasadas — foque nelas e diga o ritmo para recuperar.
 - Se for RETA FINAL: foco total em fechar. Priorize os pedidos que faltam com maior chance de fechar no prazo.
 - METAS POR COLEÇÃO ("tipoPeriodo":"coleção"): trate pelo período inteiro dela (use "periodo" e "periodoDecorrido"), NÃO pelo mês calendário. Uma coleção pode ter ritmo e prazos diferentes do mês.
+
+META x CARTEIRA — REGRA MAIS IMPORTANTE: os campos "carteiraComporta", "lacunaAposCarteira", "ticketMedioDaMarca", "clientesNovosNecessarios", "cabeNaAgenda" e "espacoEmQuemJaCompra" JÁ VÊM CALCULADOS pelo app. Use-os exatamente como estão. NUNCA recalcule, estime, arredonde de outro jeito nem invente número novo — o rep conhece a carteira dele de cor e um número errado destrói a confiança na análise inteira.
+
+ORDEM DE RECOMENDAÇÃO quando falta meta (siga nesta sequência):
+1. PUXAR QUEM JÁ COMPRA — "topEspacoComprovado" lista clientes que um dia já compraram MAIS do que a média deles. Essa folga é teto comprovado, não estimativa. É a venda mais barata e mais rápida: cite 2 ou 3 pelo nome e diga quanto dá pra puxar em cada.
+2. ANTECIPAR QUEM ESTÁ AGENDADO TARDE — "visitasDepoisDoFechamento" são clientes cuja próxima visita cai DEPOIS do período fechar. Do jeito que está, eles não entram neste resultado. Sugira antecipar contato (mensagem avisando que estará na região, condição especial) em vez de esperar a data.
+3. ABRIR CLIENTE NOVO — só depois das duas anteriores, e SOMENTE se "cabeNaAgenda" começar com "sim". Se vier "NÃO", diga com todas as letras que não cabe no tempo restante e redirecione o esforço para os itens 1 e 2. Prometer abertura que não cabe na agenda é o pior conselho possível.
+
+Se "clientesSemVendaRegistrada" for maior que zero, lembre que esses clientes ficaram de fora da conta e que registrar as vendas deixa a análise mais certeira — sem culpar o rep, como convite.
+
+TOM: construção de volume e abertura de carteira, nunca cobrança. Mesmo quando o rep está bem, aponte o próximo degrau.
 
 NOTA 0-10 ("topOportunidades"): é a MESMA nota que o app mostra ao rep nas telas de rota e oportunidades (timing de recompra × potencial na carteira; 7+ = quente, 4-7 = morno). Use esses nomes ao indicar quem atacar primeiro. "marcasNoPontoDeRecompra" = marcas com ciclo de giro vencido nesse cliente. Cliente com "programadoAte" está coberto por entregas programadas até essa data — NÃO empurre venda antes; no máximo visita de acompanhamento de entrega.
 ${dados.sazonalConfeccao ? `
@@ -18695,6 +18743,12 @@ function abrirAnaliseMeta(metaId) {
     html += box('var(--borda)', 'var(--bg3)',
       `<div style="font-size:12.5px;color:var(--texto2);line-height:1.55;"><b style="color:var(--texto);">${a.semHistorico} cliente${a.semHistorico === 1 ? '' : 's'} de ${esc(a.marca)} sem venda registrada</b> ficaram de fora desta conta. Seu potencial real pode ser maior — registre as vendas e a análise fica mais certeira.</div>`);
   }
+
+  // A LACUNA é de graça (já está calculada no aparelho); o PLANO de como fechar
+  // é o Gestor IA. O rep acabou de ver o buraco — é o melhor momento pra ele
+  // querer o caminho, e o gate do Pro cuida do resto sozinho.
+  html += `<button onclick="fecharModal('modal-analise-meta');setTimeout(abrirGerenteVirtual,300);" style="width:100%;margin-top:4px;background:linear-gradient(135deg,#1e0a4a,#2d1470);border:1.5px solid rgba(124,58,237,.5);border-radius:12px;padding:14px;color:#C4B5FD;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:800;cursor:pointer;">🤖 Ver o plano no Gestor IA</button>
+    <div style="font-size:11px;color:var(--texto3);text-align:center;margin-top:7px;line-height:1.5;">Ele diz por onde começar: quem puxar, quem antecipar e onde abrir.</div>`;
 
   document.getElementById('analise-meta-corpo').innerHTML = html;
   document.getElementById('modal-analise-meta').classList.add('aberto');

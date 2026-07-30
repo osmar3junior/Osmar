@@ -953,6 +953,17 @@ window.addEventListener('appinstalled', function() {
   .mapa-legenda-titulo { font-size:10px; font-weight:700; color:var(--texto2); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
   .mapa-legenda-item { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--texto2); margin-bottom:4px; }
   .mapa-legenda-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  /* POSIÇÃO DO REP — círculo, não alfinete: as 6 cores da legenda já são de
+     urgência, então um alfinete colorido viraria "mais um cliente". A silhueta
+     redonda é que diferencia, do mesmo jeito que Google/Waze fazem. */
+  .eu-ponto { position:relative; width:18px; height:18px; }
+  .eu-ponto i { position:absolute; inset:0; border-radius:50%; background:#fff; border:3px solid #10161F; box-shadow:0 2px 8px rgba(0,0,0,.55); }
+  .eu-ponto b { position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%; background:rgba(255,255,255,.45); animation:euHalo 2.2s ease-out infinite; }
+  @keyframes euHalo { 0% { transform:scale(1); opacity:.5; } 70% { transform:scale(2.8); opacity:0; } 100% { opacity:0; } }
+  @media (prefers-reduced-motion: reduce) { .eu-ponto b { animation:none; opacity:0; } }
+  .btn-mira { position:absolute; right:12px; bottom:16px; z-index:1000; width:44px; height:44px; border-radius:12px; background:rgba(10,14,20,.92); border:1px solid var(--borda); color:var(--texto2); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .btn-mira.ativo { color:#fff; border-color:rgba(255,255,255,.45); }
+  .btn-mira:active { transform:scale(.94); }
 
   .nav-bottom { background:var(--bg2); border-top:1px solid var(--borda); display:flex; padding:8px 0 20px; position:fixed; left:0; right:0; bottom:0; z-index:150; flex-shrink:0; }
   .tela.ativa { padding-bottom:76px; }
@@ -1596,7 +1607,9 @@ window.addEventListener('appinstalled', function() {
       <div class="mapa-legenda-item"><div class="mapa-legenda-dot" style="background:#38BDF8;"></div> 6-10 dias</div>
       <div class="mapa-legenda-item"><div class="mapa-legenda-dot" style="background:#00D68F;"></div> Em dia</div>
       <div class="mapa-legenda-item"><div class="mapa-legenda-dot" style="background:#A78BFA;"></div> Esquecido</div>
+      <div class="mapa-legenda-item" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--borda);"><div class="mapa-legenda-dot" style="background:#fff;border:2px solid #10161F;"></div> Você</div>
     </div>
+    <button class="btn-mira" id="btn-mira-mapa" onclick="_mapaLocalizarMe()" title="Centralizar em mim" aria-label="Centralizar o mapa na minha posição">◎</button>
 
     <!-- BOTTOM SHEET DO CLIENTE -->
     <div id="mapa-bottom-sheet" style="
@@ -3277,6 +3290,18 @@ window.addEventListener('appinstalled', function() {
     </div>
 
     <button id="estrada-add-btn" onclick="abrirCadEstrada()" style="display:none;width:100%;margin-top:12px;background:rgba(56,189,248,.1);border:1.5px dashed rgba(56,189,248,.5);border-radius:12px;padding:13px;color:#7DD3FC;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">+ Adicionar posto</button>
+  </div>
+</div>
+
+<!-- MODAL ANÁLISE DA META — números calculados no app, sem IA -->
+<div class="modal-overlay" id="modal-analise-meta" style="z-index:345;">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto;padding-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="modal-titulo" style="margin-bottom:0;">🎯 Sua meta x sua carteira</div>
+      <button onclick="fecharModal('modal-analise-meta')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;flex-shrink:0;">✕</button>
+    </div>
+    <div class="modal-sub" id="analise-meta-sub" style="margin-bottom:14px;"></div>
+    <div id="analise-meta-corpo"></div>
   </div>
 </div>
 
@@ -8417,6 +8442,11 @@ function renderizarMapa() {
   const container = document.getElementById('leaflet-map');
   container.style.height = (window.innerHeight - 120) + 'px';
 
+  // A mira vive fora do mapa (irmã no container), então precisa sumir junto com
+  // ele nas telas de "sem mapa" — senão fica um botão que não faz nada.
+  const _mira = document.getElementById('btn-mira-mapa');
+  if (_mira) _mira.style.display = 'none';
+
   if (!window.L) {
     container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#8A95A3;font-size:14px;padding:24px;text-align:center;">Carregando mapa... Conecte-se à internet.</div>';
     return;
@@ -8436,9 +8466,15 @@ function renderizarMapa() {
   container.innerHTML = '';
 
   mapaLeaflet = L.map('leaflet-map', { zoomControl: true });
+  // O mapa é destruído e recriado a cada render: os marcadores da posição do rep
+  // morrem junto, então as referências precisam zerar aqui.
+  _euMarker = null; _euCirculo = null;
+  if (_mira) { _mira.style.display = 'flex'; _mira.textContent = '◎'; }
+  _mapaMiraEstado(false);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap', maxZoom: 19
   }).addTo(mapaLeaflet);
+  _mapaAutoLocalizar();
 
   // Fecha bottom sheet ao clicar no mapa
   mapaLeaflet.on('click', (e) => {
@@ -8490,6 +8526,84 @@ function renderizarMapa() {
   });
 
   if (bounds.length > 0) mapaLeaflet.fitBounds(bounds, { padding: [40, 40] });
+}
+
+// ===== POSIÇÃO DO REP NO MAPA =====
+let _euMarker = null, _euCirculo = null;
+
+function _mapaMiraEstado(ligada) {
+  const b = document.getElementById('btn-mira-mapa');
+  if (b) b.classList.toggle('ativo', !!ligada);
+}
+
+// Desenha (ou move) o ponto. Círculo de precisão SÓ quando o sinal está ruim:
+// com sinal bom ele seria só poluição; com sinal ruim, explica por que o ponto
+// aparece deslocado — sem isso o rep acha que o app errou.
+function _mapaMostrarEu(lat, lng, precisao) {
+  if (!mapaLeaflet) return;
+  if (!_euMarker) {
+    _euMarker = L.marker([lat, lng], {
+      icon: L.divIcon({ className: '', html: '<div class="eu-ponto"><b></b><i></i></div>', iconSize: [18, 18], iconAnchor: [9, 9] }),
+      zIndexOffset: 1000,          // sempre por cima dos alfinetes de cliente
+      interactive: false
+    }).addTo(mapaLeaflet);
+  } else {
+    _euMarker.setLatLng([lat, lng]);
+  }
+  if (_euCirculo) { mapaLeaflet.removeLayer(_euCirculo); _euCirculo = null; }
+  if (precisao && precisao > 50) {
+    _euCirculo = L.circle([lat, lng], {
+      radius: precisao, color: '#fff', weight: 1, opacity: .35, fillColor: '#fff', fillOpacity: .08, interactive: false
+    }).addTo(mapaLeaflet);
+  }
+  _mapaMiraEstado(true);
+}
+
+// Leitura sob demanda, não rastreamento contínuo: o rep passa o dia na estrada e
+// deixar o GPS ligado o tempo todo comeria a bateria dele.
+function _mapaLocalizarMe(silencioso) {
+  if (!mapaLeaflet) return;
+  if (!navigator.geolocation) { if (!silencioso) toast('Este aparelho não permite localização.'); return; }
+  const btn = document.getElementById('btn-mira-mapa');
+  if (btn && !silencioso) btn.textContent = '⏳';
+
+  const pronto = () => { if (btn) btn.textContent = '◎'; };
+
+  const ok = (pos) => {
+    pronto();
+    const { latitude, longitude, accuracy } = pos.coords;
+    _mapaMostrarEu(latitude, longitude, accuracy);
+    // No automático NÃO mexe no enquadramento: o mapa acabou de ajustar pra
+    // mostrar todos os clientes e puxar a vista sozinho seria invasivo.
+    if (!silencioso) mapaLeaflet.setView([latitude, longitude], Math.max(mapaLeaflet.getZoom() || 0, 14));
+  };
+
+  const falhou = (err) => {
+    pronto();
+    if (silencioso) return;
+    if (err && err.code === 1) {
+      toast('Localização bloqueada. Libere o GPS para o app nos ajustes do celular.');
+      return;
+    }
+    toast('Não consegui pegar o sinal agora. Tente de novo em instantes.');
+  };
+
+  navigator.geolocation.getCurrentPosition(ok, () => {
+    // 2ª tentativa aceitando posição aproximada — dentro de loja/galeria o sinal
+    // preciso costuma estourar o tempo, principalmente no iPhone.
+    navigator.geolocation.getCurrentPosition(ok, falhou, { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 });
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+// Ao abrir o mapa só mostra sozinho se a permissão JÁ existe — abrir uma tela não
+// é hora de pedir GPS. O Safari não sabe responder essa consulta, então no iPhone
+// o ponto aparece no primeiro toque da mira (que é o jeito confiável lá).
+async function _mapaAutoLocalizar() {
+  try {
+    if (!navigator.permissions || !navigator.permissions.query) return;
+    const p = await navigator.permissions.query({ name: 'geolocation' });
+    if (p.state === 'granted') _mapaLocalizarMe(true);
+  } catch (e) {}
 }
 
 function irPara(tela) {
@@ -18348,7 +18462,7 @@ function renderizarMetasConfig(cfg) {
           <select class="campo-input" style="flex:1;font-weight:700;font-size:13px;" onchange="editarMetaField('${meta.id}','marca',this.value)">${marcaOpts}</select>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button onclick="salvarConfig();toast('✅ Meta salva!');" title="Salvar" id="btn-meta-salvar-${meta.id}" style="background:rgba(0,214,143,.15);border:1.5px solid rgba(0,214,143,.4);border-radius:9px;width:34px;height:34px;color:var(--verde);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✓</button>
+          <button onclick="salvarConfig();toast('✅ Meta salva!');setTimeout(()=>abrirAnaliseMeta('${meta.id}'),450);" title="Salvar e analisar" id="btn-meta-salvar-${meta.id}" style="background:rgba(0,214,143,.15);border:1.5px solid rgba(0,214,143,.4);border-radius:9px;width:34px;height:34px;color:var(--verde);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✓</button>
           <button onclick="removerMetaConfig('${meta.id}')" title="Remover" style="background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.3);border-radius:9px;width:34px;height:34px;color:#FF4D6A;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
         </div>
       </div>
@@ -18401,6 +18515,189 @@ function renderizarMetasConfig(cfg) {
       </div>
     </div>`;
   }).join('');
+}
+
+// ===== ANÁLISE DA META (aritmética pura, sem IA) =====
+// Cruza a meta com a capacidade REAL da carteira: o que cada cliente costuma
+// comprar, de quanto em quanto tempo ele volta, e quanto tempo de agenda sobra.
+// Tudo sai daqui pronto — a IA, quando entrar, só dá voz a estes números.
+// Modelo de linguagem erra conta, e um número errado aqui queima a confiança do
+// rep no app inteiro: ele conhece a carteira dele de cor.
+
+// Compras de UMA marca num cliente, em ordem. Usa a mesma regra do resto do app:
+// pedidos[] tem marca explícita; venda legada só conta se o cliente tem essa marca.
+function _comprasDaMarca(cliente, marcaKey, ehDinheiro) {
+  const out = [];
+  const marcasCli = (cliente.marcas || []).map(m => (m || '').trim().toLowerCase());
+  (cliente.historico || []).forEach(h => {
+    if (h.motivo !== 'fechou_pedido') return;
+    if (h.pedidos && h.pedidos.length) {
+      h.pedidos.forEach(p => {
+        if ((p.marca || '').trim().toLowerCase() !== marcaKey) return;
+        const v = ehDinheiro ? (Number(p.valor) || 0) : (Number(p.qtd) || 0);
+        if (v > 0) out.push({ data: new Date(_dataGiroPedido(h, p)), v });
+      });
+    } else if (marcasCli.includes(marcaKey)) {
+      const v = ehDinheiro ? (Number(h.pedidoValor) || 0) : (Number(h.pedidoQtd) || 0);
+      if (v > 0) out.push({ data: new Date(h.data), v });
+    }
+  });
+  return out.sort((a, b) => a.data - b.data);
+}
+
+function analisarMeta(meta) {
+  const cfg = getConfig();
+  const ehDinheiro = meta.sku === 'reais' || meta.sku === 'faturamento';
+  const alvo = Number(meta.valor) || 0;
+  const marcaKey = (meta.marca || '').trim().toLowerCase();
+  const { inicio, fim } = _periodoMeta(meta);
+  const hoje = new Date();
+
+  const real = calcularRealMarca(meta);
+  const falta = Math.max(0, alvo - real);
+  const diasUteis = _diasUteisRestantes(hoje, fim);
+  const diasCorridos = Math.max(0, Math.ceil((fim - hoje) / 86400000));
+  const totalPeriodo = Math.max(1, Math.round((fim - inicio) / 86400000));
+  const pctDecorrido = Math.min(100, Math.max(0, Math.round(((hoje - inicio) / 86400000 / totalPeriodo) * 100)));
+
+  const clientes = getClientesAtivos().filter(c =>
+    (c.marcas || []).some(m => (m || '').trim().toLowerCase() === marcaKey));
+
+  let somaCompras = 0, nCompras = 0;
+  const comHistorico = [], semHistorico = [], prontos = [], depoisDoFim = [];
+
+  clientes.forEach(c => {
+    const compras = _comprasDaMarca(c, marcaKey, ehDinheiro);
+    if (!compras.length) { semHistorico.push(c); return; }
+    comHistorico.push(c);
+    compras.forEach(x => { somaCompras += x.v; nCompras++; });
+
+    const ticketCli = compras.reduce((s, x) => s + x.v, 0) / compras.length;
+    const ultima = compras[compras.length - 1].data;
+
+    // Cadência do próprio cliente; com 1 compra só, usa o ciclo ideal da marca.
+    let cadencia = null;
+    if (compras.length >= 2) {
+      let soma = 0;
+      for (let i = 1; i < compras.length; i++) soma += (compras[i].data - compras[i-1].data) / 86400000;
+      cadencia = soma / (compras.length - 1);
+    } else if (meta.cicloIdeal > 0) {
+      cadencia = Number(meta.cicloIdeal);
+    }
+    if (!cadencia || cadencia <= 0) return;
+
+    const proxima = new Date(ultima.getTime() + cadencia * 86400000);
+    if (proxima <= fim) prontos.push({ cliente: c, ticket: ticketCli, proxima, cadencia: Math.round(cadencia) });
+
+    // Cruzamento com a agenda: visita marcada só depois do fechamento do período.
+    const diff = getDiffDiasCliente(c);
+    if (diff !== null) {
+      const dataVisita = new Date(hoje.getTime() + diff * 86400000);
+      if (dataVisita > fim) depoisDoFim.push({ cliente: c, dias: diff, data: dataVisita });
+    }
+  });
+
+  const ticketMedio = nCompras ? somaCompras / nCompras : 0;
+  const capacidade = prontos.reduce((s, p) => s + p.ticket, 0);
+  const lacuna = Math.max(0, falta - capacidade);
+  const clientesNovos = (lacuna > 0 && ticketMedio > 0) ? Math.ceil(lacuna / ticketMedio) : 0;
+
+  // Cabe na agenda? Jornada e tempo por visita já são configurados pelo rep.
+  const [hi, mi] = String(cfg.jornadaIni || '08:00').split(':').map(Number);
+  const [hf, mf] = String(cfg.jornadaFim || '18:00').split(':').map(Number);
+  const minutosDia = Math.max(0, (hf * 60 + mf) - (hi * 60 + mi));
+  const minVisita = tempoVisitaMarca(meta.marca) || 30;
+  const visitasPorDia = minVisita > 0 ? Math.floor(minutosDia / minVisita) : 0;
+  const visitasPossiveis = visitasPorDia * diasUteis;
+  const visitasNecessarias = prontos.length + clientesNovos;
+
+  return {
+    marca: meta.marca, sku: meta.sku, ehDinheiro,
+    skuLabel: ehDinheiro ? '' : (typeof _skuLabel === 'function' ? _skuLabel(meta.sku) : (meta.sku || '')),
+    alvo, real, falta,
+    pctFeito: alvo > 0 ? Math.round((real / alvo) * 100) : 0,
+    pctDecorrido, diasUteis, diasCorridos, fim,
+    totalClientes: clientes.length,
+    comHistorico: comHistorico.length,
+    semHistorico: semHistorico.length,
+    ticketMedio, capacidade, lacuna, clientesNovos,
+    prontos: prontos.sort((a, b) => b.ticket - a.ticket),
+    depoisDoFim: depoisDoFim.sort((a, b) => a.dias - b.dias),
+    visitasPossiveis, visitasNecessarias,
+    cabeNaAgenda: visitasPossiveis >= visitasNecessarias,
+    semDados: comHistorico.length === 0
+  };
+}
+
+function _fmtMeta(n, a) {
+  const v = Math.round(Number(n) || 0);
+  return a.ehDinheiro ? 'R$ ' + v.toLocaleString('pt-BR') : v.toLocaleString('pt-BR') + (a.skuLabel ? ' ' + a.skuLabel : '');
+}
+
+function abrirAnaliseMeta(metaId) {
+  const cfg = getConfig();
+  const meta = (cfg.metas || []).find(m => m.id === metaId);
+  if (!meta) return;
+  if (!(Number(meta.valor) > 0)) { toast('Defina o valor da meta antes de analisar.'); return; }
+
+  const a = analisarMeta(meta);
+  const box = (borda, bg, html) => `<div style="background:${bg};border:1px solid ${borda};border-radius:12px;padding:13px 14px;margin-bottom:10px;">${html}</div>`;
+  const linha = (rot, val, cor) => `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;"><span style="font-size:12.5px;color:var(--texto2);">${rot}</span><span style="font-size:13.5px;font-weight:700;color:${cor || 'var(--texto)'};white-space:nowrap;">${val}</span></div>`;
+
+  document.getElementById('analise-meta-sub').textContent =
+    `${a.marca} · faltam ${a.diasUteis} dia${a.diasUteis === 1 ? '' : 's'} útil${a.diasUteis === 1 ? '' : 'eis'} para fechar o período.`;
+
+  let html = box('var(--borda)', 'var(--bg3)',
+    linha('Meta', _fmtMeta(a.alvo, a)) +
+    linha('Já vendido', _fmtMeta(a.real, a), 'var(--verde)') +
+    linha('Falta', _fmtMeta(a.falta, a), a.falta > 0 ? 'var(--amarelo)' : 'var(--verde)') +
+    `<div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-top:9px;"><div style="height:100%;width:${Math.min(100, a.pctFeito)}%;background:var(--verde);border-radius:3px;"></div></div>
+     <div style="font-size:10.5px;color:var(--texto3);margin-top:5px;">${a.pctFeito}% da meta · ${a.pctDecorrido}% do tempo já passou</div>`);
+
+  // Sem histórico não há o que cruzar — e insistir num número inventado seria pior
+  // que admitir a limitação. Aqui o app pede o combustível que falta.
+  if (a.semDados) {
+    html += box('rgba(255,192,67,.35)', 'rgba(255,192,67,.07)',
+      `<div style="font-size:13px;font-weight:700;color:var(--amarelo);margin-bottom:6px;">Ainda não dá para cruzar essa meta</div>
+       <div style="font-size:12.5px;color:var(--texto2);line-height:1.55;">Nenhum dos seus ${a.totalClientes} cliente${a.totalClientes === 1 ? '' : 's'} de ${esc(a.marca)} tem venda registrada no app. Registre as vendas por alguns dias — a partir daí o app calcula sozinho quanto a sua carteira comporta e quantos clientes faltam abrir.</div>`);
+    document.getElementById('analise-meta-corpo').innerHTML = html;
+    document.getElementById('modal-analise-meta').classList.add('aberto');
+    return;
+  }
+
+  const cobre = a.capacidade >= a.falta;
+  html += box(cobre ? 'rgba(0,214,143,.3)' : 'rgba(255,192,67,.35)', cobre ? 'rgba(0,214,143,.06)' : 'rgba(255,192,67,.07)',
+    `<div style="font-size:13px;font-weight:700;color:${cobre ? 'var(--verde)' : 'var(--amarelo)'};margin-bottom:8px;">${cobre ? 'Sua carteira dá conta' : 'Sua carteira não fecha essa meta sozinha'}</div>` +
+    linha('Clientes com recompra prevista até o fim', String(a.prontos.length)) +
+    linha('O que eles costumam comprar', _fmtMeta(a.capacidade, a), 'var(--verde)') +
+    (cobre ? '' : linha('Lacuna a cobrir', _fmtMeta(a.lacuna, a), 'var(--amarelo)')) +
+    `<div style="font-size:11.5px;color:var(--texto2);line-height:1.5;margin-top:8px;">Conta feita com o ticket médio real de ${esc(a.marca)} na sua carteira: <b style="color:var(--texto);">${_fmtMeta(a.ticketMedio, a)}</b> por pedido.</div>`);
+
+  if (!cobre && a.clientesNovos > 0) {
+    html += box('rgba(56,189,248,.3)', 'rgba(56,189,248,.06)',
+      `<div style="font-size:13px;font-weight:700;color:#38BDF8;margin-bottom:6px;">Abrir ~${a.clientesNovos} cliente${a.clientesNovos === 1 ? '' : 's'} novo${a.clientesNovos === 1 ? '' : 's'}</div>
+       <div style="font-size:12.5px;color:var(--texto2);line-height:1.55;">No seu ticket médio, é o que fecha a lacuna de ${_fmtMeta(a.lacuna, a)}.</div>
+       <div style="font-size:12px;color:${a.cabeNaAgenda ? 'var(--verde)' : '#FF8A9B'};line-height:1.5;margin-top:8px;font-weight:600;">
+         ${a.cabeNaAgenda
+           ? `✓ Cabe na sua agenda: dá para fazer até ${a.visitasPossiveis} visitas nos dias que restam, e você precisa de ${a.visitasNecessarias}.`
+           : `⚠ Não cabe na agenda: nos dias que restam dá para fazer ~${a.visitasPossiveis} visitas, mas o plano exige ${a.visitasNecessarias}. Priorize aumentar o pedido de quem já compra.`}
+       </div>`);
+  }
+
+  if (a.depoisDoFim.length) {
+    html += box('rgba(167,139,250,.3)', 'rgba(167,139,250,.06)',
+      `<div style="font-size:13px;font-weight:700;color:var(--roxo);margin-bottom:6px;">${a.depoisDoFim.length} visita${a.depoisDoFim.length === 1 ? '' : 's'} só depois do fechamento</div>
+       <div style="font-size:12.5px;color:var(--texto2);line-height:1.55;margin-bottom:8px;">Esses clientes não entram no resultado deste período do jeito que estão agendados. Antecipar um contato com eles é a venda mais barata que existe.</div>
+       ${a.depoisDoFim.slice(0, 5).map(x => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:4px 0;border-top:1px solid var(--borda);"><span style="color:var(--texto);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(_nomeCap(x.cliente.nome))}</span><span style="color:var(--texto2);flex-shrink:0;">em ${x.dias}d</span></div>`).join('')}`);
+  }
+
+  if (a.semHistorico > 0) {
+    html += box('var(--borda)', 'var(--bg3)',
+      `<div style="font-size:12.5px;color:var(--texto2);line-height:1.55;"><b style="color:var(--texto);">${a.semHistorico} cliente${a.semHistorico === 1 ? '' : 's'} de ${esc(a.marca)} sem venda registrada</b> ficaram de fora desta conta. Seu potencial real pode ser maior — registre as vendas e a análise fica mais certeira.</div>`);
+  }
+
+  document.getElementById('analise-meta-corpo').innerHTML = html;
+  document.getElementById('modal-analise-meta').classList.add('aberto');
 }
 
 function editarMetaField(id, campo, valor) {

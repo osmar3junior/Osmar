@@ -130,7 +130,23 @@ window.addEventListener('beforeinstallprompt', function(e) {
 // iOS Safari não dispara beforeinstallprompt (não existe prompt programático lá)
 // — só dá pra orientar o passo manual (Compartilhar → Adicionar à Tela de Início).
 function _iosSemPrompt() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  const ua = navigator.userAgent;
+  // iPad com iPadOS 13+ se declara "Macintosh" — sem esta checagem o app achava
+  // que era um Mac, ficava esperando o beforeinstallprompt (que nunca vem no
+  // Safari) e o convite de instalar NUNCA aparecia no iPad.
+  const iPadModerno = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  return (/iphone|ipad|ipod/i.test(ua) || iPadModerno) && !window.MSStream;
+}
+
+// "Adicionar à Tela de Início" só existe no Safari. O rep quase sempre recebe o
+// link pelo WhatsApp e abre no navegador embutido do app — onde a opção não
+// existe. Sem avisar, ele tenta, não acha, e desiste de instalar.
+function _iosForaDoSafari() {
+  if (!_iosSemPrompt()) return false;
+  const ua = navigator.userAgent;
+  if (/CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua)) return true;      // outro navegador
+  if (/FBAN|FBAV|Instagram|Line|Twitter|LinkedIn/i.test(ua)) return true; // webview de rede social
+  return !/Safari/i.test(ua);                                            // webview genérica
 }
 
 function _appJaInstalado() {
@@ -146,16 +162,54 @@ function _checarInstallBanner() {
 
   const btn = document.getElementById('install-banner-btn');
   if (_iosSemPrompt()) {
-    document.getElementById('install-banner-sub').textContent = 'Toque em Compartilhar (□↑) e depois em "Adicionar à Tela de Início".';
-    btn.textContent = 'Como instalar';
-    btn.onclick = function() { alert('No Safari:\n\n1. Toque no ícone de Compartilhar (□↑) na barra do navegador\n2. Toque em "Adicionar à Tela de Início"\n3. Toque em "Adicionar"'); };
+    // No iPhone o app NÃO instalado corre risco real: o sistema apaga os dados de
+    // site que fica semanas sem uso. Por isso aqui o aviso é âmbar (alerta) e diz
+    // o motivo — no Android é só conveniência, e segue verde.
+    const foraSafari = _iosForaDoSafari();
+    banner.style.background = 'linear-gradient(135deg,rgba(255,192,67,.1),rgba(255,192,67,.03))';
+    banner.style.borderColor = 'rgba(255,192,67,.4)';
+    btn.style.background = 'var(--amarelo)';
+    btn.style.color = '#3D2E00';
+    document.getElementById('install-banner-titulo').textContent = foraSafari
+      ? 'Abra no Safari para instalar'
+      : 'Instale para não perder seus dados';
+    document.getElementById('install-banner-sub').textContent = foraSafari
+      ? 'Neste navegador o iPhone não deixa salvar na tela de início.'
+      : 'O iPhone apaga dados de site sem uso. Instalado, isso não acontece.';
+    btn.textContent = foraSafari ? 'Ver como' : 'Instalar';
+    btn.onclick = _abrirComoInstalarIos;
     banner.style.display = 'flex';
   } else if (_deferredInstallPrompt) {
+    // Reafirma o visual verde/de conveniência: sem isso o ramo do iOS, que pinta
+    // o banner de âmbar, deixaria resíduo se os dois rodassem no mesmo aparelho.
+    banner.style.background = 'linear-gradient(135deg,rgba(0,214,143,.08),rgba(0,214,143,.03))';
+    banner.style.borderColor = 'rgba(0,214,143,.3)';
+    btn.style.background = 'var(--verde)';
+    btn.style.color = '#04110B';
+    document.getElementById('install-banner-titulo').textContent = 'Instale o Carteira Viva';
     document.getElementById('install-banner-sub').textContent = 'Acesso rápido, direto da tela inicial — sem navegador.';
     btn.textContent = 'Instalar';
     btn.onclick = _instalarApp;
     banner.style.display = 'flex';
   }
+}
+
+// A Apple não expõe NENHUMA API de instalação: no iPhone/iPad o caminho é
+// sempre manual (Compartilhar › Adicionar à Tela de Início). O que dá pra fazer
+// é ensinar bem — e avisar quando o rep está num navegador onde nem existe.
+function _abrirComoInstalarIos() {
+  const m = document.getElementById('modal-instalar-ios');
+  const foraSafari = _iosForaDoSafari();
+  document.getElementById('ios-aviso-safari').style.display = foraSafari ? 'block' : 'none';
+  document.getElementById('ios-passos').style.display = foraSafari ? 'none' : 'block';
+  document.getElementById('ios-url').textContent = location.origin;
+  if (m) m.classList.add('aberto');
+}
+
+function _copiarLinkApp() {
+  navigator.clipboard.writeText(location.origin)
+    .then(() => toast('Link copiado! Cole no Safari.'))
+    .catch(() => toast('Copie da barra de endereço: ' + location.origin));
 }
 
 async function _instalarApp() {
@@ -169,7 +223,10 @@ async function _instalarApp() {
 
 function _dispensarInstallBanner() {
   document.getElementById('install-banner').style.display = 'none';
-  localStorage.setItem('cv_install_banner_ate', String(Date.now() + 7 * 86400000));
+  // 7 dias é exatamente a janela em que o iPhone limpa os dados de site parado:
+  // adiar por todo esse tempo deixaria o rep desprotegido justo até o prazo.
+  const dias = _iosSemPrompt() ? 2 : 7;
+  localStorage.setItem('cv_install_banner_ate', String(Date.now() + dias * 86400000));
 }
 
 window.addEventListener('appinstalled', function() {
@@ -255,6 +312,13 @@ window.addEventListener('appinstalled', function() {
   .campo-label { display:block; font-size:12px; font-weight:500; color:var(--texto2); margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
   .campo-input { width:100%; background:var(--bg2); border:1px solid var(--borda); border-radius:10px; padding:13px 16px; color:var(--texto); font-family:'DM Sans',sans-serif; font-size:15px; outline:none; transition:border-color .2s; }
   .campo-input:focus { border-color:var(--verde); }
+  /* Olhinho de "ver senha" — o rep digita senha longa no celular, na estrada,
+     muitas vezes com a mão suja ou no sol; sem conferir o que digitou, erra e
+     acha que a conta está bloqueada. */
+  .campo-senha { position:relative; }
+  .campo-senha .campo-input { padding-right:48px; }
+  .btn-olho { position:absolute; right:4px; top:50%; transform:translateY(-50%); background:none; border:none; padding:10px 12px; cursor:pointer; font-size:17px; line-height:1; color:var(--texto3); -webkit-tap-highlight-color:transparent; }
+  .btn-olho:active { transform:translateY(-50%) scale(.9); }
   .campo-input::placeholder { color:var(--texto3); }
   select.campo-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%238B949E'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:36px; cursor:pointer; }
   .btn-primario { width:100%; background:linear-gradient(135deg,var(--verde),var(--verde-escuro)); color:#04231A; border:none; border-radius:12px; padding:15px; font-family:'Syne',sans-serif; font-size:15px; font-weight:700; cursor:pointer; margin-top:8px; transition:transform .15s,box-shadow .2s; letter-spacing:.3px; box-shadow:0 6px 20px var(--verde-glow); }
@@ -950,11 +1014,14 @@ window.addEventListener('appinstalled', function() {
       <div style="text-align:center;font-size:11px;color:var(--texto3);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;">ou entre com sua conta</div>
       <div class="campo-grupo">
         <label class="campo-label">Email</label>
-        <input type="email" class="campo-input" id="login-email" placeholder="seu@email.com">
+        <input type="email" class="campo-input" id="login-email" placeholder="seu@email.com" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username">
       </div>
       <div class="campo-grupo">
         <label class="campo-label">Senha</label>
-        <input type="password" class="campo-input" id="login-senha" placeholder="••••••••">
+        <div class="campo-senha">
+          <input type="password" class="campo-input" id="login-senha" placeholder="••••••••" autocomplete="current-password">
+          <button type="button" class="btn-olho" aria-label="Mostrar senha" onclick="_verSenha(this,'login-senha')">👁️</button>
+        </div>
       </div>
       <button class="btn-primario" onclick="fazerLogin()">Entrar</button>
       <div class="login-link">Não tem conta? <a onclick="mostrarCadastro()">Criar conta grátis</a></div>
@@ -967,11 +1034,14 @@ window.addEventListener('appinstalled', function() {
       </div>
       <div class="campo-grupo">
         <label class="campo-label">Email</label>
-        <input type="email" class="campo-input" id="cad-email" placeholder="seu@email.com">
+        <input type="email" class="campo-input" id="cad-email" placeholder="seu@email.com" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username">
       </div>
       <div class="campo-grupo">
         <label class="campo-label">Senha</label>
-        <input type="password" class="campo-input" id="cad-senha" placeholder="Mínimo 6 caracteres">
+        <div class="campo-senha">
+          <input type="password" class="campo-input" id="cad-senha" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+          <button type="button" class="btn-olho" aria-label="Mostrar senha" onclick="_verSenha(this,'cad-senha')">👁️</button>
+        </div>
       </div>
       <button class="btn-primario" onclick="fazerCadastro()">Criar conta</button>
       <div class="login-link">Já tem conta? <a onclick="mostrarLogin()">Entrar</a></div>
@@ -1008,7 +1078,7 @@ window.addEventListener('appinstalled', function() {
     <div style="min-width:0;display:flex;align-items:center;gap:10px;">
       <span style="font-size:20px;flex-shrink:0;">📲</span>
       <div style="min-width:0;">
-        <div style="font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:700;color:var(--texto);">Instale o Carteira Viva</div>
+        <div id="install-banner-titulo" style="font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:700;color:var(--texto);">Instale o Carteira Viva</div>
         <div id="install-banner-sub" style="font-size:10.5px;color:var(--texto2);margin-top:1px;">Acesso rápido, direto da tela inicial — sem navegador.</div>
       </div>
     </div>
@@ -1932,9 +2002,18 @@ window.addEventListener('appinstalled', function() {
     <div class="config-secao">
       <div class="config-secao-titulo">🔐 Senha de acesso</div>
       <div class="config-secao-sub">Troque sua senha quando quiser. Informe a senha atual, escolha a nova e confirme.</div>
-      <input type="password" class="campo-input" id="cfg-senha-atual" placeholder="Senha atual" autocomplete="current-password" style="margin-top:4px;">
-      <input type="password" class="campo-input" id="cfg-senha-nova" placeholder="Nova senha (mínimo 6 caracteres)" autocomplete="new-password" style="margin-top:10px;">
-      <input type="password" class="campo-input" id="cfg-senha-conf" placeholder="Confirmar nova senha" autocomplete="new-password" style="margin-top:10px;">
+      <div class="campo-senha" style="margin-top:4px;">
+        <input type="password" class="campo-input" id="cfg-senha-atual" placeholder="Senha atual" autocomplete="current-password">
+        <button type="button" class="btn-olho" aria-label="Mostrar senha" onclick="_verSenha(this,'cfg-senha-atual')">👁️</button>
+      </div>
+      <div class="campo-senha" style="margin-top:10px;">
+        <input type="password" class="campo-input" id="cfg-senha-nova" placeholder="Nova senha (mínimo 6 caracteres)" autocomplete="new-password">
+        <button type="button" class="btn-olho" aria-label="Mostrar senha" onclick="_verSenha(this,'cfg-senha-nova')">👁️</button>
+      </div>
+      <div class="campo-senha" style="margin-top:10px;">
+        <input type="password" class="campo-input" id="cfg-senha-conf" placeholder="Confirmar nova senha" autocomplete="new-password">
+        <button type="button" class="btn-olho" aria-label="Mostrar senha" onclick="_verSenha(this,'cfg-senha-conf')">👁️</button>
+      </div>
       <button class="btn-primario" id="btn-alterar-senha" onclick="alterarSenha()" style="margin-top:12px;">🔐 Alterar senha</button>
       <div style="text-align:center;margin-top:10px;">
         <a onclick="abrirEsqueciSenha()" style="font-size:12px;color:var(--texto2);cursor:pointer;text-decoration:underline;">Esqueceu a senha atual?</a>
@@ -3201,6 +3280,42 @@ window.addEventListener('appinstalled', function() {
   </div>
 </div>
 
+<!-- MODAL COMO INSTALAR NO IPHONE/IPAD (a Apple não permite instalar por botão) -->
+<div class="modal-overlay" id="modal-instalar-ios" style="z-index:350;">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-titulo" style="margin-bottom:0;">📲 Instalar no seu iPhone</div>
+      <button onclick="fecharModal('modal-instalar-ios')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;flex-shrink:0;">✕</button>
+    </div>
+
+    <div id="ios-aviso-safari" style="display:none;background:rgba(255,192,67,.08);border:1px solid rgba(255,192,67,.35);border-radius:12px;padding:13px 14px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--amarelo);margin-bottom:6px;">Você não está no Safari</div>
+      <div style="font-size:12.5px;color:var(--texto2);line-height:1.55;">No iPhone, só o Safari consegue instalar o app na tela de início. Copie o link abaixo, abra o Safari e cole na barra de endereço.</div>
+      <div style="background:var(--bg3);border:1px solid var(--borda);border-radius:9px;padding:9px 11px;margin-top:10px;font-size:12px;color:var(--texto);word-break:break-all;" id="ios-url"></div>
+      <button onclick="_copiarLinkApp()" style="width:100%;margin-top:9px;background:var(--verde);border:none;border-radius:10px;padding:11px;color:#04231A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">📋 Copiar o link</button>
+    </div>
+
+    <div id="ios-passos">
+      <div class="modal-sub" style="margin-bottom:14px;">São 3 toques — e o app passa a abrir como aplicativo, sem a barra do navegador.</div>
+      <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:13px;">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:rgba(0,214,143,.14);color:var(--verde);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">1</div>
+        <div style="font-size:13px;color:var(--texto2);line-height:1.5;">Toque no ícone <strong style="color:var(--texto);">Compartilhar</strong> <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:1px solid var(--borda);border-radius:5px;vertical-align:middle;">⬆️</span> na barra de baixo do Safari.</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:13px;">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:rgba(0,214,143,.14);color:var(--verde);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">2</div>
+        <div style="font-size:13px;color:var(--texto2);line-height:1.5;">Role a lista e toque em <strong style="color:var(--texto);">Adicionar à Tela de Início</strong>.</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:14px;">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:rgba(0,214,143,.14);color:var(--verde);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">3</div>
+        <div style="font-size:13px;color:var(--texto2);line-height:1.5;">Confirme em <strong style="color:var(--texto);">Adicionar</strong>, no canto superior direito.</div>
+      </div>
+      <div style="background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.22);border-radius:12px;padding:12px 13px;font-size:12px;color:var(--texto2);line-height:1.55;">
+        <strong style="color:var(--verde);">Por que instalar:</strong> no iPhone, o Safari apaga os dados de sites que ficam semanas sem uso. Instalado na tela de início, isso não acontece — e o app abre mais rápido e funciona sem internet.
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL ESQUECI SENHA -->
 <div class="modal-overlay" id="modal-esqueci-senha">
   <div class="modal-box">
@@ -3226,11 +3341,17 @@ window.addEventListener('appinstalled', function() {
     <div class="modal-sub">Escolha uma senha nova para sua conta.</div>
     <div class="campo-grupo" style="margin-top:16px;">
       <label class="campo-label">Nova senha</label>
-      <input type="password" class="campo-input" id="nova-senha-input" placeholder="Mínimo 6 caracteres">
+      <div class="campo-senha">
+        <input type="password" class="campo-input" id="nova-senha-input" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+        <button type="button" class="btn-olho" aria-label="Mostrar senha" onclick="_verSenha(this,'nova-senha-input')">👁️</button>
+      </div>
     </div>
     <div class="campo-grupo">
       <label class="campo-label">Confirmar senha</label>
-      <input type="password" class="campo-input" id="nova-senha-confirma" placeholder="Repita a senha">
+      <div class="campo-senha">
+        <input type="password" class="campo-input" id="nova-senha-confirma" placeholder="Repita a senha" autocomplete="new-password">
+        <button type="button" class="btn-olho" aria-label="Mostrar senha" onclick="_verSenha(this,'nova-senha-confirma')">👁️</button>
+      </div>
     </div>
     <button class="btn-primario" onclick="aplicarNovaSenha()">✅ Salvar nova senha</button>
   </div>
@@ -6415,6 +6536,18 @@ window.addEventListener('DOMContentLoaded', () => {
 // Segurança: a senha NUNCA é guardada em texto puro. Guardamos só um hash
 // derivado (PBKDF2 + salt) para validar o login offline. Com internet, o
 // Supabase é a autoridade real da senha.
+// Olhinho de ver senha. Mantém o cursor no fim ao voltar pra oculto: em alguns
+// teclados de celular a troca de type joga o cursor pro começo do campo.
+function _verSenha(btn, id) {
+  const inp = document.getElementById(id);
+  if (!inp) return;
+  const estaVisivel = inp.type === 'text';
+  inp.type = estaVisivel ? 'password' : 'text';
+  btn.textContent = estaVisivel ? '👁️' : '🙈';
+  btn.setAttribute('aria-label', estaVisivel ? 'Mostrar senha' : 'Ocultar senha');
+  try { const n = inp.value.length; inp.focus(); inp.setSelectionRange(n, n); } catch (e) {}
+}
+
 function _gerarSalt() {
   const a = new Uint8Array(16);
   crypto.getRandomValues(a);
@@ -6444,11 +6577,37 @@ async function _verificarSenhaLocal(senha, usuario) {
   return h === usuario.senhaHash;
 }
 
+// O iPhone capitaliza a 1ª letra dos campos sozinho, então o rep digitava
+// "Osmar@..." e o cadastro tinha gravado "osmar@...". Como as chaves do
+// localStorage são por e-mail (cv_clientes_<email> etc.), a maiúscula abria um
+// BALDE DE DADOS SEPARADO e o login local nunca batia — o app caía na
+// recuperação da nuvem toda vez. Esta função migra o que ficou gravado errado.
+function _migrarChavesEmail(de, para) {
+  if (!de || !para || de === para) return;
+  const sufixoDe = '_' + de, sufixoPara = '_' + para;
+  Object.keys(localStorage).forEach(k => {
+    if (!k.startsWith('cv_')) return;
+    const i = k.lastIndexOf(sufixoDe);
+    if (i === -1) return;
+    const novo = k.slice(0, i) + sufixoPara + k.slice(i + sufixoDe.length);
+    if (localStorage.getItem(novo) === null) localStorage.setItem(novo, localStorage.getItem(k));
+    localStorage.removeItem(k);
+  });
+}
+
 async function fazerLogin() {
-  const email = document.getElementById('login-email').value.trim();
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
   const senha = document.getElementById('login-senha').value;
   if (!email || !senha) { toast('Preencha email e senha'); return; }
   const usuarios = getUsuarios();
+  // Conta criada antes da correção, com o e-mail em caixa alta: adota e migra.
+  const chaveLegada = Object.keys(usuarios).find(k => k.toLowerCase() === email && k !== email);
+  if (chaveLegada && !usuarios[email]) {
+    usuarios[email] = usuarios[chaveLegada];
+    delete usuarios[chaveLegada];
+    setData('cv_usuarios', usuarios);
+    _migrarChavesEmail(chaveLegada, email);
+  }
   if (usuarios[email]) {
     const ok = await _verificarSenhaLocal(senha, usuarios[email]);
     if (!ok) { toast('Senha incorreta'); return; }
@@ -7853,7 +8012,7 @@ function mostrarLogin() { document.getElementById('form-cadastro').style.display
 // ===== RECUPERAÇÃO DE SENHA =====
 function abrirEsqueciSenha() {
   // Prefere o e-mail digitado no login; se vier das Configurações (rep já logado), usa o dele.
-  const email = document.getElementById('login-email').value.trim() || (usuarioAtual && usuarioAtual.email) || '';
+  const email = document.getElementById('login-email').value.trim().toLowerCase() || (usuarioAtual && usuarioAtual.email) || '';
   if (email) document.getElementById('reset-email').value = email;
   document.getElementById('modal-esqueci-senha').classList.add('aberto');
 }
@@ -12602,9 +12761,32 @@ function adicionarEnderecoCliente() {
 let localizacaoDetectadaNc = null;
 
 function detectarLocalizacaoNc() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(async pos => {
+  const status = () => document.getElementById('nc-gps-status');
+  const chipEl = () => document.getElementById('nc-gps-chip');
+  const chipTxt = () => document.getElementById('nc-gps-chip-texto');
+
+  const mostrarStatus = (html) => { const s = status(); if (s) { s.innerHTML = html; s.style.display = 'block'; } };
+
+  if (!navigator.geolocation) {
+    mostrarStatus('📵 Este aparelho não permite localização pelo navegador.');
+    return;
+  }
+
+  // Mostra o chip assim que TEM COORDENADA. Antes ele só aparecia depois do
+  // reverse-geocode do Nominatim dar certo — se aquele fetch falhasse (rede
+  // fraca, limite da API), o GPS tinha funcionado mas nada aparecia na tela.
+  const revelarChip = (texto) => {
+    const c = chipEl(), t = chipTxt();
+    const s = status(); if (s) s.style.display = 'none';
+    if (!c || !t || enderecoValidadoNc || document.getElementById('nc-lat').value) return;
+    t.textContent = texto;
+    c.style.display = 'block';
+  };
+
+  const aoAchar = async (pos) => {
     const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    localizacaoDetectadaNc = { lat, lng, endereco: '', cidade: '' };
+    revelarChip('Buscando o endereço...');
     try {
       const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=pt-BR`);
       const data = await resp.json();
@@ -12616,21 +12798,28 @@ function detectarLocalizacaoNc() {
       const ruaCompleta = bairro ? `${rua} — ${bairro}` : rua;
       const cidadeCompleta = [cidade, estado].filter(Boolean).join(', ');
       localizacaoDetectadaNc = { lat, lng, endereco: ruaCompleta, cidade };
-      const status = document.getElementById('nc-gps-status');
-      if (status) status.style.display = 'none';
-      const chip = document.getElementById('nc-gps-chip');
-      const chipTexto = document.getElementById('nc-gps-chip-texto');
-      if (chip && chipTexto && !enderecoValidadoNc && !document.getElementById('nc-lat').value) {
-        chipTexto.textContent = cidadeCompleta ? `${ruaCompleta} — ${cidadeCompleta}` : ruaCompleta;
-        chip.style.display = 'block';
-      }
+      revelarChip(cidadeCompleta ? `${ruaCompleta} — ${cidadeCompleta}` : ruaCompleta);
     } catch (e) {
-      const status = document.getElementById('nc-gps-status');
-      if (status) status.style.display = 'none';
+      // Sem nome de rua ainda dá pra gerar a rota — a coordenada é o que importa.
+      revelarChip('Endereço não veio agora, mas o ponto no mapa está certo.');
     }
-  }, () => {
-    const status = document.getElementById('nc-gps-status');
-    if (status) status.style.display = 'none';
+  };
+
+  const aoFalhar = (err) => {
+    // iPhone nega em silêncio quando a permissão já foi recusada antes. Sem
+    // mensagem, o rep achava que o app estava quebrado.
+    if (err && err.code === 1) {
+      mostrarStatus('🔒 Localização bloqueada neste aparelho.<br><span style="color:var(--texto3);">No iPhone: Ajustes › Privacidade › Serviços de Localização › Safari. Depois toque em <b>Tentar de novo</b>.</span><br><button onclick="detectarLocalizacaoNc()" style="margin-top:8px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.45);border-radius:9px;padding:8px 12px;color:#A78BFA;font-family:\'DM Sans\',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔄 Tentar de novo</button>');
+      return;
+    }
+    mostrarStatus('📡 Não consegui pegar o sinal agora.<br><button onclick="detectarLocalizacaoNc()" style="margin-top:8px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.45);border-radius:9px;padding:8px 12px;color:#A78BFA;font-family:\'DM Sans\',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔄 Tentar de novo</button>');
+  };
+
+  mostrarStatus('📡 Detectando sua localização...');
+  // 1ª tentativa precisa; se estourar (comum dentro de loja no iPhone), repete
+  // aceitando posição aproximada, que já serve pra marcar o ponto da loja.
+  navigator.geolocation.getCurrentPosition(aoAchar, () => {
+    navigator.geolocation.getCurrentPosition(aoAchar, aoFalhar, { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 });
   }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
@@ -19889,7 +20078,15 @@ let _despMesAtual = new Date().toISOString().slice(0,7);
 
 function getDespesas() {
   if (!usuarioAtual) return [];
-  return getData('cv_despesas_' + usuarioAtual.email) || [];
+  const arr = getData('cv_despesas_' + usuarioAtual.email);
+  return Array.isArray(arr) ? arr : [];
+}
+// Um lançamento sem data (vindo de sync antigo, importação ou registro
+// interrompido) derrubava o PAINEL INTEIRO: d.data.startsWith de undefined
+// estourava em atualizarBadgeDespesas, que roda no dashboard. Filtrar num ponto
+// só evita repetir a checagem — e não regrava nada, então nada é apagado.
+function _despDoMes(lista, mes) {
+  return (lista || []).filter(d => d && typeof d.data === 'string' && d.data.startsWith(mes));
 }
 function salvarDespesasData(arr) {
   if (!usuarioAtual) return;
@@ -19990,7 +20187,7 @@ function renderizarDespesas() {
   document.getElementById('desp-mes-label').textContent = labelFmt;
 
   const todas  = getDespesas();
-  const doMes  = todas.filter(d => d.data.startsWith(_despMesAtual));
+  const doMes  = _despDoMes(todas, _despMesAtual);
   const totais = {};
   Object.keys(DESP_CATS).forEach(k => { totais[k] = 0; });
   doMes.forEach(d => { totais[d.categoria] = (totais[d.categoria]||0) + d.valor; });
@@ -20088,7 +20285,7 @@ function renderizarDespesas() {
 
 function atualizarBadgeDespesas() {
   const mes   = new Date().toISOString().slice(0,7);
-  const total = getDespesas().filter(d=>d.data.startsWith(mes)).reduce((s,d)=>s+d.valor,0);
+  const total = _despDoMes(getDespesas(), mes).reduce((s,d)=>s+(Number(d.valor)||0),0);
   // Card do painel: saldo gasto no mês
   const numEl = document.getElementById('num-despesas');
   if (numEl) numEl.textContent = 'R$ ' + fmtK(total);
@@ -20165,7 +20362,7 @@ function _montarTextoRelatorioDesp() {
   const labelFmt = labelMes.charAt(0).toUpperCase() + labelMes.slice(1);
   const rep = usuarioAtual?.nome || 'Representante';
   const agora = new Date();
-  const doMes = getDespesas().filter(d => d.data.startsWith(_despMesAtual));
+  const doMes = _despDoMes(getDespesas(), _despMesAtual);
 
   const totais = {};
   Object.keys(DESP_CATS).forEach(k => { totais[k] = 0; });

@@ -728,6 +728,9 @@ window.addEventListener('appinstalled', function() {
     50%     { box-shadow:0 0 0 6px rgba(255,192,67,.5); border-color:#FFC043; transform:scale(1.18); color:#FFC043; background:rgba(255,192,67,.18); }
   }
   .btn-meta-salvar-pisca { animation:piscaMetaSalvar .55s ease-in-out 5; }
+  /* Etiqueta de escopo do Gestor IA: diz de cara se a seção fala de UMA marca ou
+     de todas. Sem ela o rep não sabe o alcance do que está lendo. */
+  .tag-foco { font-size:10px; font-weight:800; background:rgba(255,192,67,.14); border:1px solid rgba(255,192,67,.45); color:#FFC043; border-radius:999px; padding:2px 9px; font-family:'DM Sans',sans-serif; white-space:nowrap; }
   @keyframes piscaFoco {
     0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(255,192,67,0); }
     50%      { opacity:.65; box-shadow:0 0 5px 2px rgba(255,192,67,.55); }
@@ -3085,6 +3088,15 @@ window.addEventListener('appinstalled', function() {
       <button onclick="fecharModal('modal-gerente')" style="background:var(--bg3);border:1px solid var(--borda);border-radius:50%;width:32px;height:32px;color:var(--texto2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
     </div>
 
+    <!-- Seletor de foco: com 5 marcas o modelo divide o mesmo orçamento de texto
+         entre todas e cada uma fica rasa. Focar numa marca vira profundidade. -->
+    <div id="gerente-seletor" style="display:none;">
+      <div style="font-size:13px;color:var(--texto2);font-family:'DM Sans',sans-serif;line-height:1.55;margin-bottom:12px;">Sobre qual marca você quer o diagnóstico? Escolhendo uma, a análise vai bem mais fundo.</div>
+      <div class="sku-grid" id="gerente-marcas-grid" style="margin-bottom:10px;"></div>
+      <div id="gerente-foco-aviso" style="font-size:11.5px;color:var(--texto3);font-family:'DM Sans',sans-serif;margin-bottom:12px;line-height:1.5;"></div>
+      <button onclick="_gerenteAnalisarSelecao()" style="width:100%;background:linear-gradient(135deg,#7C3AED,#4F46E5);border:none;border-radius:12px;padding:14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;">🤖 Analisar</button>
+    </div>
+
     <!-- Loading -->
     <div id="gerente-loading" style="display:none;text-align:center;padding:40px 20px;">
       <div style="font-size:40px;margin-bottom:14px;animation:spinEmoji 2s linear infinite;display:inline-block;">🤖</div>
@@ -3100,6 +3112,7 @@ window.addEventListener('appinstalled', function() {
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
           <span style="font-size:16px;">🏷️</span>
           <span style="font-size:12px;font-weight:700;color:#A78BFA;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;">Visão das marcas</span>
+          <span class="tag-foco" id="gerente-tag-marca"></span>
         </div>
         <div id="gerente-marca-texto" style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.7;white-space:pre-wrap;"></div>
       </div>
@@ -3118,6 +3131,7 @@ window.addEventListener('appinstalled', function() {
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
           <span style="font-size:16px;">⚡</span>
           <span style="font-size:12px;font-weight:700;color:#F97316;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;">3 ações para esta semana</span>
+          <span class="tag-foco" id="gerente-tag-acoes"></span>
         </div>
         <div id="gerente-acoes-texto" style="font-size:13px;color:var(--texto);font-family:'DM Sans',sans-serif;line-height:1.8;white-space:pre-wrap;"></div>
       </div>
@@ -16403,21 +16417,70 @@ let _gerenteCacheCfgHash = null;
 function _gerenteCfgHash() {
   const cfg = getConfig();
   try {
-    return JSON.stringify({ metas: cfg.metas, marcas: cfg.marcas, wpp: cfg.wppRep, email: cfg.emailRep, buffer: cfg.bufferMeta, saz: cfg.sazonalAtivo, col: cfg.colecoes });
+    return JSON.stringify({ foco: _gerenteMarcasFoco, metas: cfg.metas, marcas: cfg.marcas, wpp: cfg.wppRep, email: cfg.emailRep, buffer: cfg.bufferMeta, saz: cfg.sazonalAtivo, col: cfg.colecoes });
   } catch (e) { return String(Date.now()); }
 }
 
-function abrirGerenteVirtual() {
+// null = todas as marcas (comportamento histórico). Array = foco nessas.
+let _gerenteMarcasFoco = null;
+
+function _gerenteFocoLabel() {
+  if (!_gerenteMarcasFoco || !_gerenteMarcasFoco.length) return 'todas as marcas';
+  if (_gerenteMarcasFoco.length === 1) return _gerenteMarcasFoco[0];
+  return _gerenteMarcasFoco.length + ' marcas';
+}
+
+// marcasFoco: vindo do botão da meta, a marca já é conhecida — não faz sentido
+// perguntar de novo, então pula o seletor e analisa direto.
+function abrirGerenteVirtual(marcasFoco) {
   if (!exigirPro('gestor')) return;
   document.getElementById('modal-gerente').classList.add('aberto');
   document.getElementById('gerente-loading').style.display = 'none';
   document.getElementById('gerente-resultado').style.display = 'none';
   document.getElementById('gerente-erro').style.display = 'none';
+  document.getElementById('gerente-seletor').style.display = 'none';
 
   const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
   document.getElementById('gerente-data-label').textContent = hoje;
 
-  // Cache de 24h — só vale se a configuração não mudou desde a análise
+  if (Array.isArray(marcasFoco) && marcasFoco.length) {
+    _gerenteMarcasFoco = marcasFoco;
+    _gerenteRodar();
+    return;
+  }
+
+  // Sem foco definido: pergunta. "Todas" já vem marcado, então quem não quer
+  // escolher só aperta Analisar e tem o comportamento de sempre.
+  const marcas = (getConfig().marcas || []).filter(m => m && m.trim());
+  if (marcas.length < 2) { _gerenteMarcasFoco = null; _gerenteRodar(); return; }
+  _gerenteMarcasFoco = null;
+  renderizarMarcasGrid('gerente-marcas-grid', []);
+  _gerenteAtualizarAvisoFoco();
+  // Atribuição (não addEventListener): o modal reabre várias vezes por sessão e
+  // com listener acumulado a mesma função rodaria N vezes por toque.
+  document.getElementById('gerente-marcas-grid').onclick = () => setTimeout(_gerenteAtualizarAvisoFoco, 0);
+  document.getElementById('gerente-seletor').style.display = 'block';
+}
+
+function _gerenteAtualizarAvisoFoco() {
+  const sel = getMarcasSelecionadas('gerente-marcas-grid');
+  const el = document.getElementById('gerente-foco-aviso');
+  if (!el) return;
+  el.textContent = sel.length
+    ? `Foco em ${sel.join(', ')} — a visão do seu negócio continua olhando a carteira inteira.`
+    : 'Nenhuma marca marcada = análise de todas.';
+}
+
+function _gerenteAnalisarSelecao() {
+  const sel = getMarcasSelecionadas('gerente-marcas-grid');
+  _gerenteMarcasFoco = sel.length ? sel : null;
+  document.getElementById('gerente-seletor').style.display = 'none';
+  _gerenteRodar();
+}
+
+function _gerenteRodar() {
+  // O cache precisa saber QUAL marca gerou a análise: sem isso, escolher Meet
+  // depois de Lupo devolvia a resposta da Lupo com a etiqueta errada.
   const agora = Date.now();
   if (_gerenteAnaliseCache && _gerenteCacheData && (agora - _gerenteCacheData) < 86400000
       && _gerenteCacheCfgHash === _gerenteCfgHash()) {
@@ -16520,7 +16583,12 @@ function _planoMesAgoraNao() {
 
 function _coletarDadosRep() {
   const cfg = getConfig();
-  const metas = getMetasConfig();
+  // Foco por marca: só as seções de marca e de ações são recortadas. A visão do
+  // negócio segue com a carteira inteira (Pareto, canais, cidades, prospecção),
+  // porque aquilo é do negócio, não de uma marca.
+  const _foco = (_gerenteMarcasFoco || []).map(m => (m||'').trim().toLowerCase());
+  const metas = getMetasConfig().filter(m =>
+    !_foco.length || _foco.includes((m.marca||'').trim().toLowerCase()));
   const ativos = getClientesAtivos();
   const hoje = new Date();
   const Y = hoje.getFullYear(), M = hoje.getMonth(), D = hoje.getDate();
@@ -16730,6 +16798,9 @@ function _coletarDadosRep() {
     temporalidade,
     saudeConfiguracao,
     marcas: dadosMarcas,
+    focoDaAnalise: _foco.length
+      ? `APENAS ${_gerenteMarcasFoco.join(', ')} nas seções "marca" e "acoes"`
+      : 'todas as marcas',
     carteira: {
       totalClientes: ativos.length,
       compraramEsseMes: ranking.length,
@@ -16837,6 +16908,8 @@ CONSCIÊNCIA DE TEMPO (campo "temporalidade" + campos de cada marca): AJUSTE seu
 - Se for MEIO do mês: corrija a rota. Compare "pct" (quanto já vendeu) com "periodoDecorrido" (quanto do tempo passou). Marcas com "foraDoRitmo":true estão atrasadas — foque nelas e diga o ritmo para recuperar.
 - Se for RETA FINAL: foco total em fechar. Priorize os pedidos que faltam com maior chance de fechar no prazo.
 - METAS POR COLEÇÃO ("tipoPeriodo":"coleção"): trate pelo período inteiro dela (use "periodo" e "periodoDecorrido"), NÃO pelo mês calendário. Uma coleção pode ter ritmo e prazos diferentes do mês.
+
+ESCOPO ("focoDaAnalise"): quando houver marca em foco, as seções "marca" e "acoes" falam SÓ dela — não cite nem compare com outras marcas ali, use o espaço para ir mais fundo (clientes pelo nome, valores, sequência de abordagem). A seção "negocio" é a ÚNICA que continua olhando o negócio inteiro: carteira, concentração, canais, cidades e prospecção valem para todas as marcas.
 
 META x CARTEIRA — REGRA MAIS IMPORTANTE: os campos "carteiraComporta", "lacunaAposCarteira", "ticketMedioDaMarca", "clientesNovosNecessarios", "cabeNaAgenda" e "espacoEmQuemJaCompra" JÁ VÊM CALCULADOS pelo app. Use-os exatamente como estão. NUNCA recalcule, estime, arredonde de outro jeito nem invente número novo — o rep conhece a carteira dele de cor e um número errado destrói a confiança na análise inteira.
 
@@ -17002,6 +17075,13 @@ function _exibirAnaliseGerente(analise, doCache) {
   document.getElementById('gerente-erro').style.display = 'none';
   document.getElementById('gerente-resultado').style.display = 'block';
   document.getElementById('gerente-marca-texto').innerHTML = _linkificarClientesIA(analise.marca);
+  // Etiqueta de escopo nas DUAS seções recortadas — "negócio" fica sem, porque
+  // ali o assunto é a carteira inteira e uma etiqueta induziria ao erro.
+  const _lbFoco = _gerenteFocoLabel();
+  ['gerente-tag-marca', 'gerente-tag-acoes'].forEach(id => {
+    const t = document.getElementById(id);
+    if (t) t.textContent = _lbFoco;
+  });
   document.getElementById('gerente-negocio-texto').innerHTML = _linkificarClientesIA(analise.negocio);
   document.getElementById('gerente-acoes-texto').innerHTML = _linkificarClientesIA(analise.acoes);
   const _cfgBloco = document.getElementById('gerente-config-bloco');
@@ -18747,7 +18827,7 @@ function abrirAnaliseMeta(metaId) {
   // A LACUNA é de graça (já está calculada no aparelho); o PLANO de como fechar
   // é o Gestor IA. O rep acabou de ver o buraco — é o melhor momento pra ele
   // querer o caminho, e o gate do Pro cuida do resto sozinho.
-  html += `<button onclick="fecharModal('modal-analise-meta');setTimeout(abrirGerenteVirtual,300);" style="width:100%;margin-top:4px;background:linear-gradient(135deg,#1e0a4a,#2d1470);border:1.5px solid rgba(124,58,237,.5);border-radius:12px;padding:14px;color:#C4B5FD;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:800;cursor:pointer;">🤖 Ver o plano no Gestor IA</button>
+  html += `<button onclick="fecharModal('modal-analise-meta');setTimeout(()=>abrirGerenteVirtual(['${_escOnclickArg(a.marca)}']),300);" style="width:100%;margin-top:4px;background:linear-gradient(135deg,#1e0a4a,#2d1470);border:1.5px solid rgba(124,58,237,.5);border-radius:12px;padding:14px;color:#C4B5FD;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:800;cursor:pointer;">🤖 Ver o plano no Gestor IA</button>
     <div style="font-size:11px;color:var(--texto3);text-align:center;margin-top:7px;line-height:1.5;">Ele diz por onde começar: quem puxar, quem antecipar e onde abrir.</div>`;
 
   document.getElementById('analise-meta-corpo').innerHTML = html;
